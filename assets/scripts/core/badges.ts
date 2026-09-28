@@ -13,6 +13,7 @@ import { dailyClaimable } from './daily';
 import { workerSlots } from './economy';
 import { relocationTargets } from './sites';
 import { traderPresent } from './trader';
+import { activeScoutSpots } from './scouting';
 import { GameConfig, GameState, SeenState } from './types';
 import { idleSurvivors, workersIn } from './workers';
 
@@ -25,7 +26,7 @@ function contentKeys(config: GameConfig, state: GameState, now: number): Record<
     const level = workshopLevel(config, state);
     return {
         survivors: state.survivors.map((s) => `survivor:${s.id}`),
-        explore: availableLocations(config, state, now).map((l) => `loc:${l.id}`),
+        explore: [...availableLocations(config, state, now).map((l) => `loc:${l.id}`), ...activeScoutSpots(state, now).map((s) => `spot:${s.id}`)],
         bounties: availableBounties(config, state, now).map((b) => `bounty:${b.id}`),
         workshop: level > 0 ? config.items.filter((i) => i.workshopLevel <= level).map((i) => `item:${i.id}`) : [],
         achievements: state.achievements.map((a) => `ach:${a.id}`),

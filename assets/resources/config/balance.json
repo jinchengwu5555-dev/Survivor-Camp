@@ -37,6 +37,7 @@
     "raidBreachDeaths": 1,
     "hardshipDeathMinutes": 160,
     "startingSite": "supermarket",
+    "townMap": { "revealCamp": 200, "revealKnown": 110, "revealCleared": 170, "revealSite": 120 },
     "startingProps": { "ration_s": 2, "wrench": 3, "coffee": 1, "mystery_box": 1 },
     "relocation": { "carryRatio": 0.5, "foodPerSurvivor": 20, "cooldownDays": 3 },
     "hunterRanks": [

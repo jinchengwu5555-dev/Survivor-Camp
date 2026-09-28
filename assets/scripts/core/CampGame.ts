@@ -13,6 +13,7 @@ import { addWorker, autoAssign, removeWorker } from './workers';
 import { refreshTraderOffers, trade, updateTrader } from './trader';
 import { BadgeGroup, badgeCounts, markSeen } from './badges';
 import { useProp } from './props';
+import { resolveScouts, sendScout, updateScoutSpots } from './scouting';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
@@ -82,12 +83,14 @@ export class CampGame {
         checkSeasonChange(this.config, s, now);
         recoverInjuries(this.config, s, now);
         resolveExpeditions(this.config, s, now);
+        resolveScouts(this.config, s, now);
         // 没有界面在看（比如模拟器），留着的尸潮直接自动打完
         if (!this.liveRaids && s.pendingRaid) new LiveRaid(this.config, s, s.pendingRaid).finish();
         maybeRunRaid(this.config, s, now, this.liveRaids);
         maybeTriggerRandomEvent(this.config, s, now);
         updatePickups(this.config, s, now);
         updateTrader(this.config, s, now);
+        updateScoutSpots(this.config, s, now);
         this.settle(now);
     }
 
@@ -147,6 +150,11 @@ export class CampGame {
     /** 看完激励视频后调用：商人重新摆货 */
     refreshTrader(now: number): ActionResult {
         return this.act(now, () => refreshTraderOffers(this.config, this.state, now));
+    }
+
+    /** 派一个人去镇地图上的侦察点 */
+    sendScout(spotId: number, now: number): ActionResult {
+        return this.act(now, () => sendScout(this.config, this.state, spotId, now));
     }
 
     /** 使用背包里的一个道具 */

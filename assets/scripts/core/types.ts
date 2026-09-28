@@ -99,6 +99,8 @@ export interface BalanceDef {
     hardshipDeathMinutes: number;
     /** 开局的营地 */
     startingSite: string;
+    /** 镇地图的战争迷雾：营地、已解锁地点、已打下的地点、已发现的营地地点周围多大范围可见 */
+    townMap: { revealCamp: number; revealKnown: number; revealCleared: number; revealSite: number };
     /** 开局送的背包道具 */
     startingProps?: Record<string, number>;
     /** 搬迁：只能带走 carryRatio 的物资，每人路上吃 foodPerSurvivor 食物，搬完后 cooldownDays 天内不能再搬 */
@@ -267,9 +269,19 @@ export interface EpisodeDef {
     endEvent?: string;
 }
 
+/** 镇地图上的坐标（地图中心为原点，大约 -330～330） */
+export interface MapPoint {
+    x: number;
+    y: number;
+}
+
 export interface LocationDef {
     id: string;
     name: string;
+    /** 在镇地图上的位置 */
+    map?: MapPoint;
+    /** 镇地图上的图标（还没有美术时用 emoji） */
+    icon?: string;
     description: string;
     /** 往返需要的分钟数 */
     durationMinutes: number;
@@ -384,6 +396,8 @@ export interface SiteDef {
     id: string;
     name: string;
     icon: string;
+    /** 在镇地图上的位置（营地就画在当前营地地点的位置上） */
+    map?: MapPoint;
     description: string;
     /** 一句话优点 / 缺点，界面上显示 */
     pros: string;
@@ -428,6 +442,7 @@ export interface GameConfig {
     daily: DailyConfig;
     trader: TraderConfig;
     props: PropDef[];
+    scouting: ScoutingConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -481,6 +496,31 @@ export interface PropDef {
     minutes?: number;
     amount?: number;
     contents?: { weight: number; prop?: string; amount?: number; resources?: ResourceBag }[];
+}
+
+/** 侦察点（scouting.json）：镇地图上冒出来的小地点，派一个人去一趟，带回东西或触发事件 */
+export interface ScoutKindDef {
+    id: string;
+    name: string;
+    icon: string;
+    weight: number;
+    /** 来回要多少分钟（游戏时间） */
+    travelMinutes: number;
+    /** 带回的资源（随指挥部等级成长，罐头不成长） */
+    reward: ResourceBag;
+    drops?: PropDrop[];
+    /** 到了以后触发的事件 */
+    event?: string;
+    text: string;
+}
+
+export interface ScoutingConfig {
+    intervalMinutes: number;
+    maxActive: number;
+    lifetimeMinutes: number;
+    /** 侦察回来时受伤的概率 */
+    injuryChance: number;
+    kinds: ScoutKindDef[];
 }
 
 /** 道具掉落：chance 概率（默认 1）掉 amount 个（默认 1） */
@@ -652,10 +692,32 @@ export interface GameState {
     daily?: DailyState;
     /** 流浪商人（老存档没有，用到时补上） */
     trader?: TraderState;
+    /** 镇地图上的侦察点、正在侦察的人（老存档没有，用到时补上） */
+    scoutSpots?: ScoutSpotState[];
+    scouts?: ScoutState[];
+    nextScoutSpotAt?: number;
     /** 背包道具：道具 id → 数量（老存档没有，用到时补上） */
     props?: Record<string, number>;
     /** 界面红点：已经看过的新内容（见 core/badges.ts） */
     seen?: SeenState;
+}
+
+export interface ScoutSpotState {
+    id: number;
+    kind: string;
+    x: number;
+    y: number;
+    expiresAt: number;
+}
+
+export interface ScoutState {
+    id: number;
+    kind: string;
+    survivor: string;
+    x: number;
+    y: number;
+    startedAt: number;
+    returnsAt: number;
 }
 
 export interface TraderState {

@@ -228,6 +228,17 @@ export function validateConfig(config: GameConfig): string[] {
         for (const id of t.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
 
+    checkUnique('侦察点', config.scouting.kinds.map((x) => x.id));
+    for (const k of config.scouting.kinds) {
+        const where = `侦察点 ${k.id}`;
+        checkBag(where, k.reward);
+        checkDrops(where, k.drops);
+        if (k.event) checkEvent(where, k.event);
+        if (k.travelMinutes <= 0) errors.push(`${where}：travelMinutes 必须大于 0`);
+        if (k.weight <= 0) errors.push(`${where}：weight 必须大于 0`);
+    }
+    for (const loc of config.locations) if (!loc.map) errors.push(`地点 ${loc.id}：没有写镇地图坐标 map`);
+
     checkUnique('道具', config.props.map((x) => x.id));
     for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
     for (const p of config.props) {

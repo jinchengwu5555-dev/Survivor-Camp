@@ -52,8 +52,9 @@ export function battleRegistry(config: GameConfig): BattleRegistry {
 
 // ---------- 上阵人员 ----------
 
+/** 在外面：探索小队里，或者正在侦察 */
 export function isOnExpedition(state: GameState, survivorId: string): boolean {
-    return state.expeditions.some((e) => e.squad.includes(survivorId));
+    return state.expeditions.some((e) => e.squad.includes(survivorId)) || (state.scouts ?? []).some((s) => s.survivor === survivorId);
 }
 
 function battleUnitOf(config: GameConfig, state: GameState, survivorId: string): string | undefined {

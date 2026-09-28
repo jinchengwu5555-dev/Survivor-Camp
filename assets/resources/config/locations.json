@@ -2,6 +2,8 @@
     {
         "id": "gas_station",
         "name": "加油站便利店",
+        "icon": "⛽",
+        "map": { "x": -170, "y": -215 },
         "description": "镇口的加油站，托比以前上班的地方。货架上应该还有些吃的。",
         "durationMinutes": 3,
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
@@ -14,6 +16,8 @@
     {
         "id": "park",
         "name": "枫谷公园",
+        "icon": "🌳",
+        "map": { "x": 130, "y": 40 },
         "description": "镇中心的小公园，长椅和秋千还在。灌木丛里有一群饿疯了的野狗——它们不是丧尸，但一样危险。公园的果树和小卖部里还有些吃的和药。",
         "durationMinutes": 6,
         "conditions": { "flags": ["cleared_gas_station"] },
@@ -29,6 +33,8 @@
     {
         "id": "hardware_store",
         "name": "五金店",
+        "icon": "🔨",
+        "map": { "x": -190, "y": 70 },
         "description": "主街上的五金店，木板、钉子、工具应有尽有，但门口晃着不少行尸。",
         "durationMinutes": 10,
         "conditions": { "flags": ["cleared_gas_station"] },
@@ -45,6 +51,8 @@
     {
         "id": "clinic",
         "name": "镇卫生所",
+        "icon": "🏥",
+        "map": { "x": 215, "y": 195 },
         "description": "爆发那天挤满了病人。现在，那些病人还在里面。",
         "durationMinutes": 20,
         "conditions": { "flags": ["cleared_hardware_store"] },
@@ -61,6 +69,8 @@
     {
         "id": "sheriff_office",
         "name": "警长办公室",
+        "icon": "🚓",
+        "map": { "x": -40, "y": 230 },
         "description": "伊森工作了十五年的地方。军械柜里也许还有东西……还有他桌上的那张照片。",
         "durationMinutes": 30,
         "conditions": { "minDay": 3, "flags": ["cleared_clinic"] },
@@ -74,5 +84,56 @@
         "firstClearEvent": "sheriff_photo",
         "discoversSite": "police",
         "recruitChance": 0.25
+    },
+    {
+        "id": "school",
+        "name": "镇小学",
+        "icon": "🏫",
+        "map": { "x": 265, "y": -120 },
+        "description": "孩子们早就被接走了，体育馆却成了行尸的窝。教室里还有桌椅木料、美术课的工具，储藏室里说不定有零食。",
+        "durationMinutes": 12,
+        "conditions": { "flags": ["cleared_park"] },
+        "enemies": [
+            { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 },
+            { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "fatty", "level": 2, "spawnAt": 12 }
+        ],
+        "timeLimit": 90,
+        "loot": { "wood": 50, "parts": 30 },
+        "drops": [ { "prop": "flyer", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.5 }, { "prop": "parts_s", "chance": 0.4 } ],
+        "recruitChance": 0.2
+    },
+    {
+        "id": "motel",
+        "name": "公路汽车旅馆",
+        "icon": "🏨",
+        "map": { "x": -275, "y": -290 },
+        "description": "出镇公路边的汽车旅馆，霓虹招牌还在一闪一闪。逃难的人在这里落过脚，房间里留下了不少行李。",
+        "durationMinutes": 14,
+        "conditions": { "minDay": 3, "flags": ["cleared_gas_station"] },
+        "enemies": [
+            { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "fatty", "level": 2 },
+            { "unit": "runner", "level": 2, "spawnAt": 8 }, { "unit": "walker", "level": 3, "spawnAt": 8 }
+        ],
+        "timeLimit": 90,
+        "loot": { "food": 60, "medicine": 10, "cans": 3 },
+        "drops": [ { "prop": "ration_l", "chance": 0.4 }, { "prop": "coffee", "chance": 0.4 }, { "prop": "walkie", "chance": 0.2 } ],
+        "recruitChance": 0.2
+    },
+    {
+        "id": "radio_tower",
+        "name": "北山信号塔",
+        "icon": "📡",
+        "map": { "x": 60, "y": 320 },
+        "description": "镇子北边山顶上的信号塔。从塔上能看到很远的地方——还有塔下那群守着发电机的铁甲尸。",
+        "durationMinutes": 35,
+        "conditions": { "flags": ["cleared_sheriff_office"] },
+        "enemies": [
+            { "unit": "armored", "level": 3 }, { "unit": "armored", "level": 3 }, { "unit": "walker", "level": 4 }, { "unit": "walker", "level": 4 },
+            { "unit": "walker", "level": 4 }, { "unit": "brute", "level": 2, "spawnAt": 20 }, { "unit": "frenzied", "level": 2, "spawnAt": 20 }
+        ],
+        "timeLimit": 120,
+        "loot": { "parts": 60, "cans": 12 },
+        "drops": [ { "prop": "toolbox", "chance": 0.4 }, { "prop": "mystery_box", "chance": 0.4 }, { "prop": "walkie", "chance": 0.3 } ],
+        "recruitChance": 0.2
     }
 ]

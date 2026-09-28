@@ -1,0 +1,13 @@
+{
+    "intervalMinutes": 25,
+    "maxActive": 2,
+    "lifetimeMinutes": 120,
+    "injuryChance": 0.1,
+    "kinds": [
+        { "id": "wreck", "name": "废弃的车", "icon": "🚗", "weight": 4, "travelMinutes": 4, "reward": { "wood": 25, "parts": 10 }, "drops": [ { "prop": "parts_s", "chance": 0.4 } ], "text": "撬开后备箱，拆下几块还能用的零件。" },
+        { "id": "airdrop", "name": "空投箱", "icon": "🪂", "weight": 2, "travelMinutes": 8, "reward": { "food": 60 }, "drops": [ { "prop": "mystery_box", "chance": 0.5 }, { "prop": "ration_l", "chance": 0.4 } ], "text": "降落伞挂在树上，箱子摔裂了，东西大部分还在。" },
+        { "id": "signal", "name": "求救信号", "icon": "🆘", "weight": 2, "travelMinutes": 6, "reward": {}, "event": "scout_signal", "text": "循着镜子反光的信号找过去……" },
+        { "id": "cache", "name": "地下储藏室", "icon": "🚪", "weight": 2, "travelMinutes": 10, "reward": { "cans": 2, "medicine": 6 }, "drops": [ { "prop": "toolbox", "chance": 0.3 }, { "prop": "coffee", "chance": 0.4 } ], "text": "院子里的地窖门被藤蔓盖住了，里面是前主人囤的东西。" },
+        { "id": "tracks", "name": "尸群的足迹", "icon": "👣", "weight": 2, "travelMinutes": 5, "reward": { "parts": 8 }, "drops": [ { "prop": "chocolate", "chance": 0.3 } ], "text": "跟着脚印摸清了尸群的动向，顺手捡了点东西。" }
+    ]
+}

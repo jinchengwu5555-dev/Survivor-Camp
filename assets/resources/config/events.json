@@ -1203,5 +1203,53 @@
                 ]
             }
         ]
+    },
+    {
+        "id": "scout_signal",
+        "title": "镜子的反光",
+        "text": "侦察的人循着镜子的反光，找到一座阁楼。一个饿得脱了形的人缩在角落里，手里还攥着那面小镜子。“我……我每天都照一照，就想着也许有人能看见。”",
+        "weight": 0,
+        "once": false,
+        "choices": [
+            {
+                "text": "带回营地",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "回去的路上，他一直紧紧跟在后面，好像怕一眨眼你们就会消失。",
+                        "effects": [
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "营地没地方了，留下些吃的",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "你们把一袋口粮放在他手边，告诉他往南走能找到加油站。他点点头，没有哭。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": -20
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
     }
 ]
