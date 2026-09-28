@@ -1,0 +1,15 @@
+{
+    "foodPerSurvivorPerMinute": 0.4,
+    "offlineCapHours": 8,
+    "specialtyBonus": 1.5,
+    "moodRecoveryPerMinute": 0.2,
+    "moodRecoveryMax": 70,
+    "hungerMoodPenaltyPerMinute": 0.5,
+    "newSurvivorMood": 50,
+    "eventIntervalMinutes": 10,
+    "dayLengthMinutes": 60,
+    "buildQueueSize": 1,
+    "startingResources": { "food": 60, "wood": 50, "parts": 10, "medicine": 5, "cans": 10 },
+    "startingSurvivors": ["ethan", "martha", "derek", "sophie", "toby"],
+    "baseStorage": { "food": 200, "wood": 200, "parts": 100, "medicine": 50 }
+}

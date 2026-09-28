@@ -1,0 +1,71 @@
+[
+    {
+        "id": "hq",
+        "name": "指挥部",
+        "description": "超市的经理办公室。决定营地等级和仓库容量。",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0 },
+            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "storage": { "food": 100, "wood": 100, "parts": 50, "medicine": 25 } },
+            { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 600, "storage": { "food": 250, "wood": 250, "parts": 120, "medicine": 60 } }
+        ]
+    },
+    {
+        "id": "wall",
+        "name": "路障",
+        "description": "用货架和购物车堵住入口。提供安全值，抵御尸潮。",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0, "safety": 10 },
+            { "cost": { "wood": 40 }, "buildSeconds": 60, "safety": 25 },
+            { "cost": { "wood": 150, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "safety": 45 }
+        ]
+    },
+    {
+        "id": "kitchen",
+        "name": "厨房",
+        "description": "把找到的食材做成热饭。生产食物，厨师干活效率更高。",
+        "specialty": "cook",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0, "production": { "food": 1.2 }, "workerSlots": 2 },
+            { "cost": { "wood": 40 }, "buildSeconds": 45, "production": { "food": 1.6 }, "workerSlots": 2 },
+            { "cost": { "wood": 120, "parts": 20 }, "buildSeconds": 240, "requiresHq": 2, "production": { "food": 2.0 }, "workerSlots": 3 }
+        ]
+    },
+    {
+        "id": "scrapyard",
+        "name": "废料场",
+        "description": "拆解停车场里的废车和杂物。生产木材和零件，机械师效率更高。",
+        "specialty": "mechanic",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0, "production": { "wood": 1.0, "parts": 0.2 }, "workerSlots": 2 },
+            { "cost": { "wood": 50 }, "buildSeconds": 60, "production": { "wood": 1.4, "parts": 0.3 }, "workerSlots": 2 },
+            { "cost": { "wood": 140, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "production": { "wood": 1.8, "parts": 0.5 }, "workerSlots": 3 }
+        ]
+    },
+    {
+        "id": "infirmary",
+        "name": "医务室",
+        "description": "药房柜台改成的简易医务室。生产药品，医生效率更高。",
+        "specialty": "medic",
+        "startLevel": 0,
+        "levels": [
+            { "cost": { "wood": 60, "parts": 10 }, "buildSeconds": 90, "production": { "medicine": 0.3 }, "workerSlots": 1 },
+            { "cost": { "wood": 120, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "production": { "medicine": 0.5 }, "workerSlots": 2 },
+            { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 900, "requiresHq": 3, "production": { "medicine": 0.8 }, "workerSlots": 2 }
+        ]
+    },
+    {
+        "id": "dorm",
+        "name": "宿舍",
+        "description": "仓库里铺开的睡袋和行军床。床位决定营地能收留多少人。",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0, "beds": 6 },
+            { "cost": { "wood": 80 }, "buildSeconds": 90, "beds": 9 },
+            { "cost": { "wood": 180, "parts": 40 }, "buildSeconds": 400, "requiresHq": 2, "beds": 12 }
+        ]
+    }
+]

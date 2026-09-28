@@ -1,0 +1,16 @@
+{
+    "name": "doomsday-camp",
+    "private": true,
+    "description": "末日营地 - 微信小游戏",
+    "creator": {
+        "version": "3.8.6"
+    },
+    "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc -p tsconfig.core.json"
+    },
+    "devDependencies": {
+        "typescript": "^5.6.0",
+        "vitest": "^3.2.0"
+    }
+}

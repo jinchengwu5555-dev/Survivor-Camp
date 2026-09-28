@@ -1,0 +1,221 @@
+[
+    {
+        "id": "s1e1_open",
+        "title": "门外的呼救",
+        "text": "尸群正沿着主街涌过来。你们刚用货架堵住超市大门，外面就传来拍门声：“求求你们，开门！”\n透过玻璃，你看到一个满身是泥的年轻人，身后不远处就是晃动的黑影。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            {
+                "text": "开门，把他拉进来",
+                "outcomes": [
+                    { "weight": 3, "text": "你们拽开货架，把他拉了进来。他叫里奥，吓坏了，但没被咬。", "effects": [ { "type": "addSurvivor", "survivor": "leo" }, { "type": "flag", "flag": "saved_leo" } ] },
+                    { "weight": 1, "text": "里奥被拉了进来，但一只行尸也挤进了门缝。德里克扑上去把它按住，手臂被抓得鲜血直流。", "effects": [ { "type": "addSurvivor", "survivor": "leo" }, { "type": "injure", "survivor": "derek" }, { "type": "flag", "flag": "saved_leo" } ] }
+                ]
+            },
+            {
+                "text": "不开门，太危险了",
+                "outcomes": [
+                    { "weight": 1, "text": "拍门声越来越弱，最后消失了。苏菲整晚没有说话。", "effects": [ { "type": "mood", "target": "sophie", "amount": -15 }, { "type": "mood", "target": "all", "amount": -5 }, { "type": "flag", "flag": "left_leo" } ] }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "s1e1_end",
+        "title": "第一夜过去了",
+        "text": "路障撑住了。天亮时，门外只剩下一片狼藉。\n伊森把对讲机调到女儿夏令营的频道，里面只有沙沙的杂音。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            { "text": "我们还活着。先把日子过下去。", "outcomes": [ { "weight": 1, "text": "大家松了一口气。", "effects": [ { "type": "mood", "target": "all", "amount": 10 } ] } ] }
+        ]
+    },
+    {
+        "id": "s1e2_start",
+        "title": "空货架",
+        "text": "玛莎清点完仓库，脸色很难看：“照这样吃下去，撑不过一个星期。”\n托比说他知道镇口加油站的便利店还有存货。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            {
+                "text": "让托比骑车去一趟加油站",
+                "outcomes": [
+                    { "weight": 3, "text": "托比满载而归，还顺手带回一箱瓶装水。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 } ] },
+                    { "weight": 1, "text": "托比带回了一些食物，但被行尸追了两条街，摔伤了腿。", "effects": [ { "type": "resource", "resource": "food", "amount": 20 }, { "type": "injure", "survivor": "toby" } ] }
+                ]
+            },
+            {
+                "text": "太冒险了，大家先省着吃",
+                "outcomes": [ { "weight": 1, "text": "每人每天只分到半个罐头，营地里怨声载道。", "effects": [ { "type": "mood", "target": "all", "amount": -8 } ] } ]
+            }
+        ]
+    },
+    {
+        "id": "s1e3_start",
+        "title": "旧无线电",
+        "text": "德里克在仓库角落翻出一台老式无线电：“给我点零件，我能让它响起来。”",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            {
+                "text": "给他零件（15 零件）",
+                "cost": { "parts": 15 },
+                "outcomes": [ { "weight": 1, "text": "德里克鼓捣了一整夜，无线电终于亮起了指示灯。", "effects": [ { "type": "flag", "flag": "s1e3_started" }, { "type": "flag", "flag": "radio_fixed" } ] } ]
+            },
+            {
+                "text": "零件要留着修路障，以后再说",
+                "outcomes": [ { "weight": 1, "text": "德里克耸耸肩，把无线电塞回了角落。", "effects": [ { "type": "flag", "flag": "s1e3_started" } ] } ]
+            }
+        ]
+    },
+    {
+        "id": "radio_reminder",
+        "title": "角落里的无线电",
+        "text": "德里克又把那台无线电搬了出来：“零件够了吗？说不定外面还有人在喊话。”",
+        "weight": 5,
+        "conditions": { "flags": ["s1e3_started"], "notFlags": ["radio_fixed"] },
+        "choices": [
+            {
+                "text": "给他零件（15 零件）",
+                "cost": { "parts": 15 },
+                "outcomes": [ { "weight": 1, "text": "无线电终于亮起了指示灯。", "effects": [ { "type": "flag", "flag": "radio_fixed" } ] } ]
+            },
+            { "text": "再等等", "outcomes": [ { "weight": 1, "text": "德里克叹了口气。", "effects": [] } ] }
+        ]
+    },
+    {
+        "id": "s1e3_end",
+        "title": "无线电里的声音",
+        "text": "深夜，无线电突然响了。杂音里传出一个孩子的声音：“这里是……松林营地……有人吗……”\n伊森手里的咖啡杯掉在了地上。那是莉莉夏令营的呼号。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            { "text": "“莉莉？！我是爸爸！”", "outcomes": [ { "weight": 1, "text": "信号断了。但伊森知道，他必须出发。（第一季 未完待续）", "effects": [ { "type": "flag", "flag": "heard_lily" } ] } ] }
+        ]
+    },
+    {
+        "id": "stranger_knock",
+        "title": "深夜敲门声",
+        "text": "半夜有人敲门。门外是个拄着猎枪的老人：“我不要吃的，只要一个能睡觉的角落。”",
+        "weight": 10,
+        "once": true,
+        "conditions": { "minDay": 1 },
+        "choices": [
+            {
+                "text": "收留他",
+                "outcomes": [
+                    { "weight": 3, "text": "老人叫汉克，是个退伍老兵。第二天一早，他默默加固了后门。", "effects": [ { "type": "addSurvivor", "survivor": "hank" } ] },
+                    { "weight": 1, "text": "汉克留了下来，但他半夜惊醒时误伤了人，营地里人心惶惶。", "effects": [ { "type": "addSurvivor", "survivor": "hank" }, { "type": "injure", "survivor": "random" }, { "type": "mood", "target": "all", "amount": -8 } ] }
+                ]
+            },
+            {
+                "text": "拒绝，谁知道他是什么人",
+                "outcomes": [ { "weight": 1, "text": "老人点点头，消失在夜色里。玛莎嘟囔着“这世道……”。", "effects": [ { "type": "mood", "target": "martha", "amount": -10 } ] } ]
+            }
+        ]
+    },
+    {
+        "id": "food_split",
+        "title": "不够分的晚饭",
+        "text": "今晚的饭只够一半人吃饱。大家都盯着玛莎手里的勺子。",
+        "weight": 8,
+        "conditions": { "minSurvivors": 5 },
+        "choices": [
+            { "text": "平均分，大家都饿一点", "outcomes": [ { "weight": 1, "text": "每个人都没吃饱，但没人抱怨不公平。", "effects": [ { "type": "mood", "target": "all", "amount": -4 } ] } ] },
+            { "text": "干活的人先吃", "outcomes": [ { "weight": 1, "text": "工作效率提高了，但有人在背后说你冷血。", "effects": [ { "type": "resource", "resource": "wood", "amount": 20 }, { "type": "mood", "target": "random", "amount": -20 } ] } ] },
+            { "text": "拿出储备（20 食物）", "cost": { "food": 20 }, "outcomes": [ { "weight": 1, "text": "大家吃了顿饱饭，难得听到了笑声。", "effects": [ { "type": "mood", "target": "all", "amount": 6 } ] } ] }
+        ]
+    },
+    {
+        "id": "rosa_seeds",
+        "title": "带着种子的女人",
+        "text": "托比在花店门口遇到一个女人，她死死抱着一个布包：“这是种子，是能种出吃的东西的种子。”",
+        "weight": 6,
+        "once": true,
+        "conditions": { "minDay": 2, "hasSurvivors": ["toby"] },
+        "choices": [
+            { "text": "邀请她加入营地", "outcomes": [ { "weight": 1, "text": "罗莎加入了营地，她说要在屋顶种菜。", "effects": [ { "type": "addSurvivor", "survivor": "rosa" } ] } ] },
+            { "text": "用零件换一些种子（5 零件）", "cost": { "parts": 5 }, "outcomes": [ { "weight": 1, "text": "玛莎用这些种子做了一锅菜汤。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 } ] } ] }
+        ]
+    },
+    {
+        "id": "quarrel",
+        "title": "争吵",
+        "text": "德里克把扳手摔在地上：“凭什么她管吃的就能少干活？”玛莎也不甘示弱：“没有我，你们早饿死了！”",
+        "weight": 6,
+        "conditions": { "hasSurvivors": ["derek", "martha"] },
+        "choices": [
+            { "text": "站在德里克这边", "outcomes": [ { "weight": 1, "text": "德里克满意了，玛莎一整天没给你好脸色。", "effects": [ { "type": "mood", "target": "derek", "amount": 10 }, { "type": "mood", "target": "martha", "amount": -15 } ] } ] },
+            { "text": "站在玛莎这边", "outcomes": [ { "weight": 1, "text": "德里克骂骂咧咧地走了。", "effects": [ { "type": "mood", "target": "martha", "amount": 10 }, { "type": "mood", "target": "derek", "amount": -15 } ] } ] },
+            { "text": "“都给我闭嘴，活下去才是最重要的。”", "outcomes": [ { "weight": 1, "text": "两个人都不说话了，但气氛很僵。", "effects": [ { "type": "mood", "target": "all", "amount": -3 } ] } ] }
+        ]
+    },
+    {
+        "id": "overturned_truck",
+        "title": "翻倒的货车",
+        "text": "瞭望的人发现，两条街外有一辆翻倒的货车，周围晃着几只行尸。",
+        "weight": 8,
+        "choices": [
+            {
+                "text": "派人去搜刮",
+                "outcomes": [
+                    { "weight": 3, "text": "车里是一批建材和工具！", "effects": [ { "type": "resource", "resource": "wood", "amount": 40 }, { "type": "resource", "resource": "parts", "amount": 10 } ] },
+                    { "weight": 1, "text": "东西拿到了，但有人在撤退时受了伤。", "effects": [ { "type": "resource", "resource": "wood", "amount": 20 }, { "type": "injure", "survivor": "random" } ] }
+                ]
+            },
+            { "text": "不值得冒险", "outcomes": [ { "weight": 1, "text": "你们看着那辆货车，最终没有行动。", "effects": [] } ] }
+        ]
+    },
+    {
+        "id": "fever",
+        "title": "发烧",
+        "text": "营地里有人发起了高烧，大家都在担心：是普通感冒，还是……",
+        "weight": 5,
+        "choices": [
+            { "text": "用药（3 药品）", "cost": { "medicine": 3 }, "outcomes": [ { "weight": 1, "text": "烧退了。只是普通感冒，大家松了口气。", "effects": [ { "type": "heal", "survivor": "all" }, { "type": "mood", "target": "all", "amount": 5 } ] } ] },
+            {
+                "text": "药太珍贵了，硬扛过去",
+                "outcomes": [
+                    { "weight": 1, "text": "第二天早上烧自己退了。", "effects": [] },
+                    { "weight": 1, "text": "病情加重，病人倒下了。", "effects": [ { "type": "injure", "survivor": "random" }, { "type": "mood", "target": "all", "amount": -5 } ] }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "guitar_night",
+        "title": "吉他",
+        "text": "托比从乐器店拖回来一把旧吉他，问大家想不想听歌。",
+        "weight": 4,
+        "conditions": { "hasSurvivors": ["toby"] },
+        "choices": [
+            { "text": "来一首！", "outcomes": [ { "weight": 1, "text": "那天晚上，超市里第一次有了歌声。", "effects": [ { "type": "mood", "target": "all", "amount": 8 } ] } ] },
+            { "text": "小声点，会引来行尸", "outcomes": [ { "weight": 1, "text": "托比悻悻地把吉他收了起来。", "effects": [ { "type": "mood", "target": "toby", "amount": -10 } ] } ] }
+        ]
+    },
+    {
+        "id": "nora_radio",
+        "title": "无线电求助",
+        "text": "无线电里传来一个女人的声音：“我是兽医诺拉，被困在镇东的动物医院，有人能来吗？”",
+        "weight": 6,
+        "once": true,
+        "conditions": { "flags": ["radio_fixed"] },
+        "choices": [
+            { "text": "派人去接她（10 食物）", "cost": { "food": 10 }, "outcomes": [ { "weight": 1, "text": "诺拉带着一箱药品加入了营地。", "effects": [ { "type": "addSurvivor", "survivor": "nora" }, { "type": "resource", "resource": "medicine", "amount": 10 } ] } ] },
+            { "text": "我们自身难保", "outcomes": [ { "weight": 1, "text": "你关掉了无线电。苏菲看着你，欲言又止。", "effects": [ { "type": "mood", "target": "sophie", "amount": -10 } ] } ] }
+        ]
+    },
+    {
+        "id": "joe_truck",
+        "title": "皮卡车",
+        "text": "一辆掉了漆的皮卡停在超市门口，司机按了两下喇叭：“嘿！里面的人！我拿工具换一张床，怎么样？”",
+        "weight": 5,
+        "once": true,
+        "conditions": { "minDay": 3 },
+        "choices": [
+            { "text": "成交", "outcomes": [ { "weight": 1, "text": "老乔搬进了营地，还带来一车斗零件。", "effects": [ { "type": "addSurvivor", "survivor": "joe" }, { "type": "resource", "resource": "parts", "amount": 20 } ] } ] },
+            { "text": "只换东西，不收人（20 食物）", "cost": { "food": 20 }, "outcomes": [ { "weight": 1, "text": "老乔留下一箱零件，开车走了。", "effects": [ { "type": "resource", "resource": "parts", "amount": 15 } ] } ] }
+        ]
+    }
+]

@@ -1,0 +1,7 @@
+[
+    { "id": "food", "name": "食物", "icon": "🍞" },
+    { "id": "wood", "name": "木材", "icon": "🪵" },
+    { "id": "parts", "name": "零件", "icon": "⚙️" },
+    { "id": "medicine", "name": "药品", "icon": "💊" },
+    { "id": "cans", "name": "罐头", "icon": "🥫" }
+]

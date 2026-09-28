@@ -1,0 +1,39 @@
+[
+    {
+        "id": "s1e1",
+        "season": 1,
+        "episode": 1,
+        "title": "堵住大门",
+        "startEvent": "s1e1_open",
+        "objectives": [
+            { "type": "buildingLevel", "building": "wall", "level": 2, "text": "把路障升到 2 级" }
+        ],
+        "rewards": { "food": 30 },
+        "endEvent": "s1e1_end"
+    },
+    {
+        "id": "s1e2",
+        "season": 1,
+        "episode": 2,
+        "title": "空货架",
+        "startEvent": "s1e2_start",
+        "objectives": [
+            { "type": "buildingLevel", "building": "kitchen", "level": 2, "text": "把厨房升到 2 级" },
+            { "type": "resource", "resource": "food", "amount": 100, "text": "储备 100 食物" }
+        ],
+        "rewards": { "wood": 50 }
+    },
+    {
+        "id": "s1e3",
+        "season": 1,
+        "episode": 3,
+        "title": "无线电里的声音",
+        "startEvent": "s1e3_start",
+        "objectives": [
+            { "type": "buildingLevel", "building": "hq", "level": 2, "text": "把指挥部升到 2 级" },
+            { "type": "flag", "flag": "radio_fixed", "text": "修好无线电" }
+        ],
+        "rewards": { "cans": 20 },
+        "endEvent": "s1e3_end"
+    }
+]
