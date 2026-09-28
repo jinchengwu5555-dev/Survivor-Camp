@@ -62,4 +62,5 @@ export const SPRITE_DIRS = {
     units: 'sprites/units/',
     portraits: 'sprites/portraits/',
     buildings: 'sprites/buildings/',
+    bg: 'sprites/bg/',
 };

@@ -158,6 +158,8 @@ export interface BuildingDef {
     name: string;
     /** 营地画面上的图标（还没有美术时用 emoji） */
     icon?: string;
+    /** 在营地地图上的位置（相对地图中心，单位是设计分辨率的像素），scale 是显示大小倍率 */
+    map?: { x: number; y: number; scale?: number };
     description: string;
     /** 对口专长，分配对口的幸存者产量更高 */
     specialty?: Specialty;

@@ -7,7 +7,7 @@
 //   Overlay     守夜 / 战斗回放画面（BattleView），打开时隐藏 Content
 //   Fx          飘字特效（不会被重画清掉）
 
-import { _decorator, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Node, resources, SubContextView, UITransform } from 'cc';
+import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, UIOpacity, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
 import {
@@ -44,7 +44,7 @@ import { expandConfig } from '../core/configExpand';
 import { realSeconds } from '../core/clock';
 import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { GuideHint, nextHint } from '../core/guide';
-import { eventSpeaker } from '../core/portrait';
+import { eventSpeaker, portraitOf } from '../core/portrait';
 import { activePickups, pickupKind } from '../core/pickups';
 import { dailyChest, dailyClaimable, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
@@ -59,7 +59,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v0.6 支持角色图片';
+const GAME_VERSION = 'v0.7 营地地图界面';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -71,8 +71,33 @@ const DIM = COLORS.dim;
 const ACCENT = COLORS.accent;
 const WIN = COLORS.win;
 const LOSE = COLORS.lose;
-const TILE_COLUMNS = 3;
-const TILE_HEIGHT = 112;
+// ---- 屏幕布局（设计分辨率 720×1280，y 从上到下 640 → -640）----
+/** 顶部状态栏：天数、季节、资源 */
+const HUD_TOP = 640;
+const HUD_BOTTOM = 515;
+/** 营地地图 */
+const MAP_TOP = HUD_BOTTOM;
+const MAP_BOTTOM = -150;
+const MAP_WIDTH = 720;
+const MAP_HEIGHT = MAP_TOP - MAP_BOTTOM;
+const MAP_CENTER_Y = (MAP_TOP + MAP_BOTTOM) / 2;
+/** 底部两行导航按钮 */
+const NAV_TOP = -500;
+const NAV_BOTTOM = -640;
+/** 地图下面的信息条（剧情目标、引导） */
+const INFO_TOP = MAP_BOTTOM - 8;
+/** 打开的面板（人员、探索……）占据状态栏和导航之间的区域 */
+const SHEET_TOP = HUD_BOTTOM - 10;
+/** 建筑在地图上的默认大小（再乘 buildings.json 里 map.scale） */
+const BUILDING_BOX = { width: 150, height: 118 };
+/** 拾荒物在地图上出现的位置（相对地图中心） */
+const PICKUP_SPOTS = [
+    { x: 250, y: -250 },
+    { x: -205, y: 150 },
+    { x: 205, y: 150 },
+    { x: -110, y: -185 },
+    { x: 120, y: -30 },
+];
 /** 手指移动超过这么多像素算拖动，不算点击 */
 const DRAG_THRESHOLD = 12;
 
@@ -88,6 +113,8 @@ const TABS: [Tab, string][] = [
     ['rank', '排行'],
 ];
 const TABS_PER_ROW = 4;
+/** 营地页上打开的面板：建筑详情、营地地点 */
+type Sheet = 'building' | 'sites' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -111,6 +138,16 @@ export class GameRoot extends Component {
     private rankingError = '';
     private friendView: Node | null = null;
     private content: Node | null = null;
+    /** 营地地图、顶部状态栏、底部导航（固定不滚动） */
+    private mapLayer: Node | null = null;
+    private hud: Node | null = null;
+    private nav: Node | null = null;
+    /** text() / button() 往哪个节点里画（默认 content） */
+    private target: Node | null = null;
+    private sheet: Sheet = null;
+    /** 可滚动区域的上沿和高度（随显示模式变化） */
+    private viewTop = TOP;
+    private viewHeight = VIEW_HEIGHT;
     private overlay: Node | null = null;
     private fx: Node | null = null;
     private battleView: BattleView | null = null;
@@ -122,7 +159,6 @@ export class GameRoot extends Component {
     private tab: Tab = 'camp';
     /** 营地页选中的建筑（下方显示详情） */
     private selectedBuilding: string | null = null;
-    private showSites = false;
     /** 当前的新手引导 */
     private guide: GuideHint | null = null;
     // 拖动滚动
@@ -137,6 +173,10 @@ export class GameRoot extends Component {
     onLoad(): void {
         this.drawBackground();
         this.content = makeNode('Content', this.node);
+        this.mapLayer = makeNode('Map', this.node);
+        this.hud = makeNode('Hud', this.node);
+        this.nav = makeNode('Nav', this.node);
+        this.target = this.content;
         this.overlay = makeNode('Overlay', this.node);
         this.fx = makeNode('Fx', this.node);
         game.on(Game.EVENT_HIDE, this.onHide, this);
@@ -164,8 +204,7 @@ export class GameRoot extends Component {
 
     private showOffline(): void {
         if (!this.content) return;
-        this.content.destroyAllChildren();
-        this.cursorY = TOP;
+        this.fullScreenMode();
         this.text('需要联网', 40, ACCENT);
         this.text('《末日营地》需要联网才能玩：存活天数要上传到排行榜。\n断网期间营地会暂停，不会有尸潮，也不会死人；离线的时间会算成挂机收益。', 24);
         this.gap(20);
@@ -332,15 +371,20 @@ export class GameRoot extends Component {
 
     private openBattle(view: BattleView): void {
         this.battleView = view;
-        if (this.content) this.content.active = false;
+        this.setMainVisible(false);
         this.setFriendView(false);
     }
 
     private closeBattle(): void {
         this.battleView?.destroy();
         this.battleView = null;
-        if (this.content) this.content.active = true;
+        this.setMainVisible(true);
         this.render();
+    }
+
+    /** 战斗画面打开时隐藏主界面（否则点击会穿透到下面的地图和按钮） */
+    private setMainVisible(visible: boolean): void {
+        for (const node of [this.content, this.mapLayer, this.hud, this.nav]) if (node) node.active = visible;
     }
 
     // ---------- 成绩和排行 ----------
@@ -406,12 +450,30 @@ export class GameRoot extends Component {
             this.runRecorded = false;
             this.newBest = false;
             this.tab = 'camp';
+            this.sheet = null;
             this.save();
             this.render();
         }, LEFT, 'highlight');
     }
 
     // ---------- 界面 ----------
+
+    /** 整屏模式（断网、覆灭、出错）：不显示地图、状态栏和导航，内容从屏幕顶端开始 */
+    private fullScreenMode(): void {
+        this.mapLayer?.destroyAllChildren();
+        this.hud?.destroyAllChildren();
+        this.nav?.destroyAllChildren();
+        this.content!.destroyAllChildren();
+        this.target = this.content;
+        this.viewTop = TOP;
+        this.viewHeight = VIEW_HEIGHT;
+        this.cursorY = TOP;
+    }
+
+    /** 有没有打开的面板（事件、页签、建筑详情……）；没有就显示营地地图 */
+    private sheetOpen(camp: CampGame): boolean {
+        return !!camp.currentEvent || this.tab !== 'camp' || this.sheet !== null;
+    }
 
     private render(): void {
         const camp = this.camp;
@@ -421,117 +483,344 @@ export class GameRoot extends Component {
             this.showOffline();
             return;
         }
-        this.content.destroyAllChildren();
-        this.cursorY = TOP;
         const now = camp.now;
         const { config, state } = camp;
-        this.setFriendView(this.tab === 'rank' && !state.gameOver && !camp.currentEvent);
 
         if (state.gameOver) {
+            this.setFriendView(false);
+            this.fullScreenMode();
             this.recordGameOver(camp);
             this.renderGameOver(camp);
             this.finishLayout();
             return;
         }
         this.guide = nextHint(config, state, now);
+        this.setFriendView(this.tab === 'rank' && !camp.currentEvent);
+        this.renderHud(camp, now);
+        this.renderNav(camp);
+
+        this.content.destroyAllChildren();
+        this.mapLayer!.destroyAllChildren();
+        this.target = this.content;
+        if (this.sheetOpen(camp)) {
+            // 面板：状态栏和导航之间，可以上下拖动
+            this.viewTop = SHEET_TOP;
+            this.viewHeight = SHEET_TOP - NAV_TOP;
+            this.cursorY = SHEET_TOP;
+            this.renderSheet(camp, now);
+        } else {
+            // 营地：上面是地图，下面是剧情目标和引导，不滚动
+            this.viewTop = INFO_TOP;
+            this.viewHeight = 0;
+            this.scrollY = 0;
+            this.renderMap(camp, now);
+            this.cursorY = INFO_TOP;
+            this.renderInfo(camp, now);
+        }
+        this.finishLayout();
+    }
+
+    /** 顶部状态栏：天数、季节、营地、资源、士气 */
+    private renderHud(camp: CampGame, now: number): void {
+        const hud = this.hud!;
+        const { config, state } = camp;
+        hud.destroyAllChildren();
+        const height = HUD_TOP - HUD_BOTTOM;
+        const centerY = (HUD_TOP + HUD_BOTTOM) / 2;
+        const bar = makeNode('HudBar', hud, 720, height);
+        bar.setPosition(0, centerY);
+        bar.addComponent(BlockInputEvents);
+        drawPanel(bar.addComponent(Graphics), 720, height, COLORS.panel, 0);
         const { season, dayInSeason } = seasonAt(config, state, now);
-        const versionY = this.cursorY;
-        this.text(GAME_VERSION, 16, DIM, WIDTH, LEFT);
-        this.cursorY = versionY - 18;
-        this.text(`《末日营地》 第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天`, 34, ACCENT);
-        this.text(
-            `${currentSite(config, state)?.icon ?? ''}${currentSite(config, state)?.name ?? ''}   士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}   纪录 ${this.records.bestDays} 天`,
-            22,
-            DIM,
-        );
-        this.text(this.resourceLine(config, camp, now), 22);
+        const site = currentSite(config, state);
+        const line = (text: string, size: number, color: Color, y: number) =>
+            addLabel(bar, text, size, color, { width: WIDTH, align: 'left' }).node.setPosition(0, y - centerY);
+        line(GAME_VERSION, 14, DIM, 630);
+        line(`第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天   ${site?.icon ?? ''}${site?.name ?? ''}   🏆纪录 ${this.records.bestDays} 天`, 26, ACCENT, 603);
+        line(this.resourceLine(config, camp, now), 20, TEXT, 570);
+        line(`士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}   战斗等级 ${survivorBattleLevel(config, state)}`, 18, DIM, 538);
+    }
+
+    /** 底部导航：两行，每行四个 */
+    private renderNav(camp: CampGame): void {
+        const nav = this.nav!;
+        nav.destroyAllChildren();
+        const height = NAV_TOP - NAV_BOTTOM;
+        const bar = makeNode('NavBar', nav, 720, height);
+        bar.setPosition(0, (NAV_TOP + NAV_BOTTOM) / 2);
+        bar.addComponent(BlockInputEvents);
+        drawPanel(bar.addComponent(Graphics), 720, height, COLORS.panel, 0);
+        // 有事件要处理时，先处理事件
+        const event = !!camp.currentEvent;
+        const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
+        this.target = nav;
+        TABS.forEach(([tab, name], i) => {
+            const col = i % TABS_PER_ROW;
+            const row = Math.floor(i / TABS_PER_ROW);
+            this.cursorY = NAV_TOP - 10 - row * 62;
+            const current = this.tab === tab && this.sheet === null;
+            const guided = this.guide?.tab === tab && !current;
+            const dot = tab === 'bounties' && this.hasClaimable(camp) ? '❗' : '';
+            const style: ButtonStyle = event ? 'disabled' : guided ? 'highlight' : current ? 'normal' : 'disabled';
+            this.button(guided ? `👉${name}` : current ? `【${name}${dot}】` : `${name}${dot}`, w, () => {
+                if (event) return;
+                this.tab = tab;
+                this.sheet = null;
+                this.resetScroll();
+                if (tab === 'rank') this.loadRanking();
+                this.render();
+            }, LEFT + col * (w + 10), style, 24, 52, true);
+        });
+        this.target = this.content;
+    }
+
+    /** 营地地图：背景 + 各个设施 + 地上能捡的东西 + 尸潮倒计时 */
+    private renderMap(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const map = makeNode('CampMap', this.mapLayer!, MAP_WIDTH, MAP_HEIGHT);
+        map.setPosition(0, MAP_CENTER_Y);
+        // 裁掉超出地图区域的部分（背景图比例不一样时）
+        const mask = map.addComponent(Mask);
+        mask.type = Mask.Type.GRAPHICS_RECT;
+        const bg = getSprite(SPRITE_DIRS.bg + 'bg_camp');
+        if (bg) {
+            const scale = Math.max(MAP_WIDTH / (bg.rect.width || 1), MAP_HEIGHT / (bg.rect.height || 1));
+            addSprite(map, bg, bg.rect.width * scale, bg.rect.height * scale);
+        } else {
+            this.drawMapPlaceholder(map, camp);
+        }
+
+        const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
+        config.buildings.forEach((def, i) => this.renderMapBuilding(map, camp, def, i, now, guided === def.id));
+
+        // 地上能捡的东西
+        activePickups(state, now).forEach((p, i) => {
+            const kind = pickupKind(config, p.kind);
+            if (!kind) return;
+            const spot = PICKUP_SPOTS[i % PICKUP_SPOTS.length];
+            const node = makeNode('Pickup', map, 90, 90);
+            node.setPosition(spot.x, spot.y);
+            const g = node.addComponent(Graphics);
+            g.fillColor = new Color(214, 150, 40, 230);
+            g.circle(0, 6, 34);
+            g.fill();
+            g.lineWidth = 3;
+            g.strokeColor = ACCENT;
+            g.circle(0, 6, 34);
+            g.stroke();
+            addLabel(node, kind.icon, 34, TEXT, { width: 70 }).node.setPosition(0, 8);
+            addLabel(node, kind.name, 16, TEXT, { width: 110 }).node.setPosition(0, -38);
+            node.on(Node.EventType.TOUCH_END, () => {
+                const res = camp.collectPickup(p.id, camp.now);
+                if (res.ok) this.effect(`${kind.icon} ${formatBag(config, res.gained ?? {}) || kind.name}`, WIN, 28);
+                else this.showToast(res.reason ?? '');
+                this.render();
+            });
+        });
+
+        // 尸潮倒计时
         const raid = currentRaid(config, state, now);
         if (raid) {
             const left = realSeconds(config, state.nextRaidAt - now);
             const bloodMoon = nextRaidIsBloodMoon(config, state);
             const bonus = raidEnemyBonus(config, state, now);
-            const level = bonus > 0 ? ` +${bonus}` : '';
-            const relief = state.raidRelief > 0 ? `（喘息 -${state.raidRelief}）` : '';
-            const name = bloodMoon ? `🩸血月夜！${raid.name}${level}（数量多一半，奖励翻倍）` : `${raid.name}${level}${relief}`;
-            this.text(`🧟 ${formatTime(left)} 后${name}来袭`, left <= 15 ? 26 : 22, LOSE);
-        }
-        this.renderPickups(camp, now);
-        this.gap(8);
-
-        const ep = currentEpisode(config, state);
-        if (ep) {
-            this.text(`第 ${ep.season} 季 第 ${ep.episode} 集「${ep.title}」`, 24, ACCENT);
-            for (const o of ep.objectives) this.text(`${objectiveDone(config, state, o, now) ? '✅' : '⬜'} ${o.text}`, 22);
-        } else {
-            this.text('第一季完（未完待续）', 24, ACCENT);
-        }
-        if (this.guide) this.banner(`👉 下一步：${this.guide.text}`);
-        this.gap(10);
-
-        if (camp.currentEvent) {
-            this.renderEvent(camp);
-        } else {
-            this.renderTabs();
-            if (this.tab === 'camp') {
-                this.renderBuildings(camp, now);
-                this.renderSites(camp, now);
-                this.renderLog(camp);
-            } else if (this.tab === 'survivors') {
-                this.renderSurvivors(camp, now);
-            } else if (this.tab === 'explore') {
-                this.renderExplore(camp, now);
-            } else if (this.tab === 'bounties') {
-                this.renderBounties(camp, now);
-            } else if (this.tab === 'workshop') {
-                this.renderWorkshop(camp);
-            } else if (this.tab === 'achievements') {
-                this.renderAchievements(camp, now);
-            } else if (this.tab === 'rank') {
-                this.renderRanking(camp, now);
-            } else {
-                this.renderReports(camp);
-            }
+            const name = `${bloodMoon ? '🩸血月·' : ''}${raid.name}${bonus > 0 ? ` +${bonus}` : ''}${state.raidRelief > 0 ? `（喘息 -${state.raidRelief}）` : ''}`;
+            const pill = makeNode('Raid', map, 460, 40);
+            pill.setPosition(-110, MAP_HEIGHT / 2 - 28);
+            drawPanel(pill.addComponent(Graphics), 460, 40, new Color(40, 16, 16, 210), 20, left <= 15 ? LOSE : undefined, 2);
+            addLabel(pill, `🧟 ${formatTime(left)} 后${name}来袭`, left <= 15 ? 22 : 19, LOSE, { width: 440 });
         }
 
-        if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
-        this.finishLayout();
+        // 已发现的其他营地地点
+        const targets = relocationTargets(config, state);
+        if (targets.length > 0) {
+            const btn = makeNode('Sites', map, 200, 40);
+            btn.setPosition(MAP_WIDTH / 2 - 112, MAP_HEIGHT / 2 - 28);
+            drawPanel(btn.addComponent(Graphics), 200, 40, COLORS.button, 20);
+            addLabel(btn, `🧭 营地地点 ${targets.length}`, 19, TEXT, { width: 190 });
+            btn.on(Node.EventType.TOUCH_END, () => {
+                punch(btn);
+                this.sheet = 'sites';
+                this.resetScroll();
+                this.render();
+            });
+        }
     }
 
-    /** 营地附近能捡的东西：一排金色按钮，点一下捡走 */
-    private renderPickups(camp: CampGame, now: number): void {
-        const pickups = activePickups(camp.state, now);
-        if (pickups.length === 0) return;
-        const w = (WIDTH - 10 * (camp.config.pickups.maxActive - 1)) / camp.config.pickups.maxActive;
-        const top = this.cursorY - 4;
-        pickups.forEach((p, i) => {
-            const kind = pickupKind(camp.config, p.kind);
-            if (!kind) return;
-            this.cursorY = top;
-            this.button(`${kind.icon} ${kind.name}`, w, () => {
-                const res = camp.collectPickup(p.id, camp.now);
-                if (res.ok) this.effect(`${kind.icon} ${formatBag(camp.config, res.gained ?? {}) || kind.name}`, WIN, 28);
-                else this.showToast(res.reason ?? '');
-                this.render();
-            }, LEFT + i * (w + 10), 'highlight', 22, 48);
+    /** 没有 bg_camp 背景图时，画一个简单的超市停车场 */
+    private drawMapPlaceholder(map: Node, camp: CampGame): void {
+        const g = map.addComponent(Graphics);
+        const w = MAP_WIDTH;
+        const h = MAP_HEIGHT;
+        // 柏油地面
+        g.fillColor = hexColor('#3b403a');
+        g.rect(-w / 2, -h / 2, w, h);
+        g.fill();
+        // 停车位的白线
+        g.strokeColor = new Color(200, 200, 190, 60);
+        g.lineWidth = 3;
+        for (let x = -w / 2 + 40; x < w / 2; x += 90) {
+            g.moveTo(x, -h / 2 + 20);
+            g.lineTo(x, -h / 2 + 90);
+            g.moveTo(x, h / 2 - 190);
+            g.lineTo(x, h / 2 - 250);
+        }
+        g.stroke();
+        // 超市外墙
+        g.fillColor = hexColor('#5a4a3a');
+        g.rect(-w / 2, h / 2 - 150, w, 150);
+        g.fill();
+        g.fillColor = hexColor('#6e5a44');
+        g.rect(-w / 2, h / 2 - 158, w, 12);
+        g.fill();
+        // 围栏
+        g.strokeColor = hexColor('#8a7a5a');
+        g.lineWidth = 4;
+        g.moveTo(-w / 2, -h / 2 + 8);
+        g.lineTo(w / 2, -h / 2 + 8);
+        g.stroke();
+        const site = currentSite(camp.config, camp.state);
+        addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 22, new Color(255, 220, 150, 180), { width: 300 }).node.setPosition(-230, h / 2 - 70);
+    }
+
+    /** 地图上的一个设施：图片（或色块）+ 名字等级 + 状态角标 + 干活的人 */
+    private renderMapBuilding(map: Node, camp: CampGame, def: BuildingDef, index: number, now: number, guided: boolean): void {
+        const { config, state } = camp;
+        const b = state.buildings[def.id];
+        const pos = def.map ?? { x: ((index % 3) - 1) * 230, y: 180 - Math.floor(index / 3) * 150 };
+        const scale = def.map?.scale ?? 1;
+        const bw = BUILDING_BOX.width * scale;
+        const bh = BUILDING_BOX.height * scale;
+        const node = makeNode(`Building_${def.id}`, map, bw, bh + 40);
+        node.setPosition(pos.x, pos.y);
+
+        const blocker = upgradeBlocker(config, state, def.id);
+        const upgrading = b.upgradeEndsAt !== null;
+        const art = getSprite(`${SPRITE_DIRS.buildings}building_${def.id}`);
+        const g = node.addComponent(Graphics);
+        if (guided) {
+            g.lineWidth = 5;
+            g.strokeColor = COLORS.highlight;
+            g.roundRect(-bw / 2 - 6, -bh / 2 - 6, bw + 12, bh + 12, 16);
+            g.stroke();
+        }
+        if (art) {
+            const size = fitSize(art, bw, bh);
+            const sprite = addSprite(node, art, size.width, size.height);
+            if (b.level === 0) sprite.addComponent(UIOpacity).opacity = 110;
+        } else {
+            drawPanel(g, bw, bh, b.level === 0 ? new Color(70, 70, 70, 160) : new Color(96, 84, 66, 235), 14, b.level === 0 ? DIM : new Color(150, 130, 100), 2);
+            addLabel(node, def.icon ?? '🏠', Math.round(46 * scale), TEXT, { width: bw }).node.setPosition(0, 8);
+        }
+
+        // 名字 + 等级
+        const plateW = Math.max(120, bw - 10);
+        const plate = makeNode('Plate', node, plateW, 30);
+        plate.setPosition(0, -bh / 2 + 4);
+        drawPanel(plate.addComponent(Graphics), plateW, 30, new Color(20, 22, 20, 210), 15);
+        addLabel(plate, b.level > 0 ? `${def.name} Lv${b.level}` : `${def.name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
+
+        // 状态角标：升级倒计时 / 可以升级 / 引导
+        if (upgrading) {
+            const tag = makeNode('Timer', node, 120, 28);
+            tag.setPosition(0, bh / 2 + 4);
+            drawPanel(tag.addComponent(Graphics), 120, 28, new Color(40, 70, 100, 230), 14);
+            addLabel(tag, `🔨 ${formatTime(realSeconds(config, b.upgradeEndsAt! - now))}`, 18, ACCENT, { width: 116 });
+        } else if (blocker === null) {
+            const tag = makeNode('Up', node, 36, 36);
+            tag.setPosition(bw / 2 - 10, bh / 2 - 6);
+            const tg = tag.addComponent(Graphics);
+            tg.fillColor = COLORS.button;
+            tg.circle(0, 0, 17);
+            tg.fill();
+            tg.lineWidth = 2;
+            tg.strokeColor = WIN;
+            tg.circle(0, 0, 17);
+            tg.stroke();
+            addLabel(tag, '⏫', 18, TEXT, { width: 34 });
+        }
+        if (guided) addLabel(node, '👉', 34, TEXT, { width: 50 }).node.setPosition(-bw / 2 - 18, 0);
+
+        // 在这里干活的人：一排小圆点（颜色是角色的主色）
+        const workers = workersIn(state, def.id);
+        const shown = Math.min(workers.length, 6);
+        workers.slice(0, 6).forEach((s, i) => {
+            g.fillColor = hexColor(portraitOf(config, state, s.id)?.color ?? '#7a8a7a');
+            g.circle(-((shown - 1) * 16) / 2 + i * 16, -bh / 2 - 22, 7);
+            g.fill();
         });
-        this.gap(4);
+
+        node.on(Node.EventType.TOUCH_END, () => {
+            if (this.dragDistance > DRAG_THRESHOLD) return;
+            punch(node);
+            this.selectedBuilding = def.id;
+            this.sheet = 'building';
+            this.resetScroll();
+            this.render();
+        });
+    }
+
+    /** 地图下面：剧情目标、下一步引导、提示、最近的日志 */
+    private renderInfo(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const ep = currentEpisode(config, state);
+        if (ep) {
+            const goals = ep.objectives.map((o) => `${objectiveDone(config, state, o, now) ? '✅' : '⬜'}${o.text}`).join('  ');
+            this.text(`第${ep.season}季第${ep.episode}集「${ep.title}」 ${goals}`, 20, ACCENT);
+        } else {
+            this.text('第一季完（未完待续）', 20, ACCENT);
+        }
+        if (this.guide) this.banner(`👉 下一步：${this.guide.text}`);
+        if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
+        for (const entry of state.log.slice(-3).reverse()) this.text(entry.text, 18, DIM);
+    }
+
+    /** 面板：事件、页签内容、建筑详情、营地地点 */
+    private renderSheet(camp: CampGame, now: number): void {
+        const bg = makeNode('SheetBg', this.content!, 720, 2400);
+        bg.setPosition(0, SHEET_TOP + 10 - 1200);
+        drawPanel(bg.addComponent(Graphics), 720, 2400, COLORS.bg, 0);
+        if (camp.currentEvent) {
+            this.renderEvent(camp);
+            return;
+        }
+        if (this.tab === 'camp') {
+            // 建筑详情 / 营地地点，右上角可以关掉回到地图
+            const top = this.cursorY;
+            this.button('✕ 回到营地', 200, () => {
+                this.sheet = null;
+                this.render();
+            }, LEFT + WIDTH - 200, 'normal', 22, 44);
+            this.cursorY = top - 54;
+            const def = this.selectedBuilding ? getBuildingDef(camp.config, this.selectedBuilding) : undefined;
+            if (this.sheet === 'building' && def) this.renderBuildingDetail(camp, def, now);
+            else this.renderSites(camp, now);
+        } else if (this.tab === 'survivors') this.renderSurvivors(camp, now);
+        else if (this.tab === 'explore') this.renderExplore(camp, now);
+        else if (this.tab === 'bounties') this.renderBounties(camp, now);
+        else if (this.tab === 'workshop') this.renderWorkshop(camp);
+        else if (this.tab === 'achievements') this.renderAchievements(camp, now);
+        else if (this.tab === 'rank') this.renderRanking(camp, now);
+        else this.renderReports(camp);
+        if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
     }
 
     /** 记下内容高度，限制滚动范围 */
     private finishLayout(): void {
-        this.contentHeight = TOP - this.cursorY;
+        this.contentHeight = this.viewTop - this.cursorY;
         this.applyScroll();
     }
 
     private onDrag(dy: number): void {
         this.dragDistance += Math.abs(dy);
-        if (this.battleView) return;
+        // 营地地图不滚动
+        if (this.battleView || this.viewHeight <= 0) return;
         this.scrollY += dy;
         this.applyScroll();
     }
 
     private applyScroll(): void {
-        const max = Math.max(0, this.contentHeight - VIEW_HEIGHT);
+        const max = Math.max(0, this.contentHeight - this.viewHeight + 20);
         this.scrollY = Math.max(0, Math.min(max, this.scrollY));
         this.content?.setPosition(0, this.scrollY);
     }
@@ -566,7 +855,7 @@ export class GameRoot extends Component {
         if (visible && !this.friendView) {
             if (!this.leaderboard.showFriends()) return;
             const node = makeNode('FriendRanking', this.node, WIDTH, 600);
-            node.setPosition(0, -300);
+            node.setPosition(0, -180);
             node.addComponent(SubContextView);
             this.friendView = node;
         }
@@ -644,20 +933,14 @@ export class GameRoot extends Component {
         });
     }
 
-    /** 当前营地地点 + 可以搬去的地点（默认收起） */
+    /** 当前营地地点 + 可以搬去的地点（地图右上角“营地地点”打开） */
     private renderSites(camp: CampGame, now: number): void {
         const { config, state } = camp;
         const here = currentSite(config, state);
         const targets = relocationTargets(config, state);
-        this.gap(6);
-        if (here) this.text(`${here.icon} 当前营地：${here.name}　👍${here.pros}　👎${here.cons}`, 20, DIM);
-        if (targets.length === 0) return;
-        this.button(this.showSites ? '▲ 收起营地地点' : `🧭 已发现 ${targets.length} 个可以搬去的营地地点`, WIDTH, () => {
-            this.showSites = !this.showSites;
-            this.render();
-        });
+        if (here) this.text(`${here.icon} 当前营地：${here.name}　👍${here.pros}　👎${here.cons}`, 22);
         this.gap(8);
-        if (!this.showSites) return;
+        if (targets.length === 0) this.text('还没有发现其他营地地点。探索中会找到新的地方。', 20, DIM);
         for (const site of targets) {
             this.text(`${site.icon}${site.name}：${site.description}`, 20);
             this.text(`👍 ${site.pros}　👎 ${site.cons}`, 20, DIM);
@@ -665,65 +948,16 @@ export class GameRoot extends Component {
             const label = `举营搬迁（路上 ${relocationFoodCost(config, state)} 食物，只能带走一半物资，路障要重建）`;
             this.button(blocker ? `${label}（${blocker}）` : label, WIDTH, () => {
                 const res = camp.relocate(site.id, camp.now);
-                this.showToast(res.ok ? `搬到了${site.name}` : res.reason);
+                if (res.ok) {
+                    this.effect(`${site.icon} 搬到了${site.name}`, ACCENT, 30);
+                    this.sheet = null;
+                } else {
+                    this.showToast(res.reason);
+                }
                 this.render();
             }, LEFT, blocker !== null ? 'disabled' : 'normal');
             this.gap(8);
         }
-    }
-
-    /** 营地建筑：三列方块，点一下在下面显示详情和升级按钮 */
-    private renderBuildings(camp: CampGame, now: number): void {
-        const { config, state } = camp;
-        const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
-        if (guided && !this.selectedBuilding) this.selectedBuilding = guided;
-        const tileWidth = (WIDTH - 10 * (TILE_COLUMNS - 1)) / TILE_COLUMNS;
-        const top = this.cursorY;
-        config.buildings.forEach((def, i) => {
-            const col = i % TILE_COLUMNS;
-            const row = Math.floor(i / TILE_COLUMNS);
-            const b = state.buildings[def.id];
-            const node = makeNode('Tile', this.content!, tileWidth, TILE_HEIGHT);
-            node.setPosition(LEFT + col * (tileWidth + 10) + tileWidth / 2, top - row * (TILE_HEIGHT + 10) - TILE_HEIGHT / 2);
-            const blocker = upgradeBlocker(config, state, def.id);
-            const upgrading = b.upgradeEndsAt !== null;
-            const selected = this.selectedBuilding === def.id;
-            const isGuided = guided === def.id;
-            const fill = upgrading ? hexColor('#34506a') : b.level === 0 ? hexColor('#3a3a3a') : COLORS.panelLight;
-            const border = isGuided ? COLORS.highlight : selected ? ACCENT : blocker === null ? WIN : undefined;
-            drawPanel(node.addComponent(Graphics), tileWidth, TILE_HEIGHT, fill, 12, border, isGuided || selected ? 5 : 2);
-            // 有建筑图（sprites/buildings/building_<id>.png）就放在左边，文字往右挪
-            const art = getSprite(`${SPRITE_DIRS.buildings}building_${def.id}`);
-            const textX = art ? 38 : 0;
-            const textWidth = art ? tileWidth - 88 : tileWidth - 12;
-            if (art) {
-                const size = fitSize(art, 80, 90);
-                addSprite(node, art, size.width, size.height).setPosition(-tileWidth / 2 + 46, 0);
-            }
-            addLabel(node, art ? def.name : `${def.icon ?? '🏠'} ${def.name}`, 24, b.level > 0 ? TEXT : DIM, { width: textWidth }).node.setPosition(textX, 28);
-            const workers = state.survivors.filter((s) => s.assignment === def.id).length;
-            const slots = b.level > 0 ? def.levels[b.level - 1]?.workerSlots ?? 0 : 0;
-            addLabel(node, b.level > 0 ? `Lv ${b.level}${slots ? `  👷${workers}/${slots}` : ''}` : '未建造', 20, DIM, { width: textWidth }).node.setPosition(textX, -4);
-            const status = upgrading
-                ? `🔨 ${formatTime(realSeconds(config, b.upgradeEndsAt! - now))}`
-                : blocker === null
-                  ? `⏫ 可以${b.level === 0 ? '建造' : '升级'}`
-                  : blocker === '已达到最高等级'
-                    ? '已满级'
-                    : '';
-            addLabel(node, (isGuided ? '👉 ' : '') + status, 20, upgrading ? ACCENT : WIN, { width: textWidth }).node.setPosition(textX, -34);
-            node.on(Node.EventType.TOUCH_END, () => {
-                if (this.dragDistance > DRAG_THRESHOLD) return;
-                punch(node);
-                this.selectedBuilding = selected ? null : def.id;
-                this.render();
-            });
-        });
-        const rows = Math.ceil(config.buildings.length / TILE_COLUMNS);
-        this.cursorY = top - rows * (TILE_HEIGHT + 10) - 4;
-        const def = this.selectedBuilding ? getBuildingDef(config, this.selectedBuilding) : undefined;
-        if (def) this.renderBuildingDetail(camp, def, now);
-        else this.text('点建筑查看详情和升级', 20, DIM);
     }
 
     private renderBuildingDetail(camp: CampGame, def: BuildingDef, now: number): void {
@@ -772,26 +1006,6 @@ export class GameRoot extends Component {
             this.text('已经是最高等级了', 20, DIM);
         }
         this.gap(8);
-    }
-
-    private renderTabs(): void {
-        const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
-        let rowTop = this.cursorY;
-        TABS.forEach(([tab, name], i) => {
-            const col = i % TABS_PER_ROW;
-            if (col === 0 && i > 0) rowTop -= 52;
-            this.cursorY = rowTop;
-            const guided = this.guide?.tab === tab && this.tab !== tab;
-            const style: ButtonStyle = guided ? 'highlight' : this.tab === tab ? 'normal' : 'disabled';
-            const dot = tab === 'bounties' && this.camp && this.hasClaimable(this.camp) ? '❗' : '';
-            this.button(guided ? `👉${name}` : this.tab === tab ? `【${name}${dot}】` : `${name}${dot}`, w, () => {
-                this.tab = tab;
-                this.resetScroll();
-                if (tab === 'rank') this.loadRanking();
-                this.render();
-            }, LEFT + col * (w + 10), style, 22, 44, true);
-        });
-        this.gap(14);
     }
 
     /** 任务页有没有能领的奖励（页签上显示 ❗） */
@@ -983,11 +1197,13 @@ export class GameRoot extends Component {
             this.button('▶ 回放', 160, () => this.openReplay(r));
             this.gap(10);
         }
+        this.gap(10);
+        this.renderLog(camp);
     }
 
     private renderLog(camp: CampGame): void {
         this.text('—— 营地日志 ——', 22, DIM);
-        for (const entry of camp.state.log.slice(-4).reverse()) this.text(entry.text, 20, DIM);
+        for (const entry of camp.state.log.slice(-15).reverse()) this.text(entry.text, 20, DIM);
     }
 
     private speedUp(buildingId: string): void {
@@ -1024,8 +1240,7 @@ export class GameRoot extends Component {
 
     private showFatal(message: string): void {
         if (!this.content) return;
-        this.content.destroyAllChildren();
-        this.cursorY = TOP;
+        this.fullScreenMode();
         this.text(message, 24, ACCENT);
     }
 
@@ -1041,7 +1256,7 @@ export class GameRoot extends Component {
 
     /** 从当前光标位置往下写一段自动换行的文字，返回后光标移到文字下方 */
     private text(str: string, size: number, color: Color = TEXT, width = WIDTH, x = LEFT): void {
-        const node = makeNode('Text', this.content!);
+        const node = makeNode('Text', this.target!);
         const tf = node.getComponent(UITransform)!;
         tf.setAnchorPoint(0, 1);
         tf.width = width;
@@ -1061,7 +1276,7 @@ export class GameRoot extends Component {
     /** 一行带底色的提示条（新手引导、toast） */
     private banner(str: string, fill: Color = COLORS.highlight): void {
         const height = 48;
-        const node = makeNode('Banner', this.content!, WIDTH, height);
+        const node = makeNode('Banner', this.target!, WIDTH, height);
         node.setPosition(0, this.cursorY - height / 2 - 4);
         drawPanel(node.addComponent(Graphics), WIDTH, height, fill, 10);
         addLabel(node, str, 22, TEXT, { width: WIDTH - 24, height });
@@ -1069,7 +1284,7 @@ export class GameRoot extends Component {
     }
 
     private button(str: string, width: number, onClick: () => void, x = LEFT, style: ButtonStyle = 'normal', size = 22, height = 44, clickableWhenDisabled = false): void {
-        const node = makeNode('Button', this.content!, width, height);
+        const node = makeNode('Button', this.target!, width, height);
         node.setPosition(x + width / 2, this.cursorY - height / 2);
         const fill = style === 'highlight' ? COLORS.highlight : style === 'disabled' ? COLORS.disabled : COLORS.button;
         drawPanel(node.addComponent(Graphics), width, height, fill, 8, style === 'highlight' ? ACCENT : undefined);
