@@ -1,12 +1,12 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
-import { Condition, Effect, GameConfig, GameEventDef, GameState } from './types';
+import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
 import { addResource, bedCount, canAfford, clampMood, pay } from './economy';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
 import { addWanderer, checkGameOver, injureSurvivor, survivorInfo, survivorName as rosterName } from './roster';
 import { getSite } from './siteMods';
-import { addProp } from './props';
+import { addProp, formatProps } from './props';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
     return config.events.find((e) => e.id === id);
@@ -49,6 +49,94 @@ export interface ChoiceResult {
     ok: boolean;
     reason?: string;
     outcomeText?: string;
+    /** 这次选择实际带来的变化，比如“🍞+30 · 📦神秘补给箱 · 德里克受伤” */
+    effectsText?: string;
+}
+
+/**
+ * 选项旁边的提示标签：要花什么、结果是否随机、有没有风险、可能有什么收获。
+ * 只看配置，不泄露具体会抽到哪个结果。
+ */
+export function choiceHints(config: GameConfig, choice: EventChoiceDef): string[] {
+    const hints: string[] = [];
+    const cost = RESOURCE_IDS.filter((id) => choice.cost?.[id])
+        .map((id) => `${resIcon(config, id)}${choice.cost![id]}`)
+        .join(' ');
+    if (cost) hints.push(`💰花费 ${cost}`);
+    if (choice.outcomes.length > 1) hints.push('🎲结果随机');
+    const effects = choice.outcomes.flatMap((o) => o.effects);
+    const risky = effects.some(
+        (e) =>
+            e.type === 'injure' ||
+            e.type === 'removeSurvivor' ||
+            ((e.type === 'resource' || e.type === 'mood') && e.amount < 0),
+    );
+    const reward = effects.some(
+        (e) =>
+            e.type === 'prop' ||
+            e.type === 'addSurvivor' ||
+            e.type === 'addWanderer' ||
+            e.type === 'discoverSite' ||
+            e.type === 'heal' ||
+            ((e.type === 'resource' || e.type === 'mood') && e.amount > 0),
+    );
+    if (risky) hints.push('⚠️有风险');
+    if (reward) hints.push('🎁可能有收获');
+    return hints;
+}
+
+function resIcon(config: GameConfig, id: string): string {
+    return config.resources.find((r) => r.id === id)?.icon ?? id;
+}
+
+interface Snapshot {
+    resources: Record<string, number>;
+    props: Record<string, number>;
+    survivors: { id: string; name: string; injured: boolean; mood: number }[];
+    sites: number;
+}
+
+function snapshot(config: GameConfig, state: GameState): Snapshot {
+    return {
+        resources: { ...state.resources },
+        props: { ...(state.props ?? {}) },
+        survivors: state.survivors.map((s) => ({ id: s.id, name: rosterName(config, state, s.id), injured: s.injured, mood: s.mood })),
+        sites: state.discoveredSites.length,
+    };
+}
+
+/** 对比选择前后的状态，写成一行给玩家看 */
+function describeChanges(config: GameConfig, state: GameState, before: Snapshot): string {
+    const parts: string[] = [];
+    for (const id of RESOURCE_IDS) {
+        const d = Math.round((state.resources[id] ?? 0) - (before.resources[id] ?? 0));
+        if (d) parts.push(`${resIcon(config, id)}${d > 0 ? '+' : ''}${d}`);
+    }
+    const gained: Record<string, number> = {};
+    for (const [id, n] of Object.entries(state.props ?? {})) {
+        const d = n - (before.props[id] ?? 0);
+        if (d > 0) gained[id] = d;
+    }
+    const props = formatProps(config, gained);
+    if (props) parts.push(props);
+    for (const s of state.survivors) {
+        const old = before.survivors.find((b) => b.id === s.id);
+        const name = rosterName(config, state, s.id);
+        if (!old) parts.push(`🙋${name}加入`);
+        else if (s.injured && !old.injured) parts.push(`🩹${name}受伤`);
+        else if (!s.injured && old.injured) parts.push(`💚${name}康复`);
+    }
+    for (const b of before.survivors) {
+        if (!state.survivors.some((s) => s.id === b.id)) parts.push(`👋${b.name}离开`);
+    }
+    const kept = state.survivors.filter((s) => before.survivors.some((b) => b.id === s.id));
+    if (kept.length > 0) {
+        const total = kept.reduce((sum, s) => sum + s.mood - before.survivors.find((b) => b.id === s.id)!.mood, 0);
+        const avg = Math.round(total / kept.length);
+        if (avg) parts.push(`${avg > 0 ? '😊' : '😞'}心情${avg > 0 ? '+' : ''}${avg}`);
+    }
+    if (state.discoveredSites.length > before.sites) parts.push('🗺发现新营地');
+    return parts.join(' · ');
 }
 
 export function resolveChoice(config: GameConfig, state: GameState, choiceIndex: number, now: number): ChoiceResult {
@@ -59,6 +147,7 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
     if (!choice) return { ok: false, reason: '无效的选项' };
 
     if (!canAfford(state, choice.cost)) return { ok: false, reason: '资源不足' };
+    const before = snapshot(config, state);
     pay(state, choice.cost);
 
     state.eventQueue.shift();
@@ -66,10 +155,10 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
     addStat(state, 'events_resolved');
 
     const outcome = pickWeighted(state, choice.outcomes);
-    if (!outcome) return { ok: true };
+    if (!outcome) return { ok: true, effectsText: describeChanges(config, state, before) };
     addLog(state, now, `【${event.title}】${outcome.text}`);
     for (const effect of outcome.effects) applyEffect(config, state, effect, now);
-    return { ok: true, outcomeText: outcome.text };
+    return { ok: true, outcomeText: outcome.text, effectsText: describeChanges(config, state, before) };
 }
 
 /** 发现一个新的营地地点（探索、剧情事件都会用到） */

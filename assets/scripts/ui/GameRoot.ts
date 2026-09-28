@@ -26,7 +26,8 @@ import {
     squadOf,
     suggestSquad,
 } from '../core/combat';
-import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel, survivorEfficiency, workerSlots } from '../core/economy';
+import { choiceHints } from '../core/events';
+import { bedCount, canAfford, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel, survivorEfficiency, workerSlots } from '../core/economy';
 import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
 import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
 import { isUnlocked } from '../core/achievements';
@@ -66,7 +67,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.1 天赋+栅栏+事件';
+const GAME_VERSION = 'v1.2 事件多选项+结果卡';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -192,6 +193,8 @@ export class GameRoot extends Component {
     private selectedBuilding: string | null = null;
     /** 幸存者页选中的人（显示个人档案） */
     private selectedSurvivor: string | null = null;
+    /** 刚做完的事件选择：结果卡片（点“继续”后才看下一个事件） */
+    private eventResult: { title: string; choice: string; text: string; effects: string } | null = null;
     /** 探索页选中的地点 */
     private selectedLocation: string | null = null;
     /** 当前的新手引导 */
@@ -505,9 +508,14 @@ export class GameRoot extends Component {
         this.cursorY = TOP;
     }
 
+    /** 正在处理事件（或者在看事件选择的结果） */
+    private eventShowing(camp: CampGame): boolean {
+        return !!camp.currentEvent || this.eventResult !== null;
+    }
+
     /** 有没有打开的面板（事件、页签、建筑详情……）；没有就显示营地地图 */
     private sheetOpen(camp: CampGame): boolean {
-        return !!camp.currentEvent || this.tab !== 'camp' || this.sheet !== null;
+        return this.eventShowing(camp) || this.tab !== 'camp' || this.sheet !== null;
     }
 
     private render(): void {
@@ -530,7 +538,7 @@ export class GameRoot extends Component {
             return;
         }
         this.guide = nextHint(config, state, now);
-        this.setFriendView(this.tab === 'rank' && !camp.currentEvent);
+        this.setFriendView(this.tab === 'rank' && !this.eventShowing(camp));
         this.renderHud(camp, now);
         this.renderNav(camp);
 
@@ -539,7 +547,7 @@ export class GameRoot extends Component {
         this.target = this.content;
         if (this.sheetOpen(camp)) {
             // 面板：状态栏和导航之间，可以上下拖动（探索页是地图，不滚动）
-            const townMap = this.tab === 'explore' && !camp.currentEvent;
+            const townMap = this.tab === 'explore' && !this.eventShowing(camp);
             this.viewTop = SHEET_TOP;
             this.viewHeight = townMap ? 0 : SHEET_TOP - NAV_TOP;
             if (townMap) this.scrollY = 0;
@@ -585,7 +593,7 @@ export class GameRoot extends Component {
         addLabel(bag, `🎒背包 ${totalProps}`, 20, TEXT, { width: 112 });
         addBadge(bag, 54, 18, camp.badges().props);
         bag.on(Node.EventType.TOUCH_END, () => {
-            if (camp.currentEvent) return;
+            if (this.eventShowing(camp)) return;
             punch(bag);
             this.tab = 'camp';
             this.sheet = this.sheet === 'props' ? null : 'props';
@@ -604,7 +612,7 @@ export class GameRoot extends Component {
         bar.addComponent(BlockInputEvents);
         drawPanel(bar.addComponent(Graphics), 720, height, COLORS.panel, 0);
         // 有事件要处理时，先处理事件
-        const event = !!camp.currentEvent;
+        const event = this.eventShowing(camp);
         const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
         const badges = camp.badges();
         this.target = nav;
@@ -907,6 +915,10 @@ export class GameRoot extends Component {
         const bg = makeNode('SheetBg', this.content!, 720, 2400);
         bg.setPosition(0, SHEET_TOP + 10 - 1200);
         drawPanel(bg.addComponent(Graphics), 720, 2400, COLORS.bg, 0);
+        if (this.eventResult) {
+            this.renderEventResult(camp);
+            return;
+        }
         if (camp.currentEvent) {
             this.renderEvent(camp);
             return;
@@ -1126,14 +1138,40 @@ export class GameRoot extends Component {
 
         this.cursorY = top - cardHeight - 16;
         event.choices.forEach((choice, i) => {
-            const cost = choice.cost && Object.keys(choice.cost).length ? `（花费 ${formatBag(config, choice.cost)}）` : '';
-            this.button(`${choice.text}${cost}`, WIDTH, () => {
+            const affordable = canAfford(state, choice.cost);
+            this.button(choice.text, WIDTH, () => {
                 const res = camp.choose(i, camp.now);
-                this.showToast(res.ok ? res.outcomeText ?? '' : res.reason ?? '');
+                if (!res.ok) {
+                    this.showToast(res.reason ?? '');
+                } else {
+                    this.eventResult = { title: event.title, choice: choice.text, text: res.outcomeText ?? '', effects: res.effectsText ?? '' };
+                    this.resetScroll();
+                }
                 this.render();
-            }, LEFT, 'normal', 24, 60);
-            this.gap(10);
+            }, LEFT, affordable ? 'normal' : 'disabled', 24, 60);
+            // 选项提示：花费、结果随机、有风险、可能有收获
+            const hints = choiceHints(config, choice);
+            if (hints.length) this.text(`　${hints.join('　')}${affordable ? '' : '　（资源不够）'}`, 18, affordable ? DIM : COLORS.danger);
+            this.gap(12);
         });
+    }
+
+    /** 事件选择的结果：发生了什么 + 实际得失，点“继续”再看下一个事件 */
+    private renderEventResult(camp: CampGame): void {
+        const r = this.eventResult!;
+        this.text(`【${r.title}】`, 30, ACCENT);
+        this.text(`你选择了：${r.choice}`, 20, DIM);
+        this.gap(8);
+        if (r.text) this.text(r.text, 24);
+        this.gap(10);
+        this.banner(r.effects ? `结果：${r.effects}` : '结果：没有什么变化', COLORS.panelLight);
+        this.gap(10);
+        const more = camp.currentEvent ? '继续（还有事件）' : '继续';
+        this.button(more, WIDTH, () => {
+            this.eventResult = null;
+            this.resetScroll();
+            this.render();
+        }, LEFT, 'highlight', 26, 64);
     }
 
     /** 当前营地地点 + 可以搬去的地点（地图右上角“营地地点”打开） */

@@ -72,7 +72,8 @@
                 "cost": { "parts": 15 },
                 "outcomes": [ { "weight": 1, "text": "无线电终于亮起了指示灯。", "effects": [ { "type": "flag", "flag": "radio_fixed" } ] } ]
             },
-            { "text": "再等等", "outcomes": [ { "weight": 1, "text": "德里克叹了口气。", "effects": [] } ] }
+            { "text": "再等等", "outcomes": [ { "weight": 1, "text": "德里克叹了口气。", "effects": [] } ] },
+            {"text": "拆掉冷柜的压缩机凑零件", "outcomes": [{"weight": 1, "text": "无线电亮了！可冷柜也彻底坏了，一批肉只能赶紧煮掉吃了。", "effects": [{"type": "flag", "flag": "radio_fixed"}, {"type": "resource", "resource": "food", "amount": -30}]}, {"weight": 1, "text": "“啪”的一声冒出黑烟，德里克的手被电了一下。无线电还是哑的。", "effects": [{"type": "injure", "survivor": "derek"}, {"type": "resource", "resource": "parts", "amount": -5}]}]}
         ]
     },
     {
@@ -103,7 +104,8 @@
             {
                 "text": "拒绝，谁知道他是什么人",
                 "outcomes": [ { "weight": 1, "text": "老人点点头，消失在夜色里。玛莎嘟囔着“这世道……”。", "effects": [ { "type": "mood", "target": "martha", "amount": -10 } ] } ]
-            }
+            },
+            {"text": "让他在门外过一夜，明早再说", "outcomes": [{"weight": 2, "text": "天刚亮，老人已经帮你们解决了两只摸到门口的行尸。他叫汉克。你们打开了门。", "effects": [{"type": "addSurvivor", "survivor": "hank"}, {"type": "mood", "target": "all", "amount": 3}]}, {"weight": 1, "text": "天亮时人已经走了，门口放着一只打死的野兔，算是借宿的谢礼。", "effects": [{"type": "resource", "resource": "food", "amount": 20}]}]}
         ]
     },
     {
@@ -127,7 +129,8 @@
         "conditions": { "minDay": 2, "hasSurvivors": ["toby"] },
         "choices": [
             { "text": "邀请她加入营地", "outcomes": [ { "weight": 1, "text": "罗莎加入了营地，她说要在屋顶种菜。", "effects": [ { "type": "addSurvivor", "survivor": "rosa" } ] } ] },
-            { "text": "用零件换一些种子（5 零件）", "cost": { "parts": 5 }, "outcomes": [ { "weight": 1, "text": "玛莎用这些种子做了一锅菜汤。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 } ] } ] }
+            { "text": "用零件换一些种子（5 零件）", "cost": { "parts": 5 }, "outcomes": [ { "weight": 1, "text": "玛莎用这些种子做了一锅菜汤。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 } ] } ] },
+            {"text": "跟她打听附近还有什么", "outcomes": [{"weight": 1, "text": "她说镇北有户人家的温室还没被翻过。临走前，她塞给托比一小包种子。", "effects": [{"type": "resource", "resource": "food", "amount": 25}, {"type": "prop", "prop": "ration_s"}]}]}
         ]
     },
     {
@@ -155,7 +158,8 @@
                     { "weight": 1, "text": "东西拿到了，但有人在撤退时受了伤。", "effects": [ { "type": "resource", "resource": "wood", "amount": 20 }, { "type": "injure", "survivor": "random" } ] }
                 ]
             },
-            { "text": "不值得冒险", "outcomes": [ { "weight": 1, "text": "你们看着那辆货车，最终没有行动。", "effects": [] } ] }
+            { "text": "不值得冒险", "outcomes": [ { "weight": 1, "text": "你们看着那辆货车，最终没有行动。", "effects": [] } ] },
+            {"text": "先扔个罐头引开行尸，再去搜", "cost": {"cans": 1}, "outcomes": [{"weight": 3, "text": "罐头在对面街“哐当”一响，行尸全晃了过去。车里的东西被你们搬了个精光。", "effects": [{"type": "resource", "resource": "wood", "amount": 40}, {"type": "resource", "resource": "parts", "amount": 15}, {"type": "prop", "prop": "lumber_s"}]}, {"weight": 1, "text": "行尸没上当。小队只抢出一点东西就撤了。", "effects": [{"type": "resource", "resource": "wood", "amount": 15}]}]}
         ]
     },
     {
@@ -171,7 +175,8 @@
                     { "weight": 1, "text": "第二天早上烧自己退了。", "effects": [] },
                     { "weight": 1, "text": "病情加重，病人倒下了。", "effects": [ { "type": "injure", "survivor": "random" }, { "type": "mood", "target": "all", "amount": -5 } ] }
                 ]
-            }
+            },
+            {"text": "让诺拉 / 苏菲用土办法试试", "outcomes": [{"weight": 2, "text": "冷毛巾、姜汤和一整夜的守候。天亮时，烧退了。", "effects": [{"type": "heal", "survivor": "all"}, {"type": "resource", "resource": "food", "amount": -10}]}, {"weight": 1, "text": "土办法不管用，最后还是用上了药，而且用得更多。", "effects": [{"type": "resource", "resource": "medicine", "amount": -5}, {"type": "heal", "survivor": "all"}]}]}
         ]
     },
     {
@@ -182,7 +187,8 @@
         "conditions": { "hasSurvivors": ["toby"] },
         "choices": [
             { "text": "来一首！", "outcomes": [ { "weight": 1, "text": "那天晚上，超市里第一次有了歌声。", "effects": [ { "type": "mood", "target": "all", "amount": 8 } ] } ] },
-            { "text": "小声点，会引来行尸", "outcomes": [ { "weight": 1, "text": "托比悻悻地把吉他收了起来。", "effects": [ { "type": "mood", "target": "toby", "amount": -10 } ] } ] }
+            { "text": "小声点，会引来行尸", "outcomes": [ { "weight": 1, "text": "托比悻悻地把吉他收了起来。", "effects": [ { "type": "mood", "target": "toby", "amount": -10 } ] } ] },
+            {"text": "拿到栅栏边弹，顺便守夜", "outcomes": [{"weight": 1, "text": "歌声飘进夜里。守夜的人都说，那天晚上一点都不困。", "effects": [{"type": "mood", "target": "all", "amount": 6}]}, {"weight": 1, "text": "歌声把几只行尸引到了栅栏外。大家一边骂托比，一边把它们处理掉了。", "effects": [{"type": "mood", "target": "all", "amount": 2}, {"type": "stat", "stat": "zombies_killed", "amount": 3}, {"type": "resource", "resource": "parts", "amount": 6}]}]}
         ]
     },
     {
@@ -194,7 +200,8 @@
         "conditions": { "flags": ["radio_fixed"] },
         "choices": [
             { "text": "派人去接她（10 食物）", "cost": { "food": 10 }, "outcomes": [ { "weight": 1, "text": "诺拉带着一箱药品加入了营地。", "effects": [ { "type": "addSurvivor", "survivor": "nora" }, { "type": "resource", "resource": "medicine", "amount": 10 } ] } ] },
-            { "text": "我们自身难保", "outcomes": [ { "weight": 1, "text": "你关掉了无线电。苏菲看着你，欲言又止。", "effects": [ { "type": "mood", "target": "sophie", "amount": -10 } ] } ] }
+            { "text": "我们自身难保", "outcomes": [ { "weight": 1, "text": "你关掉了无线电。苏菲看着你，欲言又止。", "effects": [ { "type": "mood", "target": "sophie", "amount": -10 } ] } ] },
+            {"text": "请她先说说动物医院里有什么", "outcomes": [{"weight": 1, "text": "“药品、手术器械……还有一条会咬人的德牧。”你们决定带上全部家当去接她。", "effects": [{"type": "addSurvivor", "survivor": "nora"}, {"type": "resource", "resource": "medicine", "amount": 20}, {"type": "injure", "survivor": "random"}]}, {"weight": 1, "text": "信号断了。之后几天，无线电里再也没有她的声音。", "effects": [{"type": "mood", "target": "all", "amount": -5}]}]}
         ]
     },
     {
@@ -206,7 +213,8 @@
         "conditions": { "minDay": 3 },
         "choices": [
             { "text": "成交", "outcomes": [ { "weight": 1, "text": "老乔搬进了营地，还带来一车斗零件。", "effects": [ { "type": "addSurvivor", "survivor": "joe" }, { "type": "resource", "resource": "parts", "amount": 20 } ] } ] },
-            { "text": "只换东西，不收人（20 食物）", "cost": { "food": 20 }, "outcomes": [ { "weight": 1, "text": "老乔留下一箱零件，开车走了。", "effects": [ { "type": "resource", "resource": "parts", "amount": 15 } ] } ] }
+            { "text": "只换东西，不收人（20 食物）", "cost": { "food": 20 }, "outcomes": [ { "weight": 1, "text": "老乔留下一箱零件，开车走了。", "effects": [ { "type": "resource", "resource": "parts", "amount": 15 } ] } ] },
+            {"text": "跟他讨价还价", "outcomes": [{"weight": 1, "text": "老乔哈哈大笑：“成！再搭一箱好东西！”他搬进了营地，还从车斗里翻出一个神秘的箱子。", "effects": [{"type": "addSurvivor", "survivor": "joe"}, {"type": "resource", "resource": "parts", "amount": 20}, {"type": "prop", "prop": "mystery_box"}]}, {"weight": 1, "text": "“嘿，我可不是来做慈善的！”老乔一脚油门开走了。", "effects": []}]}
         ]
     },
     {
@@ -292,7 +300,8 @@
         "conditions": {"minDay": 2},
         "choices": [
             { "text": "就这样静静看着", "outcomes": [ { "weight": 1, "text": "鹿群走远了。玛莎抹了抹眼角：“我都忘了，这个镇子原来这么安静。”", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
-            { "text": "悄悄摸过去，打一只改善伙食", "outcomes": [ { "weight": 1, "text": "汉克一枪就放倒了一只。晚饭很丰盛，但苏菲一口也没吃。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 }, { "type": "mood", "target": "sophie", "amount": -10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] }
+            { "text": "悄悄摸过去，打一只改善伙食", "outcomes": [ { "weight": 1, "text": "汉克一枪就放倒了一只。晚饭很丰盛，但苏菲一口也没吃。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 }, { "type": "mood", "target": "sophie", "amount": -10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
+            {"text": "悄悄跟着鹿群，看它们从哪来", "outcomes": [{"weight": 1, "text": "鹿群带你们找到了镇外一片没人碰过的果园。", "effects": [{"type": "resource", "resource": "food", "amount": 60}, {"type": "stat", "stat": "quiet_moments"}]}, {"weight": 1, "text": "鹿群受了惊，跑进了林子。你们在林边撞上了两只行尸，好不容易才脱身。", "effects": [{"type": "injure", "survivor": "random"}]}]}
         ]
     },
     {
@@ -304,7 +313,8 @@
         "text": "德里克不知道从哪弄来一台发电机，接到了广场上那座废弃的旋转木马上。\n天黑的时候，彩灯一盏一盏亮了起来，老旧的音乐盒叮叮咚咚地响。",
         "choices": [
             { "text": "“就转一圈。”", "outcomes": [ { "weight": 1, "text": "大人们坐在木马上，像孩子一样笑。音乐引来了两只行尸，汉克默默处理掉了，没打扰任何人。", "effects": [ { "type": "mood", "target": "all", "amount": 12 }, { "type": "resource", "resource": "parts", "amount": -3 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
-            { "text": "“太招眼了，关掉吧。”", "outcomes": [ { "weight": 1, "text": "灯灭了。德里克把发电机拆回了工坊，一句话也没说。", "effects": [ { "type": "mood", "target": "derek", "amount": -8 }, { "type": "resource", "resource": "parts", "amount": 5 } ] } ] }
+            { "text": "“太招眼了，关掉吧。”", "outcomes": [ { "weight": 1, "text": "灯灭了。德里克把发电机拆回了工坊，一句话也没说。", "effects": [ { "type": "mood", "target": "derek", "amount": -8 }, { "type": "resource", "resource": "parts", "amount": 5 } ] } ] },
+            {"text": "“让孩子们……让大家都上去转一圈。”", "outcomes": [{"weight": 1, "text": "一圈、两圈、三圈。没人想下来。那天晚上营地里格外热闹。", "effects": [{"type": "mood", "target": "all", "amount": 12}, {"type": "resource", "resource": "wood", "amount": -15}]}]}
         ]
     },
     {
@@ -315,7 +325,9 @@
         "conditions": {"minDay": 3, "hasSurvivors": ["sophie"]},
         "text": "停电后的第一个晴夜，整个小镇一片漆黑。\n有人抬头说了句“哇”——大家这才发现，原来天上有这么多星星。",
         "choices": [
-            { "text": "躺在屋顶上看星星", "outcomes": [ { "weight": 1, "text": "苏菲一颗一颗地指给大家看星座。那天晚上，没有人做噩梦。", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] }
+            { "text": "躺在屋顶上看星星", "outcomes": [ { "weight": 1, "text": "苏菲一颗一颗地指给大家看星座。那天晚上，没有人做噩梦。", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
+            {"text": "让大家各自许一个愿", "outcomes": [{"weight": 1, "text": "有人许愿吃上汉堡，有人许愿找到家人。伊森什么都没说，只是一直看着北边。", "effects": [{"type": "mood", "target": "all", "amount": 8}, {"type": "stat", "stat": "quiet_moments"}]}]},
+            {"text": "趁天黑，派人爬上水塔看看远处有没有灯光", "outcomes": [{"weight": 1, "text": "北边山坡上有一点火光，一闪一闪，像是有人在打信号。爬上去的人记下了方向。", "effects": [{"type": "mood", "target": "all", "amount": 4}, {"type": "prop", "prop": "flyer"}]}, {"weight": 1, "text": "什么也没有，只有一片漆黑。下来时脚一滑，人摔伤了。", "effects": [{"type": "injure", "survivor": "random"}]}]}
         ]
     },
     {
@@ -327,7 +339,8 @@
         "conditions": {"hasSurvivors": ["toby"]},
         "choices": [
             { "text": "“再来一个！”", "outcomes": [ { "weight": 1, "text": "德里克骂了句“烂透了”，然后笑得最大声。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] },
-            { "text": "“……托比，把书给我。”", "outcomes": [ { "weight": 1, "text": "托比委屈地交出了书。第二天，书出现在了玛莎的枕头底下。", "effects": [ { "type": "mood", "target": "toby", "amount": -5 }, { "type": "mood", "target": "martha", "amount": 8 }, { "type": "stat", "stat": "laughs" } ] } ] }
+            { "text": "“……托比，把书给我。”", "outcomes": [ { "weight": 1, "text": "托比委屈地交出了书。第二天，书出现在了玛莎的枕头底下。", "effects": [ { "type": "mood", "target": "toby", "amount": -5 }, { "type": "mood", "target": "martha", "amount": 8 }, { "type": "stat", "stat": "laughs" } ] } ] },
+            {"text": "“我们来比赛，谁讲得更冷。”", "outcomes": [{"weight": 1, "text": "汉克讲了一个军队笑话，冷到所有人都愣住了——然后爆发出今年最大的笑声。", "effects": [{"type": "mood", "target": "all", "amount": 10}, {"type": "stat", "stat": "laughs"}]}]}
         ]
     },
     {
@@ -339,7 +352,8 @@
         "text": "晚饭后，老乔又开始讲他的“英雄事迹”：\n“那年我开着皮卡穿过暴风雪，一头熊扒住了车门，我一拳——”\n“上次你说是一头驼鹿。”德里克头也不抬。",
         "choices": [
             { "text": "“后来呢？”", "outcomes": [ { "weight": 1, "text": "熊变成了驼鹿，又变成了两头熊。所有人都笑疯了，连汉克都没忍住。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] },
-            { "text": "“老乔，你那辆皮卡根本开不过五十迈。”", "outcomes": [ { "weight": 1, "text": "老乔气得吹胡子瞪眼，大家笑得更厉害了。", "effects": [ { "type": "mood", "target": "all", "amount": 4 }, { "type": "mood", "target": "joe", "amount": -5 }, { "type": "stat", "stat": "laughs" } ] } ] }
+            { "text": "“老乔，你那辆皮卡根本开不过五十迈。”", "outcomes": [ { "weight": 1, "text": "老乔气得吹胡子瞪眼，大家笑得更厉害了。", "effects": [ { "type": "mood", "target": "all", "amount": 4 }, { "type": "mood", "target": "joe", "amount": -5 }, { "type": "stat", "stat": "laughs" } ] } ] },
+            {"text": "“下次带我们去那片林子看看熊。”", "outcomes": [{"weight": 1, "text": "老乔真的记得一片林子——没有熊，但有一间猎人小屋，里面有腌肉和工具。", "effects": [{"type": "resource", "resource": "food", "amount": 40}, {"type": "prop", "prop": "wrench"}, {"type": "stat", "stat": "laughs"}]}]}
         ]
     },
     {
@@ -350,7 +364,9 @@
         "conditions": {"flags": ["has_dog"], "hasSurvivors": ["derek"]},
         "text": "德里克藏了半个月的一根香肠不见了。\n他挨个审问了所有人，最后把目光落在了罐头身上。罐头正趴在墙角，尾巴摇得飞快，嘴边还沾着油。",
         "choices": [
-            { "text": "“罐头，是你吗？”", "outcomes": [ { "weight": 1, "text": "罐头打了个嗝。德里克骂了半天，最后还是蹲下来挠了挠它的肚子。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] }
+            { "text": "“罐头，是你吗？”", "outcomes": [ { "weight": 1, "text": "罐头打了个嗝。德里克骂了半天，最后还是蹲下来挠了挠它的肚子。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] },
+            {"text": "罚罐头去站岗", "outcomes": [{"weight": 1, "text": "罐头蹲在栅栏边站了一晚上岗，还真赶走了一只野猫。德里克的气也消了。", "effects": [{"type": "mood", "target": "derek", "amount": 5}, {"type": "stat", "stat": "laughs"}]}]},
+            {"text": "干脆让罐头去闻闻，别的地方还藏着什么", "outcomes": [{"weight": 2, "text": "罐头一路嗅到仓库角落，刨出了一整箱没人记得的肉罐头。德里克的香肠算是没白丢。", "effects": [{"type": "prop", "prop": "canned_meat"}, {"type": "mood", "target": "all", "amount": 4}]}, {"weight": 1, "text": "罐头刨出了玛莎藏的巧克力。玛莎的脸色很难看。", "effects": [{"type": "prop", "prop": "chocolate"}, {"type": "mood", "target": "martha", "amount": -10}]}]}
         ]
     },
     {
@@ -362,7 +378,8 @@
         "conditions": {"minDay": 2, "flags": ["cleared_gas_station"]},
         "choices": [
             { "text": "收养它（5 食物）", "cost": { "food": 5 }, "outcomes": [ { "weight": 1, "text": "托比给它起名叫“罐头”。当天夜里，它冲着黑暗叫了整整一刻钟——半小时后，尸群来了。", "effects": [ { "type": "flag", "flag": "has_dog" }, { "type": "mood", "target": "all", "amount": 8 } ] } ] },
-            { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] }
+            { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] },
+            {"text": "丢块吃的，看它会不会跟着走", "outcomes": [{"weight": 1, "text": "狗叼起吃的，没走，而是把你们领到了一个倒塌的狗舍——里面藏着一整袋狗粮和一个急救箱。", "effects": [{"type": "resource", "resource": "food", "amount": 30}, {"type": "prop", "prop": "med_box"}]}, {"weight": 1, "text": "狗叼起吃的，消失在了巷子深处。", "effects": [{"type": "resource", "resource": "food", "amount": -5}]}]}
         ]
     },
     {
@@ -451,7 +468,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "办一场小的，再比一比谁种的菜最大", "outcomes": [{"weight": 1, "text": "罗莎的南瓜赢了。第二天，好几个人抢着去屋顶帮她浇水。", "effects": [{"type": "mood", "target": "all", "amount": 6}, {"type": "resource", "resource": "food", "amount": 20}]}]}
         ]
     },
     {
@@ -512,7 +530,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "兑水稀释，给每个人分一小瓶", "outcomes": [{"weight": 1, "text": "味道淡了很多，大家出门时多少安心一点。", "effects": [{"type": "mood", "target": "all", "amount": 5}]}, {"weight": 1, "text": "兑得太淡，完全没用，还把半箱都浪费了。", "effects": [{"type": "mood", "target": "all", "amount": -3}]}]}
         ]
     },
     {
@@ -581,7 +600,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "留着，拿去和商人换东西（诺拉不太情愿）", "outcomes": [{"weight": 1, "text": "商人两眼放光，塞给你们一整箱药品和零件。诺拉一整天没说话。", "effects": [{"type": "resource", "resource": "medicine", "amount": 15}, {"type": "resource", "resource": "parts", "amount": 20}, {"type": "mood", "target": "nora", "amount": -10}]}]}
         ]
     },
     {
@@ -711,7 +731,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "递给他一罐咖啡，陪他坐着", "outcomes": [{"weight": 1, "text": "两个人在栅栏边坐到天亮。德里克只说了一句：“谢谢。”", "effects": [{"type": "mood", "target": "derek", "amount": 15}, {"type": "resource", "resource": "food", "amount": -5}]}]}
         ]
     },
     {
@@ -749,7 +770,9 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "顺着飞机的方向去找别的空投", "outcomes": [{"weight": 1, "text": "在北边的田里又找到一个箱子，摔得稀烂，里面还剩一些罐头。", "effects": [{"type": "resource", "resource": "cans", "amount": 3}, {"type": "prop", "prop": "ration_l"}]}, {"weight": 1, "text": "找了一整天，只找到一顶挂在树上的降落伞，回来时还被尸群追了一段。", "effects": [{"type": "injure", "survivor": "random"}, {"type": "resource", "resource": "wood", "amount": 10}]}]},
+            {"text": "把降落伞布拆下来做帐篷", "outcomes": [{"weight": 1, "text": "降落伞布又轻又结实，玛莎用它给大家缝了几顶遮雨棚。", "effects": [{"type": "resource", "resource": "wood", "amount": 25}, {"type": "mood", "target": "all", "amount": 4}]}]}
         ]
     },
     {
@@ -813,7 +836,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "用炸药炸开（10 零件）", "cost": {"parts": 10}, "outcomes": [{"weight": 1, "text": "轰！门飞了出去，里面的东西也被炸得七零八落，只抢救出一些零碎。", "effects": [{"type": "resource", "resource": "parts", "amount": 12}, {"type": "prop", "prop": "mystery_box"}, {"type": "flag", "flag": "safe_done"}]}, {"weight": 1, "text": "炸药量没算好，整面墙塌了下来，有人被压在下面。保险柜倒是纹丝不动。", "effects": [{"type": "injure", "survivor": "random"}, {"type": "flag", "flag": "safe_found"}]}]}
         ]
     },
     {
@@ -893,7 +917,8 @@
                         "effects": []
                     }
                 ]
-            }
+            },
+            {"text": "把耳朵贴在锁上，听声音慢慢转", "outcomes": [{"weight": 1, "text": "托比把耳朵贴在锁上听了一下午，最后一格“咔”的一声对上了——保险柜里只剩一瓶咖啡和几块巧克力，别的早被人拿走了。", "effects": [{"type": "prop", "prop": "coffee"}, {"type": "prop", "prop": "chocolate"}, {"type": "flag", "flag": "safe_done"}]}, {"weight": 2, "text": "锁芯被转坏了，彻底卡死。托比骂了一句，把记事本扔回了杂物堆。", "effects": [{"type": "mood", "target": "toby", "amount": -8}]}]}
         ]
     },
     {
@@ -957,7 +982,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "挖出来，但只拿一半，剩下的留给她", "outcomes": [{"weight": 1, "text": "伊森拿走了猎刀和一半的饼干，把剩下的重新埋好，在水塔上刻了一个小小的记号。", "effects": [{"type": "resource", "resource": "food", "amount": 15}, {"type": "mood", "target": "all", "amount": 5}]}, {"weight": 1, "text": "挖到一半，水塔后面晃出来三只行尸。伊森拉着同伴跑回来，只抓了一把饼干。", "effects": [{"type": "resource", "resource": "food", "amount": 8}, {"type": "injure", "survivor": "random"}]}]}
         ]
     },
     {
@@ -1024,7 +1050,8 @@
                         "effects": []
                     }
                 ]
-            }
+            },
+            {"text": "派个腿快的人抄小路，快去快回", "outcomes": [{"weight": 1, "text": "骑自行车去的人驮回来两大袋面粉，还顺手捡了一箱口粮。", "effects": [{"type": "resource", "resource": "food", "amount": 30}, {"type": "prop", "prop": "ration_s"}]}, {"weight": 1, "text": "人空手回来，自行车丢了，腿上还有一道口子。“货车没了，只有一群行尸。”", "effects": [{"type": "injure", "survivor": "random"}]}]}
         ]
     },
     {
@@ -1080,7 +1107,8 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "多做一些，拿去跟商人换", "outcomes": [{"weight": 1, "text": "肥皂在末日里居然是抢手货。下次商人来时，换回了不少东西。", "effects": [{"type": "resource", "resource": "food", "amount": -15}, {"type": "resource", "resource": "cans", "amount": 3}, {"type": "resource", "resource": "medicine", "amount": 8}]}]}
         ]
     },
     {
@@ -1127,7 +1155,9 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "把地图抄一份贴在指挥部", "outcomes": [{"weight": 1, "text": "有了地图，大家出门都更有底气了。", "effects": [{"type": "mood", "target": "all", "amount": 5}, {"type": "prop", "prop": "walkie"}]}]},
+            {"text": "拿地图去换商人的消息", "outcomes": [{"weight": 1, "text": "商人看了半天地图，告诉你们镇上有一个没人去过的仓库，还送了一箱零件。", "effects": [{"type": "prop", "prop": "parts_s"}, {"type": "mood", "target": "toby", "amount": -5}]}]}
         ]
     },
     {
@@ -1165,7 +1195,9 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "“明天也要活着。”", "outcomes": [{"weight": 1, "text": "大家愣了一下，然后一起笑了。从那以后，暗号变成了两句。", "effects": [{"type": "mood", "target": "all", "amount": 8}, {"type": "flag", "flag": "camp_greeting"}]}]},
+            {"text": "“别说丧气话，干活！”", "outcomes": [{"weight": 1, "text": "大家讪讪地散了，第二天多劈了一堆柴，但没人再提那句话。", "effects": [{"type": "resource", "resource": "wood", "amount": 30}, {"type": "mood", "target": "all", "amount": -5}]}]}
         ]
     },
     {
@@ -1201,7 +1233,9 @@
                         ]
                     }
                 ]
-            }
+            },
+            {"text": "在名字下面写上他们生前最爱吃的东西", "outcomes": [{"weight": 1, "text": "玛莎做了一锅墙上写着的菜。那天晚上，大家一边吃一边讲他们的故事。", "effects": [{"type": "mood", "target": "all", "amount": 10}, {"type": "resource", "resource": "food", "amount": -20}, {"type": "flag", "flag": "memorial_wall"}]}]},
+            {"text": "把墙刷白，往前看", "outcomes": [{"weight": 1, "text": "有人哭了，有人松了口气。刷墙剩下的油漆被拿去刷了栅栏。", "effects": [{"type": "resource", "resource": "wood", "amount": 20}, {"type": "mood", "target": "all", "amount": -6}, {"type": "flag", "flag": "memorial_wall"}]}, {"weight": 1, "text": "刷到一半，玛莎抢过刷子扔了出去。名字留了下来，只是多了一道白印。", "effects": [{"type": "mood", "target": "martha", "amount": -10}, {"type": "flag", "flag": "memorial_wall"}]}]}
         ]
     },
     {

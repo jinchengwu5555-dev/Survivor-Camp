@@ -15,6 +15,7 @@
 - 守夜是玩家亲手打的（`core/liveRaid.ts` + `ui/BattleView.ts`）：界面把 `camp.liveRaids` 设为 true，尸潮进 `state.pendingRaid`；测试和模拟保持 false 自动结算。玩家操作记在 `BattleSetup.inputs` 里，战报必须能完整重放。新手引导由 `core/guide.ts` 从剧情目标推出来，不要另写引导脚本。
 - 探索页是枫谷镇地图（`core/townMap.ts` + `ui/GameRoot.ts` 的 `renderExplore`）：新地点要在 `locations.json` 写 `map` 坐标和 `icon`（validate 会检查），前置关系靠条件里的 `cleared_xxx` 自动连成道路。侦察点在 `scouting.json` / `core/scouting.ts`。
 - 背包道具在 `props.json` + `core/props.ts`，各处掉落统一写成 `drops` 掉落表（`rollDrops`）；新增道具类型时同步 `PropType`、`useProp`、`validate.ts` 和 README 的道具表。
+- 天赋在 `talents.json` + `core/talents.ts`（产量、战斗、伤愈、侦察、心情），新增效果时同步 `TalentDef` 和 `validate.ts`。随机事件至少 3 个有取舍的选项；选项提示由 `choiceHints()` 自动算，选完的得失由 `resolveChoice` 的 `effectsText` 给出，不要手写。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。
