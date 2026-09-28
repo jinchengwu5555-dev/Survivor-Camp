@@ -63,6 +63,15 @@ export interface BalanceDef {
     maxActiveBounties: number;
     /** 猎人等级：累计悬赏经验达到 xp 就升到这一级 */
     hunterRanks: { name: string; xp: number }[];
+    /** 看一次广告加速：剩余时间减少 fraction（至少 minMinutes 分钟），不够就直接完成 */
+    adSpeedUp: { minMinutes: number; fraction: number };
+    /**
+     * 无尽尸潮：从 startDay 开始，每过 daysPerLevel 天所有尸潮丧尸 +1 级，奖励 ×rewardGrowth。
+     * 喘息机制：每输一次，之后的尸潮加成 -reliefPerLoss；每赢一次恢复 reliefRecoverPerWin，避免越输越穷的死循环。
+     */
+    raidScaling: { startDay: number; daysPerLevel: number; rewardGrowth: number; reliefPerLoss: number; reliefRecoverPerWin: number };
+    /** 探索随指挥部成长：指挥部每高一级，敌人 +enemyLevelPerHq 级（向下取整），战利品 ×lootGrowth */
+    expeditionScaling: { enemyLevelPerHq: number; lootGrowth: number };
 }
 
 export interface ResourceDef {
@@ -95,6 +104,26 @@ export interface BuildingLevelDef {
     workshopLevel?: number;
 }
 
+/**
+ * 建筑的成长公式：手写的 levels 之后，按公式自动生成到 maxLevel 级（见 core/configExpand.ts）。
+ * 每一级都在上一级的基础上乘以 xxxGrowth 或加上 xxxPerLevel。
+ */
+export interface BuildingScaling {
+    maxLevel: number;
+    /** 升级花费倍率 */
+    costGrowth: number;
+    /** 建造时间倍率 */
+    timeGrowth: number;
+    productionGrowth?: number;
+    storageGrowth?: number;
+    safetyGrowth?: number;
+    bedsPerLevel?: number;
+    /** 每升几级多一个工人岗位 */
+    slotsEvery?: number;
+    battleLevelPerLevel?: number;
+    spoilPerLevel?: number;
+}
+
 export interface BuildingDef {
     id: string;
     name: string;
@@ -105,6 +134,8 @@ export interface BuildingDef {
     startLevel: number;
     /** levels[i] 表示第 i+1 级 */
     levels: BuildingLevelDef[];
+    /** 可选：手写等级之后按公式自动生成更多等级 */
+    scaling?: BuildingScaling;
 }
 
 export interface SurvivorDef {
@@ -374,6 +405,8 @@ export interface GameState {
     raidCount: number;
     /** 上一次结算时的季节，用来发现换季 */
     seasonId: string;
+    /** 喘息值：守夜失败后尸潮减弱的等级数 */
+    raidRelief: number;
 }
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; reason: string };

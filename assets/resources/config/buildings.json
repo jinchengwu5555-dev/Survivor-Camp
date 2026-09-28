@@ -6,9 +6,10 @@
         "startLevel": 1,
         "levels": [
             { "cost": {}, "buildSeconds": 0 },
-            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "storage": { "food": 100, "wood": 100, "parts": 50, "medicine": 25 } },
-            { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 600, "storage": { "food": 250, "wood": 250, "parts": 120, "medicine": 60 } }
-        ]
+            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "storage": { "food": 150, "wood": 150, "parts": 80, "medicine": 40 } },
+            { "cost": { "wood": 250, "parts": 80, "food": 200 }, "buildSeconds": 900, "storage": { "food": 350, "wood": 350, "parts": 180, "medicine": 90 } }
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "storageGrowth": 1.6 }
     },
     {
         "id": "wall",
@@ -20,7 +21,8 @@
             { "cost": { "wood": 40 }, "buildSeconds": 60, "safety": 25 },
             { "cost": { "wood": 150, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "safety": 45 },
             { "cost": { "wood": 300, "parts": 120 }, "buildSeconds": 1800, "requiresHq": 3, "safety": 70 }
-        ]
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "safetyGrowth": 1.12 }
     },
     {
         "id": "kitchen",
@@ -30,9 +32,10 @@
         "startLevel": 1,
         "levels": [
             { "cost": {}, "buildSeconds": 0, "production": { "food": 1.2 }, "workerSlots": 2 },
-            { "cost": { "wood": 40 }, "buildSeconds": 45, "production": { "food": 1.6 }, "workerSlots": 2 },
-            { "cost": { "wood": 120, "parts": 20 }, "buildSeconds": 240, "requiresHq": 2, "production": { "food": 2.0 }, "workerSlots": 3 }
-        ]
+            { "cost": { "wood": 40 }, "buildSeconds": 90, "production": { "food": 1.6 }, "workerSlots": 3 },
+            { "cost": { "wood": 120, "parts": 20 }, "buildSeconds": 480, "requiresHq": 2, "production": { "food": 2.0 }, "workerSlots": 4 }
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 3 }
     },
     {
         "id": "scrapyard",
@@ -42,9 +45,10 @@
         "startLevel": 1,
         "levels": [
             { "cost": {}, "buildSeconds": 0, "production": { "wood": 1.0, "parts": 0.2 }, "workerSlots": 2 },
-            { "cost": { "wood": 50 }, "buildSeconds": 60, "production": { "wood": 1.4, "parts": 0.3 }, "workerSlots": 2 },
-            { "cost": { "wood": 140, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "production": { "wood": 1.8, "parts": 0.5 }, "workerSlots": 3 }
-        ]
+            { "cost": { "wood": 50 }, "buildSeconds": 90, "production": { "wood": 1.4, "parts": 0.3 }, "workerSlots": 2 },
+            { "cost": { "wood": 140, "parts": 30 }, "buildSeconds": 480, "requiresHq": 2, "production": { "wood": 1.8, "parts": 0.5 }, "workerSlots": 3 }
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 4 }
     },
     {
         "id": "infirmary",
@@ -56,7 +60,8 @@
             { "cost": { "wood": 60, "parts": 10 }, "buildSeconds": 90, "production": { "medicine": 0.3 }, "workerSlots": 1 },
             { "cost": { "wood": 120, "parts": 30 }, "buildSeconds": 300, "requiresHq": 2, "production": { "medicine": 0.5 }, "workerSlots": 2 },
             { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 900, "requiresHq": 3, "production": { "medicine": 0.8 }, "workerSlots": 2 }
-        ]
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 6 }
     },
     {
         "id": "dorm",
@@ -67,7 +72,8 @@
             { "cost": {}, "buildSeconds": 0, "beds": 6 },
             { "cost": { "wood": 80 }, "buildSeconds": 90, "beds": 9 },
             { "cost": { "wood": 180, "parts": 40 }, "buildSeconds": 400, "requiresHq": 2, "beds": 12 }
-        ]
+        ],
+        "scaling": { "maxLevel": 8, "costGrowth": 1.5, "timeGrowth": 1.32, "bedsPerLevel": 1 }
     },
     {
         "id": "training",
@@ -75,10 +81,11 @@
         "description": "停车场里用轮胎和木桩搭的训练场。所有幸存者的战斗等级提升。",
         "startLevel": 0,
         "levels": [
-            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "battleLevel": 1 },
-            { "cost": { "wood": 160, "parts": 50 }, "buildSeconds": 600, "requiresHq": 2, "battleLevel": 2 },
-            { "cost": { "wood": 260, "parts": 90 }, "buildSeconds": 1800, "requiresHq": 3, "battleLevel": 3 }
-        ]
+            { "cost": { "wood": 80, "parts": 20, "food": 50 }, "buildSeconds": 120, "battleLevel": 1 },
+            { "cost": { "wood": 160, "parts": 50, "food": 150 }, "buildSeconds": 600, "requiresHq": 2, "battleLevel": 2 },
+            { "cost": { "wood": 260, "parts": 90, "food": 300 }, "buildSeconds": 1800, "requiresHq": 3, "battleLevel": 3 }
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "battleLevelPerLevel": 1 }
     },
     {
         "id": "workshop",
@@ -100,6 +107,7 @@
             { "cost": { "wood": 50 }, "buildSeconds": 60, "spoilReduction": 0.3 },
             { "cost": { "wood": 120, "parts": 20 }, "buildSeconds": 300, "requiresHq": 2, "spoilReduction": 0.5 },
             { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 900, "requiresHq": 3, "spoilReduction": 0.7 }
-        ]
+        ],
+        "scaling": { "maxLevel": 10, "costGrowth": 1.5, "timeGrowth": 1.32, "spoilPerLevel": 0.03 }
     }
 ]

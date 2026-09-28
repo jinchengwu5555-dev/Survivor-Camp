@@ -22,5 +22,8 @@
     { "id": "quiet_moments", "name": "静好时光", "icon": "🌅", "description": "经历 3 次宁静时刻。", "goal": { "type": "stat", "stat": "quiet_moments", "amount": 3, "text": "宁静时刻" }, "reward": { "cans": 5 } },
     { "id": "laughter", "name": "苦中作乐", "icon": "😂", "description": "营地里笑出声 3 次。", "goal": { "type": "stat", "stat": "laughs", "amount": 3, "text": "欢笑" }, "reward": { "cans": 3 } },
     { "id": "good_dog", "name": "好狗狗", "icon": "🐕", "hidden": true, "description": "收养了营地的狗。", "goal": { "type": "flag", "flag": "has_dog", "text": "收养狗" }, "reward": { "cans": 2 } },
-    { "id": "decider", "name": "抉择者", "icon": "⚖️", "description": "做出 50 次抉择。", "goal": { "type": "stat", "stat": "events_resolved", "amount": 50, "text": "做出抉择" }, "reward": { "cans": 5 } }
+    { "id": "decider", "name": "抉择者", "icon": "⚖️", "description": "做出 50 次抉择。", "goal": { "type": "stat", "stat": "events_resolved", "amount": 50, "text": "做出抉择" }, "reward": { "cans": 5 } },
+    { "id": "endless_5", "name": "尸潮渐涨", "icon": "🌊", "description": "守住一次 +5 级的尸潮。", "goal": { "type": "stat", "stat": "best_raid_level", "amount": 5, "text": "守住的最高尸潮等级" }, "reward": { "cans": 5 } },
+    { "id": "endless_15", "name": "屹立不倒", "icon": "🗼", "description": "守住一次 +15 级的尸潮。", "goal": { "type": "stat", "stat": "best_raid_level", "amount": 15, "text": "守住的最高尸潮等级" }, "reward": { "cans": 15 } },
+    { "id": "endless_30", "name": "末日灯塔", "icon": "🔦", "description": "守住一次 +30 级的尸潮。", "goal": { "type": "stat", "stat": "best_raid_level", "amount": 30, "text": "守住的最高尸潮等级" }, "reward": { "cans": 30 } }
 ]

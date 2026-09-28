@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { availableBounties, bountyProgress, hunterRank } from '../assets/scripts/core/bounties';
-import { currentRaid, nextRaidIsBloodMoon, runRaid } from '../assets/scripts/core/combat';
+import { currentRaid, expeditionEnemyBonus, expeditionLoot, nextRaidIsBloodMoon, raidEnemyBonus, runRaid } from '../assets/scripts/core/combat';
 import { economyRates } from '../assets/scripts/core/economy';
 import { eligibleRandomEvents } from '../assets/scripts/core/events';
 import { seasonAt } from '../assets/scripts/core/seasons';
-import { loadConfig, MIN, T0 } from './helpers';
+import { dayStart, loadConfig, MIN, T0 } from './helpers';
 
-const HOUR = 60 * MIN;
-/** 第 n 天（从 1 开始）的开头；一天 = 60 分钟 */
-const dayStart = (n: number) => T0 + (n - 1) * HOUR;
 
 function newGame() {
     const game = CampGame.newGame(loadConfig(), T0, 42);
@@ -34,7 +31,7 @@ describe('季节与过冬（R03）', () => {
         const winter = economyRates(game.config, game.state, dayStart(7));
         expect(winter.heating).toBeCloseTo(5 * 0.08);
         expect(summer.heating).toBe(0);
-        const production = (r: typeof summer) => r.net.food + 5 * 0.4 + r.spoil;
+        const production = (r: typeof summer) => r.net.food + 5 * game.config.balance.foodPerSurvivorPerMinute + r.spoil;
         expect(production(winter)).toBeCloseTo(production(summer) * 0.5);
     });
 
@@ -220,5 +217,59 @@ describe('日记残页（R18）、宁静时刻（R19）、幽默调剂（R38）'
         game.choose(0, T0);
         expect(game.state.stats.quiet_moments).toBe(1);
         expect(game.state.stats.laughs).toBe(1);
+    });
+});
+
+describe('无限流经济', () => {
+    it('看一次广告：剩余时间减少 25%（至少 30 分钟），短的升级直接完成', () => {
+        const game = newGame();
+        game.state.resources.wood = 1000;
+        game.upgrade('wall', T0); // 60 秒
+        game.speedUpUpgrade('wall', T0);
+        expect(game.state.buildings.wall.level).toBe(2);
+
+        game.state.buildings.hq.upgradeEndsAt = T0 + 10 * 60 * MIN; // 模拟一个 10 小时的升级
+        game.speedUpUpgrade('hq', T0);
+        expect(game.state.buildings.hq.upgradeEndsAt).toBe(T0 + 7.5 * 60 * MIN);
+        game.state.buildings.hq.upgradeEndsAt = T0 + 60 * MIN;
+        game.speedUpUpgrade('hq', T0);
+        expect(game.state.buildings.hq.upgradeEndsAt).toBe(T0 + 30 * MIN);
+    });
+
+    it('无尽尸潮：第 24 天开始每 6 天 +1 级，输了喘息 -2，赢了恢复 1', () => {
+        const game = newGame();
+        const { config, state } = game;
+        expect(raidEnemyBonus(config, state, dayStart(23))).toBe(0);
+        expect(raidEnemyBonus(config, state, dayStart(24))).toBe(1);
+        expect(raidEnemyBonus(config, state, dayStart(36))).toBe(3);
+        state.raidRelief = 2;
+        expect(raidEnemyBonus(config, state, dayStart(36))).toBe(1);
+    });
+
+    it('守住高等级尸潮：奖励按等级指数增长，记录最高等级，喘息值恢复', () => {
+        const game = newGame();
+        const { config, state } = game;
+        state.flags.push('raids_started');
+        state.buildings.wall.level = 25;
+        state.buildings.training.level = 25;
+        state.raidRelief = 1;
+        const at = dayStart(36);
+        const raid = currentRaid(config, state, at)!;
+        const report = runRaid(config, state, raid, at);
+        expect(report.result).toBe('win');
+        expect(report.title).toBe(`${raid.name} +2`);
+        expect(state.stats.best_raid_level).toBe(2);
+        expect(state.raidRelief).toBe(0);
+        expect(report.loot.parts).toBe(Math.round(raid.reward.parts! * Math.pow(1.15, 2)));
+    });
+
+    it('探索随指挥部成长：敌人更强，战利品按指数增长', () => {
+        const game = newGame();
+        const { config, state } = game;
+        const loc = config.locations.find((l) => l.id === 'gas_station')!;
+        expect(expeditionLoot(config, state, loc)).toEqual(loc.loot);
+        state.buildings.hq.level = 5;
+        expect(expeditionEnemyBonus(config, state)).toBe(2);
+        expect(expeditionLoot(config, state, loc).food).toBe(Math.round(loc.loot.food! * Math.pow(1.25, 4)));
     });
 });

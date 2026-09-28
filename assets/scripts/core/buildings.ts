@@ -33,13 +33,20 @@ export function startUpgrade(config: GameConfig, state: GameState, buildingId: s
     return { ok: true };
 }
 
-/** 立即完成升级（看广告加速时调用） */
-export function finishUpgradeNow(config: GameConfig, state: GameState, buildingId: string, now: number): ActionResult {
+/** 看一次广告能减少多少毫秒：剩余时间的一定比例，但至少 minMinutes 分钟 */
+export function adSpeedUpMs(config: GameConfig, remainingMs: number): number {
+    const { minMinutes, fraction } = config.balance.adSpeedUp;
+    return Math.max(minMinutes * 60_000, remainingMs * fraction);
+}
+
+/** 看完广告后加速升级；剩余时间不够减就直接完成 */
+export function speedUpUpgrade(config: GameConfig, state: GameState, buildingId: string, now: number): ActionResult {
     const b = state.buildings[buildingId];
     if (!b || b.upgradeEndsAt === null) return { ok: false, reason: '没有进行中的升级' };
-    b.upgradeEndsAt = now;
+    const remaining = Math.max(0, b.upgradeEndsAt - now);
+    b.upgradeEndsAt = now + Math.max(0, remaining - adSpeedUpMs(config, remaining));
     completeUpgrades(config, state, now);
-    return { ok: true };
+    return { ok: true, message: b.upgradeEndsAt === null ? '升级完成！' : '升级时间缩短了' };
 }
 
 export function completeUpgrades(config: GameConfig, state: GameState, now: number): void {

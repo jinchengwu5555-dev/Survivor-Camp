@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { foodConsumptionPerMinute, morale, productionPerMinute } from '../assets/scripts/core/economy';
+import { foodConsumptionPerMinute, morale, moraleMultiplier, productionPerMinute } from '../assets/scripts/core/economy';
 import { loadGame, saveGame } from '../assets/scripts/core/save';
 import { loadConfig, MemoryStorage, MIN, T0 } from './helpers';
 
@@ -16,7 +16,7 @@ describe('开局', () => {
     it('初始资源、幸存者和开场剧情', () => {
         const game = CampGame.newGame(loadConfig(), T0, 42);
         expect(game.state.survivors.map((s) => s.id)).toEqual(['ethan', 'martha', 'derek', 'sophie', 'toby']);
-        expect(game.state.resources.food).toBe(60);
+        expect(game.state.resources.food).toBe(game.config.balance.startingResources.food);
         expect(game.state.buildings.infirmary.level).toBe(0);
         expect(game.currentEvent?.id).toBe('s1e1_open');
     });
@@ -30,7 +30,7 @@ describe('生产和消耗', () => {
         expect(game.assign('toby', 'kitchen', T0).ok).toBe(true);
         const rate = productionPerMinute(game.config, game.state).food;
         expect(rate).toBeCloseTo(1.2 * 1.5 + 1.2);
-        expect(foodConsumptionPerMinute(game.config, game.state)).toBeCloseTo(2);
+        expect(foodConsumptionPerMinute(game.config, game.state)).toBeCloseTo(5 * game.config.balance.foodPerSurvivorPerMinute);
     });
 
     it('岗位满了不能再分配，受伤的人不能干活', () => {
@@ -77,8 +77,9 @@ describe('生产和消耗', () => {
 describe('建造', () => {
     it('扣资源，到时间后完成', () => {
         const game = newGame();
+        const wood = game.state.resources.wood;
         expect(game.upgrade('wall', T0).ok).toBe(true);
-        expect(game.state.resources.wood).toBe(10);
+        expect(game.state.resources.wood).toBe(wood - 40);
         game.tick(T0 + 59_000);
         expect(game.state.buildings.wall.level).toBe(1);
         game.tick(T0 + 60_000);
@@ -102,11 +103,12 @@ describe('建造', () => {
         game.state.survivors.forEach((s) => (s.mood = 70));
         game.assign('derek', 'scrapyard', T0);
         game.state.resources.wood = 50;
-        game.upgrade('scrapyard', T0); // 60 秒后完成，2 级产量 parts 0.3
+        game.state.resources.parts = 10;
+        game.upgrade('scrapyard', T0); // 90 秒后完成，2 级产量 parts 0.3
         game.state.survivors.forEach((s) => (s.mood = 70));
         game.tick(T0 + 11 * MIN);
-        const mult = 1.5 * (0.5 + 70 / 100);
-        expect(game.state.resources.parts).toBeCloseTo(10 + (0.2 * 1 + 0.3 * 10) * mult, 1);
+        const mult = 1.5 * moraleMultiplier(game.state);
+        expect(game.state.resources.parts).toBeCloseTo(10 + (0.2 * 1.5 + 0.3 * 9.5) * mult, 1);
     });
 });
 

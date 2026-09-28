@@ -6,6 +6,8 @@
 - 战斗系统在 `core/battle/`，分 5 个模块：角色配置 `units.ts`、技能系统 `skills.ts`、技能编排登记表 `registry.ts`、伤害结算管线 `damage.ts`、控制和状态 `status.ts` + `Battle.ts`。战斗按固定步长 0.1 秒推进，随机数状态存在 Battle 里，同一种子可完整重放。新增技能效果 / 目标规则 / 触发方式时同步更新 `battle/types.ts`、`registry.ts` 的校验和说明文字、README 的技能写法。
 - 营地和战斗的衔接在 `core/combat.ts`（探索远征、尸潮夜袭、伤员）。战斗参数统一由 `expeditionSetup` / `raidSetup` 生成，`npm run balance` 也用它们，改数值后跑一下看难度曲线。
 - 营地生活系统：`seasons.ts`（季节、过冬）、`crafting.ts`（工坊物品，战斗中用掉才扣）、`bounties.ts`（悬赏、猎人等级）、`achievements.ts`（成就）。成就和悬赏都读 `state.stats`，新增可统计的行为时用 `addStat` 记录，并在 README 的统计表里补上。
+- 建筑等级由 `core/configExpand.ts` 按 `scaling` 公式展开，**加载配置后必须先调用 `expandConfig()`**（GameRoot 和 tests/helpers 已经这样做）。`validate.ts` 会检查“仓库存满也不够升级”的死局。
+- 经济是无限流：改任何经济数值后跑 `npm run economy`（60 天模拟）和 `npm run balance`（含无尽尸潮表），对照 README “无限流经济”里的目标曲线。测试里的时间、数值要从配置读（`tests/helpers.ts` 的 `DAY`、`RAID`、`dayStart`），不要写死。
 - `CampGame` 的每个操作都会经过 `act()`，结束后统一检查剧情目标和成就；新增操作也要走 `act()`。
 - `platform/` 放微信 / Cocos 平台相关代码，`ui/` 放界面。
 - 提交前运行 `npm test` 和 `npm run typecheck`。

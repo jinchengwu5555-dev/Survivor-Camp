@@ -66,9 +66,9 @@ export function morale(state: GameState): number {
     return state.survivors.reduce((sum, s) => sum + s.mood, 0) / state.survivors.length;
 }
 
-/** 士气 50 时产量正常；0 时减半；100 时 1.5 倍 */
+/** 士气 50 时产量正常；0 时 75%；100 时 125%。设下限是为了避免“挨饿 → 士气低 → 产量低 → 更饿”的死循环 */
 export function moraleMultiplier(state: GameState): number {
-    return 0.5 + morale(state) / 100;
+    return 0.75 + morale(state) / 200;
 }
 
 export function survivorEfficiency(config: GameConfig, survivor: SurvivorState, building: BuildingDef): number {

@@ -4,7 +4,7 @@
 import { _decorator, Color, Component, game, Game, Graphics, JsonAsset, Label, Layers, Node, resources, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
-import { availableLocations, currentRaid, formatBag, isOnExpedition, nextRaidIsBloodMoon, suggestSquad } from '../core/combat';
+import { availableLocations, currentRaid, expeditionLoot, formatBag, isOnExpedition, nextRaidIsBloodMoon, raidEnemyBonus, suggestSquad } from '../core/combat';
 import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel } from '../core/economy';
 import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
 import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
@@ -15,6 +15,7 @@ import { currentDay } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
 import { GameConfig, RESOURCE_IDS, ResourceBag } from '../core/types';
 import { validateConfig } from '../core/validate';
+import { expandConfig } from '../core/configExpand';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 
@@ -91,7 +92,8 @@ export class GameRoot extends Component {
             }
             const byName: Record<string, unknown> = {};
             for (const a of assets) byName[a.name] = a.json;
-            const config = byName as unknown as GameConfig;
+            // 和测试一样：先把建筑的成长公式展开成完整等级
+            const config = expandConfig(byName as unknown as GameConfig);
             const errors = validateConfig(config);
             if (errors.length > 0) {
                 this.showFatal(`配置表有错误：\n${errors.slice(0, 10).join('\n')}`);
@@ -132,7 +134,10 @@ export class GameRoot extends Component {
         if (raid) {
             const left = Math.max(0, Math.ceil((state.nextRaidAt - now) / 1000));
             const bloodMoon = nextRaidIsBloodMoon(config, state);
-            const name = bloodMoon ? `🩸血月夜！${raid.name}（数量多一半，奖励翻倍）` : raid.name;
+            const bonus = raidEnemyBonus(config, state, now);
+            const level = bonus > 0 ? ` +${bonus}` : '';
+            const relief = state.raidRelief > 0 ? `（喘息 -${state.raidRelief}）` : '';
+            const name = bloodMoon ? `🩸血月夜！${raid.name}${level}（数量多一半，奖励翻倍）` : `${raid.name}${level}${relief}`;
             this.text(`🧟 ${formatTime(left)} 后${name}来袭（路障生命取决于安全值）`, 22, LOSE);
         }
         this.gap(8);
@@ -352,7 +357,7 @@ export class GameRoot extends Component {
         const names = squad.map((id) => config.survivors.find((d) => d.id === id)?.name ?? id);
         this.text(`—— 探索（自动编队：${names.join('、') || '没有能出发的人'}）——`, 22, DIM);
         for (const loc of availableLocations(config, state, now)) {
-            this.text(`${loc.name}  ⏱${loc.durationMinutes}分钟  战利品 ${formatBag(config, loc.loot)}`, 24);
+            this.text(`${loc.name}  ⏱${loc.durationMinutes}分钟  战利品 ${formatBag(config, expeditionLoot(config, state, loc))}`, 24);
             this.text(loc.description, 20, DIM);
             const ex = state.expeditions.find((e) => e.location === loc.id);
             if (ex) {
@@ -388,8 +393,12 @@ export class GameRoot extends Component {
     private speedUp(buildingId: string): void {
         this.ads.showRewarded().then((watched) => {
             if (!this.camp) return;
-            this.showToast(watched ? '加速完成！' : '需要看完广告才能加速');
-            if (watched) this.camp.speedUpUpgrade(buildingId, Date.now());
+            if (watched) {
+                const res = this.camp.speedUpUpgrade(buildingId, Date.now());
+                this.showToast(res.ok ? res.message ?? '' : res.reason);
+            } else {
+                this.showToast('需要看完广告才能加速');
+            }
             this.render();
         });
     }

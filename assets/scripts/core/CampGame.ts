@@ -2,7 +2,7 @@
 
 import { AchievementDef, ActionResult, GameConfig, GameEventDef, GameState } from './types';
 import { advanceEconomy } from './economy';
-import { assignSurvivor, completeUpgrades, finishUpgradeNow, startUpgrade } from './buildings';
+import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
 import { checkEpisode, startStory } from './story';
 import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, startExpedition, suggestSquad, treatSurvivor } from './combat';
@@ -70,9 +70,9 @@ export class CampGame {
         return this.act(now, () => startUpgrade(this.config, this.state, buildingId, now));
     }
 
-    /** 看完激励视频后调用 */
+    /** 看完激励视频后调用：剩余时间减少一部分，不够减就直接完成 */
     speedUpUpgrade(buildingId: string, now: number): ActionResult {
-        return this.act(now, () => finishUpgradeNow(this.config, this.state, buildingId, now));
+        return this.act(now, () => speedUpUpgrade(this.config, this.state, buildingId, now));
     }
 
     assign(survivorId: string, buildingId: string | null, now: number): ActionResult {

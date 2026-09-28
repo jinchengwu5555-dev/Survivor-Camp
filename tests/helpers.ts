@@ -14,15 +14,30 @@ import items from '../assets/resources/config/items.json';
 import bounties from '../assets/resources/config/bounties.json';
 import achievements from '../assets/resources/config/achievements.json';
 import { GameConfig } from '../assets/scripts/core/types';
+import { expandConfig } from '../assets/scripts/core/configExpand';
 import { KeyValueStorage } from '../assets/scripts/core/save';
 
-/** 每次返回一份深拷贝，测试之间互不影响 */
+/** 还没展开成长公式的原始配置（深拷贝） */
+export function loadRawConfig(): GameConfig {
+    return JSON.parse(
+        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, units, skills, statuses }),
+    ) as GameConfig;
+}
+
+/** 每次返回一份深拷贝，测试之间互不影响；和游戏启动时一样，先展开建筑的成长公式 */
 export function loadConfig(): GameConfig {
-    return JSON.parse(JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, units, skills, statuses })) as GameConfig;
+    return expandConfig(loadRawConfig());
 }
 
 export const T0 = 1_700_000_000_000;
 export const MIN = 60_000;
+export const HOUR = 60 * MIN;
+/** 游戏里的一天（毫秒），跟着 balance.json 走 */
+export const DAY = balance.dayLengthMinutes * MIN;
+/** 尸潮间隔（毫秒） */
+export const RAID = balance.raidIntervalMinutes * MIN;
+/** 第 n 天（从 1 开始）的开头 */
+export const dayStart = (n: number) => T0 + (n - 1) * DAY;
 
 export class MemoryStorage implements KeyValueStorage {
     private data = new Map<string, string>();

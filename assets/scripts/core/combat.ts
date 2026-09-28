@@ -8,10 +8,10 @@ import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
-import { addResource, canAfford, currentLevelDef, grantResources, pay, safety, survivorBattleLevel } from './economy';
+import { addResource, canAfford, currentLevelDef, grantResources, hqLevel, pay, safety, survivorBattleLevel } from './economy';
 import { conditionMet, queueEvent } from './events';
 import { nextRandom } from './rng';
-import { addLog, addStat, hasFlag, healSurvivorState, injureSurvivor, setFlag } from './state';
+import { addLog, addStat, currentDay, hasFlag, healSurvivorState, injureSurvivor, setFlag } from './state';
 import { consumeUsedItems, equipItems } from './crafting';
 import {
     ActionResult,
@@ -69,11 +69,14 @@ export function availableFighters(config: GameConfig, state: GameState): Survivo
     return state.survivors.filter((s) => !s.injured && !isOnExpedition(state, s.id) && !!battleUnitOf(config, s.id));
 }
 
-/** 自动编队：战斗力最高的几个人 */
+/**
+ * 自动编队：优先派闲着的人，人手不够再从工作岗位上抽人；同一组里按战斗力从高到低。
+ * 否则最能打的厨师也会被拉走，厨房没人、全营地挨饿。
+ */
 export function suggestSquad(config: GameConfig, state: GameState, size = config.balance.maxSquadSize): string[] {
     return availableFighters(config, state)
+        .sort((a, b) => Number(!!a.assignment) - Number(!!b.assignment) || survivorPower(config, b.id) - survivorPower(config, a.id))
         .map((s) => s.id)
-        .sort((a, b) => survivorPower(config, b) - survivorPower(config, a))
         .slice(0, size);
 }
 
@@ -81,11 +84,50 @@ function squadSetups(config: GameConfig, squad: string[], level: number): UnitSe
     return squad.map((id) => ({ unit: battleUnitOf(config, id)!, level, tag: id }));
 }
 
+/** 所有敌人等级 +bonus */
+export function levelUpEnemies(enemies: UnitSetup[], bonus: number): UnitSetup[] {
+    return bonus > 0 ? enemies.map((e) => ({ ...e, level: (e.level ?? 1) + bonus })) : enemies;
+}
+
+function scaleBag(bag: ResourceBag, factor: number): ResourceBag {
+    const out: ResourceBag = {};
+    for (const id of RESOURCE_IDS) if (bag[id]) out[id] = Math.round(bag[id]! * factor);
+    return out;
+}
+
+/** 探索随指挥部成长：敌人等级加成 */
+export function expeditionEnemyBonus(config: GameConfig, state: GameState): number {
+    return Math.floor((hqLevel(state) - 1) * config.balance.expeditionScaling.enemyLevelPerHq);
+}
+
+/** 探索随指挥部成长：实际战利品（和升级花费一样按指数增长，后期才不会变得没意义） */
+export function expeditionLoot(config: GameConfig, state: GameState, loc: LocationDef): ResourceBag {
+    return scaleBag(loc.loot, Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1));
+}
+
+/** 无尽尸潮：只按天数算的等级加成 */
+export function raidDayBonus(config: GameConfig, state: GameState, now: number): number {
+    const { startDay, daysPerLevel } = config.balance.raidScaling;
+    return Math.max(0, Math.floor((currentDay(config, state, now) - startDay) / daysPerLevel) + 1);
+}
+
+/** 无尽尸潮：实际的等级加成 = 天数加成 - 喘息值 */
+export function raidEnemyBonus(config: GameConfig, state: GameState, now: number): number {
+    return Math.max(0, raidDayBonus(config, state, now) - state.raidRelief);
+}
+
 /** 探索战斗的参数。单独拆出来，数值平衡报告也用它，保证模拟的和游戏里打的一样 */
-export function expeditionSetup(config: GameConfig, loc: LocationDef, squad: string[], level: number, seed: number): BattleSetup {
+export function expeditionSetup(
+    config: GameConfig,
+    loc: LocationDef,
+    squad: string[],
+    level: number,
+    seed: number,
+    enemyBonus = 0,
+): BattleSetup {
     return {
         allies: squadSetups(config, squad, level),
-        enemies: loc.enemies,
+        enemies: levelUpEnemies(loc.enemies, enemyBonus),
         timeLimit: loc.timeLimit,
         timeoutResult: 'lose',
         seed,
@@ -98,6 +140,8 @@ export interface RaidOptions {
     dog?: boolean;
     /** 血月夜：尸群多一半 */
     bloodMoon?: boolean;
+    /** 无尽尸潮的等级加成 */
+    enemyBonus?: number;
 }
 
 /** 血月夜的敌人：原来的尸群里每隔一只再来一只（多 50%），晚 2 秒出场 */
@@ -119,7 +163,7 @@ export function raidSetup(
     const dog: UnitSetup[] = options.dog ? [{ unit: DOG_UNIT, level, tag: DOG_UNIT }] : [];
     return {
         allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(config, defenders, level), ...dog],
-        enemies: options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies,
+        enemies: levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0),
         timeLimit: raid.timeLimit,
         timeoutResult: 'win',
         seed,
@@ -233,14 +277,14 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const squad = ex.squad.filter((id) => state.survivors.some((s) => s.id === id));
     if (!loc || squad.length === 0) return;
 
-    const setup = expeditionSetup(config, loc, squad, survivorBattleLevel(config, state), ex.seed);
+    const setup = expeditionSetup(config, loc, squad, survivorBattleLevel(config, state), ex.seed, expeditionEnemyBonus(config, state));
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     let loot: ResourceBag = {};
 
     if (result === 'win') {
         addStat(state, 'expeditions_won');
         addStat(state, `clear_${loc.id}`);
-        loot = grantResources(config, state, loc.loot);
+        loot = grantResources(config, state, expeditionLoot(config, state, loc));
         if (!hasFlag(state, clearedFlag(loc.id))) {
             setFlag(state, clearedFlag(loc.id));
             if (loc.firstClearFlag) setFlag(state, loc.firstClearFlag);
@@ -291,25 +335,29 @@ export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at:
     const level = survivorBattleLevel(config, state);
     const bloodMoon = nextRaidIsBloodMoon(config, state);
     state.raidCount += 1;
-    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG) };
+    const enemyBonus = raidEnemyBonus(config, state, at);
+    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state), options);
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     const survivorIds = new Set(state.survivors.map((s) => s.id));
     const injured = fallen.filter((t) => survivorIds.has(t));
-    const title = bloodMoon ? `血月·${raid.name}` : raid.name;
+    const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
     let loot: ResourceBag = {};
     const lost: ResourceBag = {};
 
     if (result === 'win') {
         addStat(state, 'raids_won');
         if (bloodMoon) addStat(state, 'blood_moons_won');
-        const mult = bloodMoon ? config.balance.bloodMoonRewardMultiplier : 1;
+        state.stats.best_raid_level = Math.max(state.stats.best_raid_level ?? 0, enemyBonus);
+        state.raidRelief = Math.max(0, state.raidRelief - config.balance.raidScaling.reliefRecoverPerWin);
+        const mult = (bloodMoon ? config.balance.bloodMoonRewardMultiplier : 1) * Math.pow(config.balance.raidScaling.rewardGrowth, enemyBonus);
         const reward: ResourceBag = {};
-        for (const id of RESOURCE_IDS) if (raid.reward[id]) reward[id] = raid.reward[id]! * mult;
+        for (const id of RESOURCE_IDS) if (raid.reward[id]) reward[id] = Math.round(raid.reward[id]! * mult);
         loot = grantResources(config, state, reward);
         for (const s of state.survivors) s.mood = Math.min(100, s.mood + 3);
     } else {
         addStat(state, 'raids_lost');
+        state.raidRelief += config.balance.raidScaling.reliefPerLoss;
         for (const id of RESOURCE_IDS) {
             if (id === 'cans') continue;
             const amount = Math.floor(state.resources[id] * config.balance.raidLossRatio);

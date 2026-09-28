@@ -4,7 +4,7 @@ import { CampGame } from '../assets/scripts/core/CampGame';
 import { battleRegistry, currentRaid, runRaid, suggestSquad } from '../assets/scripts/core/combat';
 import { applyEffect } from '../assets/scripts/core/events';
 import { loadGame } from '../assets/scripts/core/save';
-import { loadConfig, MemoryStorage, MIN, T0 } from './helpers';
+import { dayStart, loadConfig, MemoryStorage, MIN, RAID, T0 } from './helpers';
 
 function newGame() {
     const game = CampGame.newGame(loadConfig(), T0, 42);
@@ -16,10 +16,17 @@ function newGame() {
 const survivor = (game: CampGame, id: string) => game.state.survivors.find((s) => s.id === id)!;
 
 describe('探索', () => {
-    it('自动编队挑战斗力最高的 4 个人，出发后离开工作岗位', () => {
+    it('自动编队按战斗力挑 4 个人，优先派闲着的人', () => {
         const game = newGame();
-        game.assign('martha', 'kitchen', T0);
         expect(suggestSquad(game.config, game.state)).toEqual(['derek', 'ethan', 'martha', 'toby']);
+        game.assign('martha', 'kitchen', T0);
+        expect(suggestSquad(game.config, game.state)).toEqual(['derek', 'ethan', 'toby', 'sophie']);
+    });
+
+    it('人手不够时才从岗位上抽人，出发后离开工作岗位', () => {
+        const game = newGame();
+        for (const [id, job] of [['martha', 'kitchen'], ['toby', 'kitchen'], ['derek', 'scrapyard'], ['sophie', 'scrapyard']]) game.assign(id, job, T0);
+        expect(suggestSquad(game.config, game.state)).toEqual(['ethan', 'derek', 'martha', 'toby']);
         expect(game.explore('gas_station', T0).ok).toBe(true);
         expect(survivor(game, 'martha').assignment).toBeNull();
         expect(game.assign('martha', 'kitchen', T0)).toEqual({ ok: false, reason: '正在外面探索' });
@@ -86,7 +93,7 @@ describe('探索', () => {
     it('第一次打下警长办公室触发剧情，第二次不再触发', () => {
         const game = newGame();
         game.state.flags.push('cleared_clinic');
-        const later = T0 + 3 * 60 * MIN; // 第 4 天
+        const later = dayStart(4);
         game.state.lastTickAt = later;
         game.state.nextRaidAt = Number.MAX_SAFE_INTEGER;
         game.state.buildings.training.level = 3; // 训练满级后必胜，避免测试依赖随机结果
@@ -120,9 +127,9 @@ describe('探索', () => {
 describe('尸潮夜袭', () => {
     it('第 1 集结束前不会来尸潮', () => {
         const game = newGame();
-        game.tick(T0 + 121 * MIN);
+        game.tick(T0 + RAID + MIN);
         expect(game.state.reports).toHaveLength(0);
-        expect(game.state.nextRaidAt).toBe(T0 + 241 * MIN);
+        expect(game.state.nextRaidAt).toBe(T0 + 2 * RAID + MIN);
     });
 
     it('到时间自动守夜：全员 + 路障上阵，守住了发奖励', () => {
@@ -130,7 +137,8 @@ describe('尸潮夜袭', () => {
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 2;
         const parts = game.state.resources.parts;
-        game.tick(T0 + 120 * MIN); // 第 3 天，来的是“尸群”
+        game.state.createdAt = T0 - 6 * RAID; // 让这次守夜落在第 6 天之后，来的是“尸群”
+        game.tick(T0 + RAID);
         const report = game.state.reports[0];
         expect(report).toMatchObject({ kind: 'raid', title: '尸群', result: 'win', loot: { parts: 10, wood: 20 } });
         expect(report.setup.allies.map((a) => a.tag)).toEqual(['barricade', 'derek', 'ethan', 'martha', 'toby', 'sophie']);
@@ -143,7 +151,7 @@ describe('尸潮夜袭', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.buildings.training.level = 2;
-        game.tick(T0 + 120 * MIN);
+        game.tick(T0 + RAID);
         expect(game.state.reports[0].setup.allies[1].level).toBe(3);
     });
 
@@ -157,7 +165,7 @@ describe('尸潮夜袭', () => {
         expect(report.injured.length).toBeLessThan(5);
     });
 
-    it('没人守、路障被拆：守夜失败，损失 20% 资源', () => {
+    it('没人守、路障被拆：守夜失败，损失 10% 资源，之后的尸潮减弱（喘息）', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.survivors.forEach((s) => (s.injured = true));
@@ -165,29 +173,30 @@ describe('尸潮夜袭', () => {
         const raid = currentRaid(game.config, game.state, T0)!;
         const report = runRaid(game.config, game.state, raid, T0);
         expect(report.result).toBe('lose');
-        expect(report.lost.food).toBe(20);
-        expect(game.state.resources.food).toBe(80);
+        expect(report.lost.food).toBe(10);
+        expect(game.state.resources.food).toBe(90);
+        expect(game.state.raidRelief).toBe(2);
     });
 
     it('越往后尸潮越凶', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         expect(currentRaid(game.config, game.state, T0)?.id).toBe('small_horde');
-        expect(currentRaid(game.config, game.state, T0 + 2 * 60 * MIN)?.id).toBe('horde');
-        expect(currentRaid(game.config, game.state, T0 + 5 * 60 * MIN)?.id).toBe('great_horde');
+        expect(currentRaid(game.config, game.state, dayStart(6))?.id).toBe('horde');
+        expect(currentRaid(game.config, game.state, dayStart(18))?.id).toBe('great_horde');
     });
 
     it('离线 8 小时只结算一次尸潮', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
-        game.tick(T0 + 8 * 60 * MIN);
+        game.tick(T0 + 8 * RAID);
         expect(game.state.reports.filter((r) => r.kind === 'raid')).toHaveLength(1);
     });
 
     it('战报可以用同一个种子完整重放', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
-        game.tick(T0 + 120 * MIN);
+        game.tick(T0 + RAID);
         const report = game.state.reports[0];
         const replay = new Battle(battleRegistry(game.config), report.setup);
         expect(replay.runToEnd()).toBe(report.result);
@@ -238,12 +247,13 @@ describe('老存档升级', () => {
         const storage = new MemoryStorage();
         storage.setItem('doomsday-camp-save', JSON.stringify(old));
         const loaded = loadGame(storage, game.config, T0)!;
-        expect(loaded.version).toBe(3);
+        expect(loaded.version).toBe(4);
+        expect(loaded.raidRelief).toBe(0);
         expect(loaded.expeditions).toEqual([]);
         expect(loaded.stats).toEqual({});
         expect(loaded.bounties).toEqual({ active: [], completed: [] });
         expect(loaded.seasonId).toBe('summer');
-        expect(loaded.nextRaidAt).toBe(T0 + 120 * MIN);
+        expect(loaded.nextRaidAt).toBe(T0 + RAID);
         expect(loaded.survivors[0].recoverAt).toBe(T0 + 30 * MIN);
     });
 });

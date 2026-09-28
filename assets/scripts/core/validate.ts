@@ -135,6 +135,8 @@ export function validateConfig(config: GameConfig): string[] {
         for (const id of raid.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
 
+    errors.push(...checkStorageDeadlocks(config));
+
     if (config.seasons.length === 0) errors.push('seasons.json 至少要有一个季节');
     checkUnique('季节', config.seasons.map((x) => x.id));
     for (const season of config.seasons) {
@@ -167,5 +169,39 @@ export function validateConfig(config: GameConfig): string[] {
         checkObjective(`成就 ${a.id}`, a.goal);
     }
 
+    return errors;
+}
+
+/**
+ * 防止“仓库存满了也不够升级”的死局：每一级升级的花费，都不能超过满足升级条件时能达到的仓库上限。
+ * 只有指挥部提供仓库容量，所以按“升级时指挥部至少是几级”来算上限。
+ */
+function checkStorageDeadlocks(config: GameConfig): string[] {
+    const errors: string[] = [];
+    const hq = config.buildings.find((b) => b.id === 'hq');
+    if (!hq) return errors;
+    const capAtHq = (hqLevel: number, id: (typeof RESOURCE_IDS)[number]): number => {
+        const base = config.balance.baseStorage[id];
+        if (base === undefined) return Infinity;
+        let extra = 0;
+        for (const b of config.buildings) {
+            // 其他建筑提供的容量不算（保守估计），只算指挥部
+            if (b.id === 'hq' && hqLevel > 0) extra += b.levels[hqLevel - 1]?.storage?.[id] ?? 0;
+        }
+        return base + extra;
+    };
+    for (const b of config.buildings) {
+        b.levels.forEach((lv, i) => {
+            const level = i + 1;
+            if (level <= b.startLevel) return;
+            // 升级指挥部到 L 级时，指挥部当前是 L-1 级；其他建筑按 requiresHq（没写就按 1 级）
+            const hqAt = b.id === 'hq' ? level - 1 : Math.max(1, lv.requiresHq ?? 1);
+            for (const id of RESOURCE_IDS) {
+                const cost = lv.cost[id] ?? 0;
+                const cap = capAtHq(hqAt, id);
+                if (cost > cap) errors.push(`建筑 ${b.id} 第 ${level} 级：${id} 花费 ${cost} 超过了指挥部 ${hqAt} 级时的仓库上限 ${cap}，会卡死`);
+            }
+        });
+    }
     return errors;
 }

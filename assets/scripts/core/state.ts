@@ -3,7 +3,7 @@
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const MAX_LOG = 50;
 
 export function createNewState(config: GameConfig, now: number, seed: number): GameState {
@@ -30,6 +30,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         reports: [],
         nextId: 1,
         ...emptyV3Fields(config),
+        raidRelief: 0,
     };
     syncBuildings(config, state);
     return state;
@@ -66,6 +67,10 @@ export function migrateState(config: GameConfig, state: GameState, now: number):
     if (state.version === 2) {
         Object.assign(state, emptyV3Fields(config));
         state.version = 3;
+    }
+    if (state.version === 3) {
+        state.raidRelief = 0;
+        state.version = 4;
     }
     return state.version === SAVE_VERSION;
 }

@@ -1,4 +1,5 @@
 // 数值平衡报告：每个探索地点、每种尸潮在不同的训练场 / 路障等级下各打 50 场，统计胜率和平均受伤人数。
+// 最后一张表是无尽模式：不同加成的尸潮对上不同建设进度的营地。
 //   npm run balance
 // 平时跑 npm test 时不输出。战斗参数和游戏里完全一样（expeditionSetup / raidSetup）。
 
@@ -17,8 +18,9 @@ it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
     const squad = ['derek', 'ethan', 'martha', 'toby'];
     const defenders = [...squad, 'sophie'];
     const building = (id: string) => config.buildings.find((b) => b.id === id)!;
-    const trainingLevels = [0, ...building('training').levels.map((l) => l.battleLevel!)];
-    const wallHps = building('wall').levels.map((l) => l.safety! * config.balance.barricadeHpPerSafety);
+    const trainingLevels = [0, 1, 2, 3, 5, 10];
+    const wallHp = (level: number) => building('wall').levels[level - 1].safety! * config.balance.barricadeHpPerSafety;
+    const battleLevel = (trainingLevel: number) => 1 + (trainingLevel > 0 ? building('training').levels[trainingLevel - 1].battleLevel! : 0);
 
     const stats = (make: (seed: number) => BattleSetup) => {
         let wins = 0;
@@ -40,18 +42,26 @@ it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
 
     header('—— 探索：4 人小队的胜率（平均受伤人数）——', trainingLevels.map((t) => `训练场${t}级`));
     for (const loc of config.locations) {
-        row(loc.name, trainingLevels.map((t) => stats((seed) => expeditionSetup(config, loc, squad, 1 + t, seed))));
+        row(loc.name, trainingLevels.map((t) => stats((seed) => expeditionSetup(config, loc, squad, battleLevel(t), seed))));
     }
 
-    const combos = wallHps.map((_, w) => w).flatMap((w) => [0, 2].map((t) => ({ w, t })));
-    header('—— 尸潮：5 人 + 路障的胜率（平均受伤人数）——', combos.map((c) => `路障${c.w + 1}/训练${c.t}`));
+    const combos = [1, 2, 3, 4].flatMap((w) => [0, 2].map((t) => ({ w, t })));
+    header('—— 尸潮：5 人 + 路障的胜率（平均受伤人数）——', combos.map((c) => `路障${c.w}/训练${c.t}`));
     for (const raid of config.raids) {
         for (const bloodMoon of [false, true]) {
             for (const dog of bloodMoon ? [false, true] : [false]) {
                 const name = `${bloodMoon ? '血月·' : ''}${raid.name}${dog ? '+狗' : ''}`;
-                row(name, combos.map(({ w, t }) => stats((seed) => raidSetup(config, raid, defenders, wallHps[w], 1 + t, seed, { bloodMoon, dog }))));
+                row(name, combos.map(({ w, t }) => stats((seed) => raidSetup(config, raid, defenders, wallHp(w), battleLevel(t), seed, { bloodMoon, dog }))));
             }
         }
+    }
+
+    // 无尽模式：营地建设进度（路障 = 训练场 = 指挥部等级）对上不同加成的大尸潮
+    const great = config.raids[config.raids.length - 1];
+    const camps = [5, 10, 15, 20, 25];
+    header(`—— 无尽尸潮：${great.name}+N 对上不同建设进度的营地（路障、训练场都和指挥部同级）——`, camps.map((lv) => `营地${lv}级`));
+    for (const bonus of [0, 5, 10, 20, 30, 40, 50]) {
+        row(`${great.name} +${bonus}`, camps.map((lv) => stats((seed) => raidSetup(config, great, defenders, wallHp(lv), battleLevel(lv), seed, { enemyBonus: bonus }))));
     }
 
     console.log(lines.join('\n'));
