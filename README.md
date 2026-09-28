@@ -4,6 +4,7 @@ Q 版丧尸末日生存 · 营地经营 · 剧情抉择，微信小游戏（竖�
 
 - 游戏设计文档：[docs/GDD.md](docs/GDD.md)
 - 备用资料库（参考作品分析和待采用的点子）：[docs/reference/](docs/reference/README.md)
+- 美术资源清单与 AI 提示词：[docs/art-assets.md](docs/art-assets.md)
 - 引擎：Cocos Creator 3.8 + TypeScript
 - 微信小游戏 AppID：`wx26c43b6b78c92ffe`
 

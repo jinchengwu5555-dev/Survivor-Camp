@@ -14,7 +14,7 @@ export interface Portrait {
     sprite: string;
 }
 
-const NARRATOR: Portrait = { id: 'narrator', name: '营地', title: '', color: '#5a5f55', sprite: 'narrator' };
+const NARRATOR: Portrait = { id: 'narrator', name: '营地', title: '', color: '#5a5f55', sprite: 'portrait_narrator' };
 
 export function portraitOf(config: GameConfig, state: GameState, id: string): Portrait | null {
     const info = survivorInfo(config, state, id);
