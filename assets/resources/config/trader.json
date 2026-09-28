@@ -1,0 +1,19 @@
+{
+    "firstDay": 2,
+    "intervalMinutes": 160,
+    "stayMinutes": 60,
+    "offersPerVisit": 3,
+    "priceJitter": 0.25,
+    "refreshesPerVisit": 1,
+    "offers": [
+        { "id": "wood_for_food", "give": { "wood": 60 }, "get": { "food": 80 }, "weight": 3 },
+        { "id": "food_for_wood", "give": { "food": 60 }, "get": { "wood": 70 }, "weight": 3 },
+        { "id": "food_for_parts", "give": { "food": 80 }, "get": { "parts": 25 }, "weight": 3 },
+        { "id": "parts_for_food", "give": { "parts": 30 }, "get": { "food": 140 }, "weight": 2 },
+        { "id": "parts_for_medicine", "give": { "parts": 20 }, "get": { "medicine": 12 }, "weight": 2 },
+        { "id": "cans_for_parts", "give": { "cans": 3 }, "get": { "parts": 40 }, "weight": 2 },
+        { "id": "cans_for_medicine", "give": { "cans": 3 }, "get": { "medicine": 20 }, "weight": 2 },
+        { "id": "medicine_for_cans", "give": { "medicine": 15 }, "get": { "cans": 2 }, "weight": 1 },
+        { "id": "wood_for_cans", "give": { "wood": 150 }, "get": { "cans": 2 }, "weight": 1 }
+    ]
+}

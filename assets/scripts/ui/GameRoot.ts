@@ -46,20 +46,22 @@ import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { GuideHint, nextHint } from '../core/guide';
 import { eventSpeaker, portraitOf } from '../core/portrait';
 import { activePickups, pickupKind } from '../core/pickups';
-import { dailyChest, dailyClaimable, dailyProgress, dailyTaskDef } from '../core/daily';
+import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
+import { traderPresent } from '../core/trader';
+import { BadgeGroup } from '../core/badges';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
-import { addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch } from './widgets';
+import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch } from './widgets';
 import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v0.7 营地地图界面';
+const GAME_VERSION = 'v0.8 红点+商人+新内容';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -92,7 +94,7 @@ const SHEET_TOP = HUD_BOTTOM - 10;
 const BUILDING_BOX = { width: 150, height: 118 };
 /** 拾荒物在地图上出现的位置（相对地图中心） */
 const PICKUP_SPOTS = [
-    { x: 250, y: -250 },
+    { x: -110, y: -30 },
     { x: -205, y: 150 },
     { x: 205, y: 150 },
     { x: -110, y: -185 },
@@ -114,7 +116,7 @@ const TABS: [Tab, string][] = [
 ];
 const TABS_PER_ROW = 4;
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | null;
+type Sheet = 'building' | 'sites' | 'trader' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -553,6 +555,7 @@ export class GameRoot extends Component {
         // 有事件要处理时，先处理事件
         const event = !!camp.currentEvent;
         const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
+        const badges = camp.badges();
         this.target = nav;
         TABS.forEach(([tab, name], i) => {
             const col = i % TABS_PER_ROW;
@@ -560,16 +563,16 @@ export class GameRoot extends Component {
             this.cursorY = NAV_TOP - 10 - row * 62;
             const current = this.tab === tab && this.sheet === null;
             const guided = this.guide?.tab === tab && !current;
-            const dot = tab === 'bounties' && this.hasClaimable(camp) ? '❗' : '';
+            const badge = tab in badges ? badges[tab as BadgeGroup] : 0;
             const style: ButtonStyle = event ? 'disabled' : guided ? 'highlight' : current ? 'normal' : 'disabled';
-            this.button(guided ? `👉${name}` : current ? `【${name}${dot}】` : `${name}${dot}`, w, () => {
+            this.button(guided ? `👉${name}` : current ? `【${name}】` : name, w, () => {
                 if (event) return;
                 this.tab = tab;
                 this.sheet = null;
                 this.resetScroll();
                 if (tab === 'rank') this.loadRanking();
                 this.render();
-            }, LEFT + col * (w + 10), style, 24, 52, true);
+            }, LEFT + col * (w + 10), style, 24, 52, true, current ? 0 : badge);
         });
         this.target = this.content;
     }
@@ -638,9 +641,28 @@ export class GameRoot extends Component {
             btn.setPosition(MAP_WIDTH / 2 - 112, MAP_HEIGHT / 2 - 28);
             drawPanel(btn.addComponent(Graphics), 200, 40, COLORS.button, 20);
             addLabel(btn, `🧭 营地地点 ${targets.length}`, 19, TEXT, { width: 190 });
+            addBadge(btn, 92, 14, camp.badges().sites);
             btn.on(Node.EventType.TOUCH_END, () => {
                 punch(btn);
                 this.sheet = 'sites';
+                this.resetScroll();
+                this.render();
+            });
+        }
+
+        // 流浪商人的皮卡
+        if (traderPresent(state, now)) {
+            const truck = makeNode('Trader', map, 110, 90);
+            truck.setPosition(255, -245);
+            const tg = truck.addComponent(Graphics);
+            drawPanel(tg, 104, 70, new Color(70, 90, 110, 235), 14, ACCENT, 3);
+            addLabel(truck, '🚚', 36, TEXT, { width: 60 }).node.setPosition(0, 8);
+            const left = realSeconds(config, (state.trader!.leavesAt ?? now) - now);
+            addLabel(truck, `商人 ${formatTime(left)}`, 16, TEXT, { width: 104 }).node.setPosition(0, -22);
+            addBadge(truck, 46, 30, camp.badges().trader);
+            truck.on(Node.EventType.TOUCH_END, () => {
+                punch(truck);
+                this.sheet = 'trader';
                 this.resetScroll();
                 this.render();
             });
@@ -794,7 +816,13 @@ export class GameRoot extends Component {
             this.cursorY = top - 54;
             const def = this.selectedBuilding ? getBuildingDef(camp.config, this.selectedBuilding) : undefined;
             if (this.sheet === 'building' && def) this.renderBuildingDetail(camp, def, now);
-            else this.renderSites(camp, now);
+            else if (this.sheet === 'trader') {
+                this.renderTrader(camp, now);
+                camp.markSeen('trader');
+            } else {
+                this.renderSites(camp, now);
+                camp.markSeen('sites');
+            }
         } else if (this.tab === 'survivors') this.renderSurvivors(camp, now);
         else if (this.tab === 'explore') this.renderExplore(camp, now);
         else if (this.tab === 'bounties') this.renderBounties(camp, now);
@@ -802,7 +830,47 @@ export class GameRoot extends Component {
         else if (this.tab === 'achievements') this.renderAchievements(camp, now);
         else if (this.tab === 'rank') this.renderRanking(camp, now);
         else this.renderReports(camp);
+        // 打开的页签：里面的新内容记为已读（红点下一次刷新时消失）
+        if (this.tab !== 'camp' && this.tab !== 'rank') camp.markSeen(this.tab as BadgeGroup);
         if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
+    }
+
+    /** 流浪商人：几笔以物易物的交易 + 看广告刷新货架 */
+    private renderTrader(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const t = state.trader;
+        if (!t || !traderPresent(state, now)) {
+            this.text('商人已经走了。过一阵子还会再来。', 22, DIM);
+            return;
+        }
+        this.text(`🚚 流浪商人（${formatTime(realSeconds(config, (t.leavesAt ?? now) - now))} 后离开）`, 26, ACCENT);
+        this.text('“什么都能换，价格看心情。”每笔交易只能换一次。', 20, DIM);
+        this.gap(8);
+        t.offers.forEach((o, i) => {
+            const affordable = RESOURCE_IDS.every((id) => state.resources[id] >= (o.give[id] ?? 0));
+            const label = o.bought ? `✅ 已换：${formatBag(config, o.give)} → ${formatBag(config, o.get)}` : `给 ${formatBag(config, o.give)}  →  换 ${formatBag(config, o.get)}`;
+            this.button(label, WIDTH, () => {
+                const res = camp.trade(i, camp.now);
+                if (res.ok) this.effect(`🤝 换到了 ${res.message ?? ''}`, WIN, 28);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, o.bought || !affordable ? 'disabled' : 'normal', 24, 60);
+            this.gap(10);
+        });
+        this.button(`📺 看广告让商人换一批货（剩 ${t.refreshesLeft} 次）`, WIDTH, () => this.refreshTrader(), LEFT, t.refreshesLeft > 0 ? 'highlight' : 'disabled', 22, 52);
+    }
+
+    private refreshTrader(): void {
+        this.ads.showRewarded().then((watched) => {
+            if (!this.camp) return;
+            if (watched) {
+                const res = this.camp.refreshTrader(this.camp.now);
+                if (!res.ok) this.showToast(res.reason);
+            } else {
+                this.showToast('需要看完广告才能刷新');
+            }
+            this.render();
+        });
     }
 
     /** 记下内容高度，限制滚动范围 */
@@ -1006,16 +1074,6 @@ export class GameRoot extends Component {
             this.text('已经是最高等级了', 20, DIM);
         }
         this.gap(8);
-    }
-
-    /** 任务页有没有能领的奖励（页签上显示 ❗） */
-    private hasClaimable(camp: CampGame): boolean {
-        const { config, state } = camp;
-        if (dailyClaimable(config, state)) return true;
-        return state.bounties.active.some((a) => {
-            const { current, target } = bountyProgress(config, state, a.id);
-            return target > 0 && current >= target;
-        });
     }
 
     /** 每日目标：每个游戏日 3 个小目标，全部完成开宝箱 */
@@ -1283,12 +1341,23 @@ export class GameRoot extends Component {
         this.cursorY -= height + 8;
     }
 
-    private button(str: string, width: number, onClick: () => void, x = LEFT, style: ButtonStyle = 'normal', size = 22, height = 44, clickableWhenDisabled = false): void {
+    private button(
+        str: string,
+        width: number,
+        onClick: () => void,
+        x = LEFT,
+        style: ButtonStyle = 'normal',
+        size = 22,
+        height = 44,
+        clickableWhenDisabled = false,
+        badge = 0,
+    ): void {
         const node = makeNode('Button', this.target!, width, height);
         node.setPosition(x + width / 2, this.cursorY - height / 2);
         const fill = style === 'highlight' ? COLORS.highlight : style === 'disabled' ? COLORS.disabled : COLORS.button;
         drawPanel(node.addComponent(Graphics), width, height, fill, 8, style === 'highlight' ? ACCENT : undefined);
         addLabel(node, str, size, TEXT, { width: width - 12, height });
+        addBadge(node, width / 2 - 8, height / 2 - 6, badge);
         node.on(Node.EventType.TOUCH_END, () => {
             // 拖动滚动时不算点击；禁用的按钮不响应（页签除外，灰色只表示没选中）
             if (this.dragDistance > DRAG_THRESHOLD || (style === 'disabled' && !clickableWhenDisabled)) return;

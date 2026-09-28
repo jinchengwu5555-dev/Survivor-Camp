@@ -193,6 +193,13 @@ export function validateConfig(config: GameConfig): string[] {
         checkBag(`拾荒物 ${k.id}`, k.reward);
         if (k.weight <= 0) errors.push(`拾荒物 ${k.id}：weight 必须大于 0`);
     }
+    checkUnique('商人交易', config.trader.offers.map((x) => x.id));
+    for (const o of config.trader.offers) {
+        checkBag(`商人交易 ${o.id}`, o.give);
+        checkBag(`商人交易 ${o.id}`, o.get);
+        if (o.weight <= 0) errors.push(`商人交易 ${o.id}：weight 必须大于 0`);
+    }
+    if (config.trader.offersPerVisit > config.trader.offers.length) errors.push('trader.json：offersPerVisit 不能多于交易种类');
     checkUnique('每日目标', config.daily.tasks.map((x) => x.id));
     checkBag('每日宝箱', config.daily.chest);
     for (const t of config.daily.tasks) {

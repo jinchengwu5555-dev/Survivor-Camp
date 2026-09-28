@@ -418,6 +418,7 @@ export interface GameConfig {
     wanderers: WandererDef;
     pickups: PickupConfig;
     daily: DailyConfig;
+    trader: TraderConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -445,6 +446,27 @@ export interface PickupConfig {
     /** 多少分钟没人捡就消失 */
     lifetimeMinutes: number;
     kinds: PickupKindDef[];
+}
+
+/** 流浪商人的一笔交易（trader.json）：给出 give，换来 get */
+export interface TraderOfferDef {
+    id: string;
+    give: ResourceBag;
+    get: ResourceBag;
+    weight: number;
+}
+
+/** 流浪商人：第 firstDay 天起，每隔 intervalMinutes 来一次，待 stayMinutes，每次随机摆 offersPerVisit 笔交易 */
+export interface TraderConfig {
+    firstDay: number;
+    intervalMinutes: number;
+    stayMinutes: number;
+    offersPerVisit: number;
+    /** 每次来的时候，换到的数量在 ±priceJitter 之间浮动（有时划算，有时不划算） */
+    priceJitter: number;
+    /** 每次来访能看广告刷新几次货架 */
+    refreshesPerVisit: number;
+    offers: TraderOfferDef[];
 }
 
 /** 每日目标：每个游戏日从任务池里抽几个，用统计数据判断进度（daily.json） */
@@ -582,6 +604,27 @@ export interface GameState {
     nextPickupAt?: number;
     /** 今天的每日目标（老存档没有，用到时补上） */
     daily?: DailyState;
+    /** 流浪商人（老存档没有，用到时补上） */
+    trader?: TraderState;
+    /** 界面红点：已经看过的新内容（见 core/badges.ts） */
+    seen?: SeenState;
+}
+
+export interface TraderState {
+    /** 下一次来的时间（游戏时间） */
+    nextVisitAt: number;
+    /** 在营地时：什么时候走；不在时为 null */
+    leavesAt: number | null;
+    /** 第几次来访（红点用） */
+    visit: number;
+    offers: { id: string; give: ResourceBag; get: ResourceBag; bought: boolean }[];
+    refreshesLeft: number;
+}
+
+export interface SeenState {
+    keys: string[];
+    /** 看过的最新战报 id */
+    reportId: number;
 }
 
 export interface PickupState {

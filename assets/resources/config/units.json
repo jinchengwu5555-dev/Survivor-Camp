@@ -4,7 +4,7 @@
         "appearance": { "sprite": "unit_ethan", "color": "#4a6fa5", "scale": 1 },
         "stats": { "maxHp": 420, "atk": 38, "def": 20, "moveSpeed": 1.2, "attackRange": 4, "attackInterval": 1.2, "critRate": 0.15, "critDamage": 1.6 },
         "growth": { "maxHp": 40, "atk": 4, "def": 2 },
-        "skills": ["cover_fire", "leader_call"]
+        "skills": ["cover_fire", "leader_call", "last_stand"]
     },
     {
         "id": "martha", "name": "玛莎", "faction": "survivor",
@@ -102,5 +102,12 @@
         "stats": { "maxHp": 170, "atk": 22, "def": 4, "moveSpeed": 2.4, "attackRange": 0.8, "attackInterval": 0.7, "critRate": 0.3, "critDamage": 2.0 },
         "growth": { "maxHp": 17, "atk": 2.2, "def": 0.5 },
         "skills": ["frenzy_rush", "zombie_bite"]
+    },
+    {
+        "id": "wild_dog", "name": "野狗", "faction": "beast",
+        "appearance": { "sprite": "enemy_wild_dog", "color": "#8a6a4a", "scale": 0.75 },
+        "stats": { "maxHp": 130, "atk": 24, "def": 3, "moveSpeed": 2.6, "attackRange": 0.7, "attackInterval": 0.8, "critRate": 0.1, "critDamage": 1.5 },
+        "growth": { "maxHp": 9, "atk": 1.4, "def": 0.3 },
+        "skills": ["pack_bite"]
     }
 ]

@@ -124,5 +124,19 @@
         "targeting": { "rule": "currentTarget" },
         "effects": [ { "type": "status", "status": "slow", "duration": 2 } ],
         "tags": ["control"]
+    },
+    {
+        "id": "last_stand", "name": "绝不倒下", "description": "伊森生命低于 20% 时咬牙硬撑：攻击和攻速大幅提升，并获得一层护盾（每场一次）。",
+        "trigger": { "type": "hpBelow", "ratio": 0.2 }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "status", "status": "rage", "duration": 8 }, { "type": "status", "status": "shield", "duration": 8, "power": 3 } ],
+        "tags": ["buff"]
+    },
+    {
+        "id": "pack_bite", "name": "群狼撕咬", "description": "野狗扑上来撕咬，让目标行动变慢。",
+        "trigger": { "type": "onAttack", "chance": 0.3 }, "cooldown": 0,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "status", "status": "slow", "duration": 2 } ],
+        "tags": ["beast"]
     }
 ]

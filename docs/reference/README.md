@@ -7,7 +7,7 @@
 | 文件 | 内容 |
 |---|---|
 | [ideas.md](ideas.md) | **点子池**：40 条点子（R01～R40），按营地、幸存者、探索、战斗、剧情、传播分类，标注来源、工作量、推荐度和状态。**从这里开始看** |
-| [candidate-events.json](candidate-events.json) | **候选事件**：6 个已经按 `events.json` 格式写好的事件（另外 4 个已采用进游戏），采用时直接复制进游戏 |
+| [candidate-events.json](candidate-events.json) | **候选事件**：按 `events.json` 格式写好、等待采用的事件。目前为空（之前的 10 个都已采用进游戏），以后新写的候选事件放这里 |
 | [sources/global-evolution.md](sources/global-evolution.md) | 《全球进化》：生态失控、食物链洗牌、浓雾、人类变异 |
 | [sources/cuotuo.md](sources/cuotuo.md) | 《蹉跎》：边境小镇、势力林立、非人伙伴、末日民俗 |
 | [sources/hunting-demons.md](sources/hunting-demons.md) | 《狩魔手记》：辐射废土、进化点与能力域、猎人职业、聚居地秩序 |

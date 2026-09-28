@@ -399,5 +399,800 @@
         "choices": [
             { "text": "伊森跪下来，紧紧抱住她", "outcomes": [ { "weight": 1, "text": "那天晚上八点，莉莉第一次没有打开对讲机。（第二季 · 北岭水坝）", "effects": [ { "type": "addSurvivor", "survivor": "lily" }, { "type": "flag", "flag": "lily_found" }, { "type": "mood", "target": "all", "amount": 30 } ] } ] }
         ]
+    },
+    {
+        "id": "ref_harvest_festival",
+        "_idea": "R02 末日民俗（参考：蹉跎）",
+        "title": "丰收会",
+        "text": "罗莎在屋顶种的第一批土豆熟了。她提议办个“丰收会”：“以前镇上每年秋天都办。现在更该办。”",
+        "weight": 4,
+        "once": true,
+        "conditions": {
+            "hasSurvivors": [
+                "rosa"
+            ]
+        },
+        "choices": [
+            {
+                "text": "办！（15 食物）",
+                "cost": {
+                    "food": 15
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "大家围着火堆分土豆。有人起了个头：“祝土豆丰收！”大家齐声回：“罐头满仓！”——这成了营地的问候语。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_greeting"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 12
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "粮食要省着吃",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "罗莎没再坚持，只是把最大的那颗土豆留给了孩子们。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "rosa",
+                                "amount": -8
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "ref_perfume_trick",
+        "_idea": "R17 潜行与气味（参考：全球进化）",
+        "title": "一箱香水",
+        "text": "探索队在商场专柜找到一整箱香水。诺拉拿起一瓶闻了闻：“行尸是靠气味找人的。把这个洒在身上，它们也许就闻不到我们了。”",
+        "weight": 4,
+        "once": true,
+        "conditions": {
+            "hasSurvivors": [
+                "nora"
+            ]
+        },
+        "choices": [
+            {
+                "text": "试试看",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "真的有用！托比浑身喷满香水，从三只行尸身边走过，它们连头都没回。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "scent_masking"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": 10
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "香味太冲，把附近所有的行尸都引了过来。小队狼狈撤回。",
+                        "effects": [
+                            {
+                                "type": "injure",
+                                "survivor": "random"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "拿回去换东西",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "下次商队来的时候，一箱香水换了一大袋米。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 30
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "ref_mutant_serum",
+        "_idea": "R28 变异血清（参考：狩魔手记）",
+        "title": "实验血清",
+        "text": "诺拉在卫生所的冷柜里找到一支贴着“实验品 · 勿用”标签的血清。附带的报告写着：注射者力量和反应速度显著提升，副作用未知。\n汉克把袖子卷了起来：“我老了，拿我试。”",
+        "weight": 3,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "cleared_clinic"
+            ],
+            "hasSurvivors": [
+                "hank",
+                "nora"
+            ]
+        },
+        "choices": [
+            {
+                "text": "让汉克注射",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "汉克发了一夜高烧，第二天一拳打穿了仓库的门板。他盯着自己的手，很久没说话。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "hank_serum"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -5
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "汉克抽搐着倒下，差点没挺过来。诺拉守了他两天两夜。",
+                        "effects": [
+                            {
+                                "type": "injure",
+                                "survivor": "hank"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "hank_serum_failed"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "销毁它",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "诺拉把血清倒进了下水道。“有些捷径，”她说，“走上去就回不了头。”",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "nora",
+                                "amount": 5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "ref_cult_envoy",
+        "_idea": "R24 人类敌对势力（参考：蹉跎、最后生还者）",
+        "title": "新生会的使者",
+        "text": "两个穿白袍的人站在路障外，举着一面画着太阳的旗子：“我们是新生会。末日是神的筛选，只有信徒能活下去。每七天交三十份粮食，你们就受神的庇护。”",
+        "weight": 4,
+        "once": true,
+        "conditions": {
+            "minDay": 4
+        },
+        "choices": [
+            {
+                "text": "交粮，不想惹麻烦（30 食物）",
+                "cost": {
+                    "food": 30
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "使者满意地走了。德里克一脚踢翻了水桶：“这次是粮食，下次呢？”",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "cult_tribute"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "derek",
+                                "amount": -10
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "“滚。”",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "使者没有生气，只是笑了笑：“神会记住的。”",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "cult_defied"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "扣下他们，问出老巢在哪",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "年轻的那个吓得全说了。年长的那个，第二天早上不见了。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "cult_location_known"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "sophie",
+                                "amount": -8
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "ref_berserk_derek",
+        "_idea": "R12 心理创伤 / R29 极限爆发（参考：剑风传奇）",
+        "title": "停不下来的斧头",
+        "text": "尸潮退了，德里克却还在路障边一斧一斧地砍着一具早已不动的行尸，浑身是血，谁叫都不理。",
+        "weight": 3,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "raids_started"
+            ],
+            "hasSurvivors": [
+                "derek"
+            ]
+        },
+        "choices": [
+            {
+                "text": "伊森走过去，按住他的肩膀",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "德里克终于停了手，蹲在地上说起了他弟弟。那是他第一次提起这件事。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "derek_opened_up"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "derek",
+                                "amount": 15
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "让他发泄完",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "天亮时他自己回来了，一句话也没说。之后好几天，没人敢和他搭话。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "ref_airdrop_seeds",
+        "_idea": "R08 军方空投种子（参考：全球进化）",
+        "title": "空投箱",
+        "text": "一架飞机从高空掠过，远处的田野里飘下一顶降落伞。箱子上印着褪色的军方标志，里面是几包种子和一张传单：“坚持住。救援正在路上。”",
+        "weight": 3,
+        "once": true,
+        "conditions": {
+            "minDay": 3
+        },
+        "choices": [
+            {
+                "text": "种下去",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "种子发芽了。传单被贴在了厨房墙上，谁也没提“救援”这两个字，但每个人都看过好几遍。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 30
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 8
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "military_alive"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "safe_found",
+        "title": "锁着的保险柜",
+        "_idea": "R06 死人开关 / 前主人的保险柜",
+        "text": "搜刮加油站的小队在后面的办公室里发现一个小保险柜，焊死在墙角，带着一个老式的转盘密码锁。托比说老板以前每天打烊都会在里面放东西。",
+        "weight": 6,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "cleared_gas_station"
+            ]
+        },
+        "choices": [
+            {
+                "text": "先记下来，以后想办法打开",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "德里克在保险柜上用粉笔画了个大大的问号。总有办法的。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "safe_found"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "德里克，撬开它！",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "德里克抡了半个小时撬棍，终于把门撬开一条缝，里面的东西被砸得乱七八糟，只抢救出一点零件。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": 15
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "safe_done"
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "撬棍断了，德里克的手也划了一道口子。保险柜纹丝不动。",
+                        "effects": [
+                            {
+                                "type": "injure",
+                                "survivor": "derek"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "safe_found"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "safe_notebook",
+        "title": "记事本最后一页",
+        "_idea": "R06 死人开关 / 前主人的保险柜",
+        "text": "托比在整理从加油站带回来的杂物时，翻出老板的记事本。最后一页没有字，只画着四个小图案：一只猫、一辆卡车、一个蛋糕、一把钥匙。\n“猫叫九命，卡车是他那辆 1987 年的老皮卡……蛋糕是他女儿的生日，十二号。”托比挠挠头，“钥匙我就不知道了。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "safe_found"
+            ],
+            "notFlags": [
+                "safe_done"
+            ],
+            "hasSurvivors": [
+                "toby"
+            ]
+        },
+        "choices": [
+            {
+                "text": "试试 9、87、12……再猜最后一位",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "转到第三次，锁“咔哒”一声开了。里面有一沓旧钞票（现在没用了）、几罐午餐肉、一盒止痛药，还有一封写给女儿的信。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "cans",
+                                "amount": 6
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "medicine",
+                                "amount": 12
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "safe_done"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "safe_letter"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "toby",
+                                "amount": 10
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "试了一整晚都没对上。托比不甘心地把记事本塞进了口袋。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "toby",
+                                "amount": -3
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "算了，太费时间",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "记事本被扔回杂物堆里。",
+                        "effects": []
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "safe_letter_read",
+        "title": "给女儿的信",
+        "_idea": "R06 死人开关 / 前主人的保险柜",
+        "text": "保险柜里那封信一直没人拆。伊森拿着它在篝火边坐了很久：信是加油站老板写给女儿的，说他在镇北的水塔下面给她埋了“应急包”，“万一哪天世道乱了”。",
+        "weight": 6,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "safe_letter"
+            ],
+            "hasSurvivors": [
+                "ethan"
+            ]
+        },
+        "choices": [
+            {
+                "text": "去水塔下面挖出来",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "应急包还在：压缩饼干、净水片、一把猎刀。伊森把信折好，放回了自己的口袋。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 80
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "medicine",
+                                "amount": 6
+                            },
+                            {
+                                "type": "mood",
+                                "target": "ethan",
+                                "amount": 8
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "那是留给他女儿的，别动它",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "伊森在信封背面写上“水塔下有东西，给你的”，钉在了加油站门口。也许有一天会有人看到。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 6
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "quiet_moments"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "martha_ledger",
+        "title": "玛莎的进货单",
+        "_idea": "R37 平凡人的智慧",
+        "text": "玛莎翻出超市的进货单，戴上老花镜一行行看：“尸潮那天早上，本来有一车货要送来——罐头、面粉、瓶装水。司机没来，可货车说不定就停在批发站。”",
+        "weight": 7,
+        "once": true,
+        "conditions": {
+            "minDay": 1,
+            "hasSurvivors": [
+                "martha"
+            ]
+        },
+        "choices": [
+            {
+                "text": "派人去批发站看看",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "货车还在！车厢里的东西大部分都完好。玛莎得意地拍了拍进货单：“我就说嘛。”",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 60
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "cans",
+                                "amount": 3
+                            },
+                            {
+                                "type": "mood",
+                                "target": "martha",
+                                "amount": 10
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "货车被翻过了，只剩几箱面粉。回来的路上还被两只行尸追了一段。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 25
+                            },
+                            {
+                                "type": "injure",
+                                "survivor": "random"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "太远了，先顾眼前",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "玛莎叹了口气，把进货单夹回账本里。",
+                        "effects": []
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "nora_soap",
+        "title": "草木灰肥皂",
+        "_idea": "R37 平凡人的智慧",
+        "text": "营地里好几个人的伤口发炎了。诺拉把灶里的草木灰和厨房剩的油脂倒进锅里：“以前农场的伤口，我们就用这个洗。别皱眉，比你们想的管用。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {
+            "hasSurvivors": [
+                "nora"
+            ]
+        },
+        "choices": [
+            {
+                "text": "照诺拉说的做",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "一锅灰褐色的肥皂，闻起来很冲，但伤口真的不再发红了。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "medicine",
+                                "amount": 15
+                            },
+                            {
+                                "type": "heal",
+                                "survivor": "all"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": -10
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "油脂还要吃呢",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "诺拉耸耸肩：“随你。别到时候来找我截肢。”",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "nora",
+                                "amount": -5
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "toby_alleys",
+        "title": "托比的小路",
+        "_idea": "R37 平凡人的智慧",
+        "text": "托比趴在地上，用炭笔在纸板上画了一张地图：“主街尸多，但这几条后巷能绕过去。我以前送外卖就走这儿，比导航还快。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {
+            "minDay": 2,
+            "hasSurvivors": [
+                "toby"
+            ]
+        },
+        "choices": [
+            {
+                "text": "照着地图抄小路搜刮",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "小队沿着后巷摸进了两家没人碰过的小店，满载而归。托比骄傲得鼻子都要翘上天了。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "wood",
+                                "amount": 40
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": 12
+                            },
+                            {
+                                "type": "mood",
+                                "target": "toby",
+                                "amount": 10
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "camp_greeting",
+        "title": "“今晚也活着”",
+        "_idea": "R02 末日民俗",
+        "text": "不知道从谁开始的，每天晚上守夜换班时，大家会拍拍对方的肩膀说一句“今晚也活着”。连一向嘴硬的玛莎也说。",
+        "weight": 4,
+        "once": true,
+        "conditions": {
+            "minDay": 3,
+            "minSurvivors": 5
+        },
+        "choices": [
+            {
+                "text": "“今晚也活着。”",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "这句话成了营地的暗号。新来的人听到它，就知道自己被接纳了。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 6
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "camp_greeting"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "quiet_moments"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "memorial_wall",
+        "title": "名字墙",
+        "_idea": "R02 末日民俗",
+        "text": "超市侧面那堵白墙上，有人用马克笔写下了第一个离开的人的名字。之后每失去一个人，就有人默默在下面添一行。",
+        "weight": 5,
+        "once": true,
+        "conditions": {
+            "flags": [
+                "raids_started"
+            ],
+            "minDay": 7
+        },
+        "choices": [
+            {
+                "text": "在墙前点一支蜡烛",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "没人说话。蜡烛烧了一整夜。第二天，大家干活都格外卖力。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 8
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "memorial_wall"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
     }
 ]

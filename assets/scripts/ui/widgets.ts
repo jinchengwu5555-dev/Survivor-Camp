@@ -159,3 +159,20 @@ export function formatTime(seconds: number): string {
     const mmss = `${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
     return h > 0 ? `${h}:${mmss}` : mmss;
 }
+
+/** 红点：在 parent 的 (x, y) 画一个小红圆，count > 1 时写上数字 */
+export function addBadge(parent: Node, x: number, y: number, count: number): void {
+    if (count <= 0) return;
+    const node = makeNode('Badge', parent, 26, 26);
+    node.setPosition(x, y);
+    const g = node.addComponent(Graphics);
+    const r = count > 1 ? 13 : 9;
+    g.fillColor = new Color(230, 50, 40);
+    g.circle(0, 0, r);
+    g.fill();
+    g.lineWidth = 2;
+    g.strokeColor = new Color(255, 240, 230);
+    g.circle(0, 0, r);
+    g.stroke();
+    if (count > 1) addLabel(node, count > 9 ? '9+' : String(count), 15, new Color(255, 255, 255), { width: 26, height: 22 });
+}

@@ -10,6 +10,8 @@ import { LiveRaid } from './liveRaid';
 import { collectPickup, PickupResult, updatePickups } from './pickups';
 import { claimDaily, claimDailyChest, refreshDaily } from './daily';
 import { addWorker, autoAssign, removeWorker } from './workers';
+import { refreshTraderOffers, trade, updateTrader } from './trader';
+import { BadgeGroup, badgeCounts, markSeen } from './badges';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
@@ -84,6 +86,7 @@ export class CampGame {
         maybeRunRaid(this.config, s, now, this.liveRaids);
         maybeTriggerRandomEvent(this.config, s, now);
         updatePickups(this.config, s, now);
+        updateTrader(this.config, s, now);
         this.settle(now);
     }
 
@@ -133,6 +136,26 @@ export class CampGame {
     /** 捡起营地附近的东西 */
     collectPickup(pickupId: number, now: number): PickupResult {
         return this.act(now, () => collectPickup(this.config, this.state, pickupId, now));
+    }
+
+    /** 和流浪商人交易（第 index 笔） */
+    trade(index: number, now: number): ActionResult {
+        return this.act(now, () => trade(this.config, this.state, index, now));
+    }
+
+    /** 看完激励视频后调用：商人重新摆货 */
+    refreshTrader(now: number): ActionResult {
+        return this.act(now, () => refreshTraderOffers(this.config, this.state, now));
+    }
+
+    /** 各处的红点数 */
+    badges(): Record<BadgeGroup, number> {
+        return badgeCounts(this.config, this.state, this.now);
+    }
+
+    /** 玩家打开了某个页面，新内容记为已读（只影响红点，不是游戏操作） */
+    markSeen(group: BadgeGroup): void {
+        markSeen(this.config, this.state, group, this.now);
     }
 
     claimDaily(taskId: string, now: number): ActionResult {

@@ -11,6 +11,20 @@
         "recruitChance": 0.1
     },
     {
+        "id": "park",
+        "name": "枫谷公园",
+        "description": "镇中心的小公园，长椅和秋千还在。灌木丛里有一群饿疯了的野狗——它们不是丧尸，但一样危险。公园的果树和小卖部里还有些吃的和药。",
+        "durationMinutes": 6,
+        "conditions": { "flags": ["cleared_gas_station"] },
+        "enemies": [
+            { "unit": "wild_dog" }, { "unit": "wild_dog" }, { "unit": "wild_dog" }, { "unit": "wild_dog" },
+            { "unit": "wild_dog", "level": 2, "spawnAt": 6 }, { "unit": "wild_dog", "level": 2, "spawnAt": 6 }, { "unit": "wild_dog", "level": 2, "spawnAt": 6 }
+        ],
+        "timeLimit": 60,
+        "loot": { "food": 40, "medicine": 8 },
+        "recruitChance": 0.1
+    },
+    {
         "id": "hardware_store",
         "name": "五金店",
         "description": "主街上的五金店，木板、钉子、工具应有尽有，但门口晃着不少行尸。",
