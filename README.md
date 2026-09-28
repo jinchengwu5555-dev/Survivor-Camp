@@ -57,6 +57,8 @@ assets/
     ui/GameRoot.ts      ← 营地界面（建筑方块、引导、事件卡、飘字、拖动滚动）
     ui/BattleView.ts    ← 战斗画面：亲手守夜、战报回放
     ui/widgets.ts       ← 画按钮、面板、飘字的小工具
+    ui/sprites.ts       ← 读取美术图片（sprites/units、portraits、buildings），没图时退回色块
+  resources/sprites/    ← 美术图片（规格见 docs/art-assets.md）
 tests/                  ← 单元测试
 build-templates/wechatgame/  ← 构建微信小游戏时原样拷进输出目录
   openDataContext/      ← 开放数据域：好友排行榜

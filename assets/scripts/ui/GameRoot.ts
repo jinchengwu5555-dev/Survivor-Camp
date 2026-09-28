@@ -10,14 +10,29 @@
 import { _decorator, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Node, resources, SubContextView, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
-import { availableLocations, currentRaid, expeditionLoot, formatBag, isOnExpedition, nextRaidIsBloodMoon, raidEnemyBonus, restockSecondsLeft, suggestSquad } from '../core/combat';
+import {
+    availableLocations,
+    barricadeHp,
+    currentRaid,
+    DOG_FLAG,
+    expeditionLoot,
+    formatBag,
+    isOnExpedition,
+    nextRaidIsBloodMoon,
+    raidDefenders,
+    raidEnemyBonus,
+    raidSetup,
+    restockSecondsLeft,
+    squadOf,
+    suggestSquad,
+} from '../core/combat';
 import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel } from '../core/economy';
 import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
 import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
 import { isUnlocked } from '../core/achievements';
 import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
-import { currentDay } from '../core/state';
+import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
 import { BattleReport, BuildingDef, BuildingLevelDef, GameConfig, RESOURCE_IDS, ResourceBag } from '../core/types';
 import { validateConfig } from '../core/validate';
@@ -39,11 +54,12 @@ import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
 import { addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch } from './widgets';
+import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v0.5 拾荒+每日目标';
+const GAME_VERSION = 'v0.6 支持角色图片';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -289,6 +305,26 @@ export class GameRoot extends Component {
             new BattleView(this.overlay, {
                 title: `▶ 回放：${report.title}`,
                 replay: { config: this.camp.config, setup: report.setup, report },
+                onClose: () => this.closeBattle(),
+            }),
+        );
+    }
+
+    /** 演示战斗：用营地现在的人打一场当前的尸潮，不影响营地（预览角色图片、熟悉守夜用） */
+    private openDemo(): void {
+        const camp = this.camp;
+        if (!camp || !this.overlay) return;
+        const { config, state } = camp;
+        const raid = currentRaid(config, state, camp.now) ?? config.raids[0];
+        const ids = raidDefenders(config, state);
+        const defenders = squadOf(config, state, ids.length ? ids : config.balance.startingSurvivors);
+        const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), Date.now() % 1_000_000_007, {
+            dog: hasFlag(state, DOG_FLAG),
+        });
+        this.openBattle(
+            new BattleView(this.overlay, {
+                title: `🎬 演示：${raid.name}`,
+                replay: { config, setup, report: null },
                 onClose: () => this.closeBattle(),
             }),
         );
@@ -583,7 +619,14 @@ export class GameRoot extends Component {
         g.strokeColor = TEXT;
         g.circle(faceX, faceY, 52);
         g.stroke();
-        addLabel(body, speaker.id === 'narrator' ? '📻' : speaker.name.slice(0, 1), 44, TEXT, { width: 100 }).node.setPosition(faceX, faceY);
+        // 有头像图就放图（sprites/portraits/portrait_<id>.png），没有就写名字的第一个字
+        const face = getSprite(SPRITE_DIRS.portraits + speaker.sprite);
+        if (face) {
+            const size = fitSize(face, 130, 130);
+            addSprite(body, face, size.width, size.height).setPosition(faceX, faceY + 8);
+        } else {
+            addLabel(body, speaker.id === 'narrator' ? '📻' : speaker.name.slice(0, 1), 44, TEXT, { width: 100 }).node.setPosition(faceX, faceY);
+        }
         addLabel(body, speaker.name, 22, ACCENT, { width: 150 }).node.setPosition(faceX, faceY - 72);
         if (speaker.title) addLabel(body, speaker.title, 18, DIM, { width: 150 }).node.setPosition(faceX, faceY - 98);
         // 正文
@@ -649,10 +692,18 @@ export class GameRoot extends Component {
             const fill = upgrading ? hexColor('#34506a') : b.level === 0 ? hexColor('#3a3a3a') : COLORS.panelLight;
             const border = isGuided ? COLORS.highlight : selected ? ACCENT : blocker === null ? WIN : undefined;
             drawPanel(node.addComponent(Graphics), tileWidth, TILE_HEIGHT, fill, 12, border, isGuided || selected ? 5 : 2);
-            addLabel(node, `${def.icon ?? '🏠'} ${def.name}`, 24, b.level > 0 ? TEXT : DIM, { width: tileWidth - 12 }).node.setPosition(0, 28);
+            // 有建筑图（sprites/buildings/building_<id>.png）就放在左边，文字往右挪
+            const art = getSprite(`${SPRITE_DIRS.buildings}building_${def.id}`);
+            const textX = art ? 38 : 0;
+            const textWidth = art ? tileWidth - 88 : tileWidth - 12;
+            if (art) {
+                const size = fitSize(art, 80, 90);
+                addSprite(node, art, size.width, size.height).setPosition(-tileWidth / 2 + 46, 0);
+            }
+            addLabel(node, art ? def.name : `${def.icon ?? '🏠'} ${def.name}`, 24, b.level > 0 ? TEXT : DIM, { width: textWidth }).node.setPosition(textX, 28);
             const workers = state.survivors.filter((s) => s.assignment === def.id).length;
             const slots = b.level > 0 ? def.levels[b.level - 1]?.workerSlots ?? 0 : 0;
-            addLabel(node, b.level > 0 ? `Lv ${b.level}${slots ? `  👷${workers}/${slots}` : ''}` : '未建造', 20, DIM, { width: tileWidth - 12 }).node.setPosition(0, -4);
+            addLabel(node, b.level > 0 ? `Lv ${b.level}${slots ? `  👷${workers}/${slots}` : ''}` : '未建造', 20, DIM, { width: textWidth }).node.setPosition(textX, -4);
             const status = upgrading
                 ? `🔨 ${formatTime(realSeconds(config, b.upgradeEndsAt! - now))}`
                 : blocker === null
@@ -660,7 +711,7 @@ export class GameRoot extends Component {
                   : blocker === '已达到最高等级'
                     ? '已满级'
                     : '';
-            addLabel(node, (isGuided ? '👉 ' : '') + status, 20, upgrading ? ACCENT : WIN, { width: tileWidth - 12 }).node.setPosition(0, -34);
+            addLabel(node, (isGuided ? '👉 ' : '') + status, 20, upgrading ? ACCENT : WIN, { width: textWidth }).node.setPosition(textX, -34);
             node.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
                 punch(node);
@@ -922,6 +973,8 @@ export class GameRoot extends Component {
 
     private renderReports(camp: CampGame): void {
         const { reports } = camp.state;
+        this.button('🎬 看一场演示战斗（预览角色图片，不影响营地）', WIDTH, () => this.openDemo(), LEFT, 'highlight', 22, 52);
+        this.gap(12);
         this.text('—— 战报（点“回放”重看整场战斗）——', 22, DIM);
         if (reports.length === 0) this.text('还没有战斗。', 22, DIM);
         for (const r of reports.slice(-6).reverse()) {
