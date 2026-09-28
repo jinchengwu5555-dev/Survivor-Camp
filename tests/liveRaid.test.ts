@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Battle } from '../assets/scripts/core/battle/Battle';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { battleRegistry } from '../assets/scripts/core/combat';
+import { nextHint } from '../assets/scripts/core/guide';
+import { eventSpeaker } from '../assets/scripts/core/portrait';
 import { loadConfig, MIN, RAID, T0 } from './helpers';
 
 function newGame(live = true) {
@@ -96,5 +98,42 @@ describe('第一次尸潮', () => {
         game.tick(T0 + MIN);
         expect(game.state.nextRaidAt).toBe(T0 + MIN + game.config.balance.firstRaidMinutes * MIN);
         expect(game.state.flags).toContain('first_raid_scheduled');
+    });
+});
+
+describe('新手引导', () => {
+    it('开局先提示安排人手，然后跟着剧情目标走', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 42);
+        game.state.eventQueue = [];
+        expect(nextHint(game.config, game.state, T0)).toMatchObject({ target: 'assign', tab: 'survivors' });
+        game.assign('martha', 'kitchen', T0);
+        expect(nextHint(game.config, game.state, T0)).toMatchObject({ target: 'upgrade:wall', tab: 'camp' });
+        game.upgrade('wall', T0);
+        expect(nextHint(game.config, game.state, T0)).toMatchObject({ target: 'speedup:wall' });
+    });
+
+    it('探索目标指向探索页的地点', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 42);
+        game.state.eventQueue = [];
+        game.assign('martha', 'kitchen', T0);
+        game.state.episodeIndex = 1;
+        game.state.buildings.kitchen.level = 2;
+        expect(nextHint(game.config, game.state, T0)).toMatchObject({ target: 'explore:gas_station', tab: 'explore' });
+    });
+
+    it('有事件、有尸潮时不打扰', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 42);
+        expect(game.state.eventQueue.length).toBeGreaterThan(0);
+        expect(nextHint(game.config, game.state, T0)).toBeNull();
+    });
+});
+
+describe('事件立绘', () => {
+    it('没写 speaker 时取正文里第一个提到的人，都没有就是旁白', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 42);
+        const ev = { id: 'x', title: '', text: '苏菲和德里克在吵架。', weight: 0, choices: [] };
+        expect(eventSpeaker(game.config, game.state, ev).id).toBe('sophie');
+        expect(eventSpeaker(game.config, game.state, { ...ev, speaker: 'derek' }).id).toBe('derek');
+        expect(eventSpeaker(game.config, game.state, { ...ev, text: '外面下雨了。' }).id).toBe('narrator');
     });
 });

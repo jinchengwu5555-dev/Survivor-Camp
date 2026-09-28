@@ -91,6 +91,7 @@ export function validateConfig(config: GameConfig): string[] {
     for (const ev of config.events) {
         if (ev.choices.length === 0) errors.push(`事件 ${ev.id} 没有选项`);
         for (const id of ev.conditions?.hasSurvivors ?? []) checkSurvivor(`事件 ${ev.id} 条件`, id, []);
+        if (ev.speaker) checkSurvivor(`事件 ${ev.id} 的 speaker`, ev.speaker, []);
         ev.choices.forEach((c, ci) => {
             const where = `事件 ${ev.id} 选项 ${ci + 1}`;
             checkBag(where, c.cost);

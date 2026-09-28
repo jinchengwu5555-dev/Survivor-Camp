@@ -156,6 +156,8 @@ export interface BuildingScaling {
 export interface BuildingDef {
     id: string;
     name: string;
+    /** 营地画面上的图标（还没有美术时用 emoji） */
+    icon?: string;
     description: string;
     /** 对口专长，分配对口的幸存者产量更高 */
     specialty?: Specialty;
@@ -232,6 +234,8 @@ export interface GameEventDef {
     once?: boolean;
     conditions?: Condition;
     choices: EventChoiceDef[];
+    /** 事件卡上显示谁的立绘（幸存者 id）；不写就用正文里第一个提到的人 */
+    speaker?: string;
 }
 
 export type Objective =
