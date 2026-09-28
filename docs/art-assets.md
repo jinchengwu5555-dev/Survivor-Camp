@@ -1,6 +1,6 @@
 # 美术资源清单与 AI 提示词
 
-《末日营地》目前的画面全部是代码画的色块。这份清单列出需要的图片、格式、文件名和 AI 提示词。
+《末日营地》目前的画面全部是代码画的色块。画风定为**现代日系动画赛璐璐**：头像和封面是正常比例的日漫立绘，战斗里是日系 SD 小人。这份清单列出需要的图片、格式、文件名和 AI 提示词。
 **做好一批就交给程序接入**，不用等全部做完。
 
 ---
@@ -16,27 +16,67 @@
 | 图里的文字 | **不要让 AI 生成文字**（中文基本会乱码）。招牌、标题字以后用设计软件加 |
 | 边距 | 角色、建筑四周留 5%～10% 空白，不要贴边、不要被裁切 |
 
-### 统一画风（非常重要）
+### 统一画风：现代日系动画赛璐璐（已定）
 
-所有图必须像同一个游戏里的东西。先定下画风，**每次生成都在提示词最前面加上“通用前缀”**。
+**风格定义**：现代日本动画 / 日系手游立绘的**赛璐璐上色**——干净利落的线稿，二到三阶的硬边阴影，明亮通透的高光，眼睛刻画细致；配色是**低饱和的末日色调**（灰绿、锈棕、水泥灰、褪色的天蓝），用营地灯火的**暖橙色**做点缀和逆光。气氛是“末日里的日常”：有危险，但人物温暖、有生活感，**不血腥、不猎奇**。
 
-**通用前缀（中文，适用于即梦、通义万相、文心一格、可灵等国内工具）：**
+同一个游戏里分四种用途，每种用自己的前缀，但上色和配色完全一致：
 
-> Q版卡通游戏美术，2.5 头身，大头小身子，粗而干净的深色描边，柔和的赛璐璐平涂上色，末日废土题材但温暖治愈的色调（灰绿、土黄、旧木色为主，暖橙色点缀），可爱不血腥，干净简洁，高清，游戏资源，
+| 前缀 | 用在 | 比例 |
+|---|---|---|
+| **A 日漫立绘** | 事件头像、封面、分享图、小游戏图标 | 正常人物比例（6～7 头身），半身像 |
+| **B 日系 SD 小人** | 战斗角色（伊森、丧尸……） | 2～2.5 头身的 SD / ちびキャラ（日式手游战斗小人的常见做法：立绘正常比例，战斗用 SD） |
+| **C 日漫背景** | 场景背景、营地地点、建筑 | 日本动画的美术背景质感 |
+| **D 日系手游图标** | 资源、物品、技能、拾荒物图标 | 单个物品 |
 
-**通用前缀（英文，适用于 Midjourney、Stable Diffusion）：**
+**前缀 A · 日漫立绘**
 
-> chibi cartoon mobile game asset, 2.5 heads tall, big head small body, bold clean dark outlines, soft cel shading, cozy post-apocalyptic palette (muted olive green, dusty tan, weathered wood, warm orange accents), cute not gory, clean and simple, high detail,
+> 中文：日本动画风格角色立绘，现代日系手游美术，赛璐璐上色，干净利落的线稿，二阶硬边阴影，细致的眼睛和头发高光，低饱和的末日配色（灰绿、锈棕、水泥灰），暖橙色的边缘逆光，表情生动，高清，
+>
+> English: anime style character illustration, modern Japanese mobile game art, cel shading, clean crisp lineart, two-tone hard shadows, detailed eyes and hair highlights, desaturated post-apocalyptic palette (grey-green, rust brown, concrete grey), warm orange rim light, expressive face, high quality,
+
+**前缀 B · 日系 SD 小人**
+
+> 中文：日系手游 SD 战斗小人，2 头身，头大身小，动画赛璐璐上色，干净的线稿，二阶阴影，低饱和末日配色加暖橙点缀，动作姿势清楚、轮廓分明，可爱但帅气，全身，
+>
+> English: Japanese mobile game SD battle sprite, super deformed chibi, 2 heads tall, anime cel shading, clean lineart, two-tone shadows, desaturated post-apocalyptic palette with warm orange accents, clear action pose, strong silhouette, cute but cool, full body,
+
+**前缀 C · 日漫背景**
+
+> 中文：日本动画电影的美术背景风格，精致的手绘质感，柔和的光影和大气透视，末日后的美国小镇，杂草从柏油路缝里长出来，低饱和配色，傍晚的暖光和冷色阴影对比，宁静又略带寂寥，高清，
+>
+> English: Japanese anime film background art, detailed hand-painted look, soft lighting and atmospheric perspective, post-apocalyptic small American town, weeds growing through cracked asphalt, desaturated palette, warm evening light against cool shadows, peaceful yet lonely, high quality,
+
+**前缀 D · 日系手游图标**
+
+> 中文：日系手游道具图标，单个物品居中，动画赛璐璐上色，粗而干净的描边，明暗对比清楚，微微俯视，缩小后也能一眼认出，
+>
+> English: Japanese mobile game item icon, single object centered, anime cel shading, bold clean outline, clear light and shadow, slight top-down angle, readable at small size,
 
 **反向提示词（负面提示词，能填就填）：**
 
-> 写实，照片，3D 渲染，血腥，血浆飞溅，内脏，恐怖，文字，水印，签名，logo，多余的手指，畸形的手，被裁切，多个角色，复杂背景，牛仔帽警长
+> 写实，照片，3D 渲染，欧美卡通，美漫，厚涂，血腥，血浆飞溅，内脏，猎奇，文字，水印，签名，logo，多余的手指，畸形的手，被裁切，多个角色，复杂背景，牛仔帽警长
+>
+> realistic, photo, 3d render, western cartoon, american comic style, painterly, gore, blood splatter, guts, grotesque, text, watermark, signature, logo, extra fingers, deformed hands, cropped, multiple characters, busy background, cowboy sheriff hat
 
-> realistic, photo, 3d render, gore, blood splatter, guts, horror, text, watermark, signature, logo, extra fingers, deformed hands, cropped, multiple characters, busy background, cowboy sheriff hat
+**用哪个工具**
+
+- **Midjourney**：在提示词最后加 **`--niji 6`**（Midjourney 专门做日漫风的模型）。头像加 `--ar 1:1`，背景加 `--ar 9:16` 或 `--ar 3:2`。
+- **即梦 / 可灵 / 通义万相**：模型或风格选“**动漫**”“二次元”一类，再贴中文提示词。
+- **Stable Diffusion**：用动漫类底模（比如 Animagine XL、Pony 系列的动漫模型），英文提示词效果更好。
+
+**不要在提示词里写具体画师或具体动画作品的名字**。一是版权风险，二是画出来会“像别人的游戏”。用上面的风格描述就够了。
+
+**其他可选风格**（不喜欢上面这种再换，一旦定了就全部统一）
+
+| 风格 | 感觉 | 把前缀里的风格描述换成 |
+|---|---|---|
+| 90 年代复古日漫 | 胶片颗粒、复古配色，末日气氛更浓 | 90年代日本动画风格，复古赛璐璐，胶片颗粒感，略微褪色的配色 / 90s retro anime style, vintage cel animation, film grain, faded colors |
+| 日系水彩绘本 | 温柔治愈，偏“末日日常” | 日系水彩插画风格，柔和的线条，透明水彩上色，留白 / Japanese watercolor illustration, soft lines, transparent watercolor, white space |
 
 ### 保持角色一致的技巧
 
-1. **先做伊森**，反复生成，直到满意为止，把这张当作“画风参考图”。
+1. **先做伊森的头像（前缀 A）**，反复生成直到满意，把这张当作“画风参考图”。然后用它做伊森的 SD 战斗小人（前缀 B），两张都满意了再做其他人。
 2. 之后每张都带上这张参考图：Midjourney 用 `--sref 图片链接`（画风参考），即梦、可灵用“参考图 / 风格参考”。
 3. 同一个角色的战斗图和头像，用 Midjourney 的 `--cref`（角色参考），或者即梦的“角色一致性”功能。
 4. 生成后用 **remove.bg**、即梦的“抠图”或 Photoshop 去掉背景，导出透明 PNG。
@@ -52,11 +92,11 @@
 
 ### 2.1 战斗角色 → `sprites/units/`
 
-- **尺寸 512×512**，透明背景，**全身**、站姿，脚底离画面底边约 8%。
+- **尺寸 512×512**，透明背景，**SD 小人全身**（2 头身）、站姿，脚底离画面底边约 8%。
 - 我方角色**身体朝右**（3/4 侧面），丧尸**朝左**。战斗里会缩小到 100 像素左右，所以要轮廓清楚、颜色分明。
 - 衣服的主色尽量用表里的“主色”，和游戏里现在的色块保持一致。
 
-| 文件名 | 角色 | 主色 | 中文提示词（前面加通用前缀） | English (after prefix) |
+| 文件名 | 角色 | 主色 | 中文提示词（前面加**前缀 B**） | English (after prefix B) |
 |---|---|---|---|---|
 | `unit_ethan.png` | 伊森 · 副警长（主角） | 蓝 `#4a6fa5` | 30多岁的小镇副警长，棕色短发，下巴有胡茬，眼神坚毅，穿**深蓝色警用夹克**，胸前一枚小星形警徽，腰带上挂手电筒和手枪套，右手握手枪、枪口朝下，站姿沉稳，全身，身体朝右，纯白背景 | small-town deputy in his 30s, short brown hair, stubble, determined eyes, **navy blue police jacket** with a small star badge, flashlight and holster on belt, holding a pistol pointed down, steady stance, full body, facing right, plain white background |
 | `unit_martha.png` | 玛莎 · 超市老板娘 | 红棕 `#c47a5a` | 60岁的胖胖的老奶奶，灰白头发盘成发髻，戴圆框眼镜，穿红棕色碎花连衣裙和超市围裙，双手举着一口大平底锅，表情凶巴巴但很可爱，全身，身体朝右，纯白背景 | plump 60-year-old grandma, grey hair in a bun, round glasses, rust-red floral dress with a grocery store apron, holding a big frying pan with both hands, fierce but adorable face, full body, facing right, plain white background |
@@ -67,19 +107,19 @@
 | `unit_militia.png` | 普通幸存者（流浪者通用） | 灰绿 `#7a8a7a` | 普通的末日幸存者，性别模糊，戴兜帽，穿打满补丁的灰绿色卫衣，背着小背包，手里握一根铁管，全身，身体朝右，纯白背景 | ordinary survivor, gender-neutral, hood up, patched grey-green hoodie, small backpack, holding a metal pipe, full body, facing right, plain white background |
 | `unit_dog.png` | 罐头 · 营地的狗 | 金黄 `#c8a050` | 一只金黄色的中型土狗，脖子上系红色旧头巾，竖着耳朵，摆出要冲出去的姿势，忠诚勇敢，全身，身体朝右，纯白背景 | medium golden mixed-breed dog, old red bandana on its neck, ears up, ready-to-charge pose, loyal and brave, full body, facing right, plain white background |
 | `barricade.png` | 路障 | 旧木色 `#8a7a5a` | 用超市货架、购物车、木板、轮胎和沙袋堆起来的路障墙，**侧面视角**，高大竖长，有钉子和铁丝加固，没有人物，纯白背景 | barricade wall made of grocery shelves, shopping carts, wooden planks, tires and sandbags, **side view**, tall and narrow, reinforced with nails and wire, no characters, plain white background |
-| `zombie_walker.png` | 行尸（最普通的丧尸） | 灰绿 `#6a8a5a` | Q版丧尸，灰绿色皮肤，眼睛是空洞的白色圆点，穿破烂的衬衫和牛仔裤，双手向前伸、摇摇晃晃地走，傻傻的有点可怜，不恐怖、不流血，全身，身体朝左，纯白背景 | chibi zombie, grey-green skin, blank white dot eyes, torn shirt and jeans, arms reaching forward, shambling walk, goofy and a bit pitiful, not scary, no blood, full body, facing left, plain white background |
-| `zombie_runner.png` | 奔跑者 | 浅黄绿 `#9aaa6a` | 瘦长的Q版丧尸，浅黄绿色皮肤，穿破旧的运动服和跑鞋，身体前倾、正在狂奔，头发乱飞，全身，身体朝左，纯白背景 | skinny chibi zombie, pale yellow-green skin, torn jogging tracksuit and sneakers, leaning forward mid-sprint, hair flying, full body, facing left, plain white background |
-| `zombie_fatty.png` | 胖子（死后放毒气） | 绿 `#7a9a4a` | 圆滚滚的巨大Q版丧尸，绿色皮肤，肚子鼓得很大，身上冒着淡绿色的毒气泡泡，穿撑破的背心，全身，身体朝左，纯白背景 | huge round chibi zombie, green skin, massively bloated belly, faint green toxic gas bubbles around it, tank top stretched and torn, full body, facing left, plain white background |
-| `zombie_armored.png` | 铁甲尸 | 蓝灰 `#5a6a7a` | Q版丧尸，戴黄色安全帽，身上穿着建筑工人的反光背心，外面绑着铁皮和轮胎当盔甲，看起来很硬，全身，身体朝左，纯白背景 | chibi zombie wearing a yellow hard hat and a construction worker's reflective vest, with scrap metal plates and tire pieces strapped on as armor, looks tough, full body, facing left, plain white background |
-| `zombie_brute.png` | 尸群首领（Boss） | 暗红 `#8a3a3a` | 体型是普通丧尸两倍的Q版丧尸首领，肌肉发达，暗红色皮肤，眼睛发红光，穿破烂的屠夫围裙，拳头巨大，气势很足，全身，身体朝左，纯白背景 | chibi zombie boss twice the size of normal zombies, muscular, dark red skin, glowing red eyes, torn butcher's apron, huge fists, imposing, full body, facing left, plain white background |
-| `zombie_frenzied.png` | 狂暴感染者 | 红 `#b04040` | 瘦小敏捷的Q版感染者，皮肤泛红，龇牙咧嘴，四肢着地、半蹲准备扑过来，身边有红色的速度线，全身，身体朝左，纯白背景 | small agile chibi infected, reddish skin, teeth bared, crouched on all fours ready to pounce, red speed lines around it, full body, facing left, plain white background |
+| `zombie_walker.png` | 行尸（最普通的丧尸） | 灰绿 `#6a8a5a` | SD 丧尸，灰绿色皮肤，眼睛是空洞的白色圆点，穿破烂的衬衫和牛仔裤，双手向前伸、摇摇晃晃地走，傻傻的有点可怜，不恐怖、不流血，全身，身体朝左，纯白背景 | chibi zombie, grey-green skin, blank white dot eyes, torn shirt and jeans, arms reaching forward, shambling walk, goofy and a bit pitiful, not scary, no blood, full body, facing left, plain white background |
+| `zombie_runner.png` | 奔跑者 | 浅黄绿 `#9aaa6a` | 瘦长的SD 丧尸，浅黄绿色皮肤，穿破旧的运动服和跑鞋，身体前倾、正在狂奔，头发乱飞，全身，身体朝左，纯白背景 | skinny chibi zombie, pale yellow-green skin, torn jogging tracksuit and sneakers, leaning forward mid-sprint, hair flying, full body, facing left, plain white background |
+| `zombie_fatty.png` | 胖子（死后放毒气） | 绿 `#7a9a4a` | 圆滚滚的巨大SD 丧尸，绿色皮肤，肚子鼓得很大，身上冒着淡绿色的毒气泡泡，穿撑破的背心，全身，身体朝左，纯白背景 | huge round chibi zombie, green skin, massively bloated belly, faint green toxic gas bubbles around it, tank top stretched and torn, full body, facing left, plain white background |
+| `zombie_armored.png` | 铁甲尸 | 蓝灰 `#5a6a7a` | SD 丧尸，戴黄色安全帽，身上穿着建筑工人的反光背心，外面绑着铁皮和轮胎当盔甲，看起来很硬，全身，身体朝左，纯白背景 | chibi zombie wearing a yellow hard hat and a construction worker's reflective vest, with scrap metal plates and tire pieces strapped on as armor, looks tough, full body, facing left, plain white background |
+| `zombie_brute.png` | 尸群首领（Boss） | 暗红 `#8a3a3a` | 体型是普通丧尸两倍的SD 丧尸首领，肌肉发达，暗红色皮肤，眼睛发红光，穿破烂的屠夫围裙，拳头巨大，气势很足，全身，身体朝左，纯白背景 | chibi zombie boss twice the size of normal zombies, muscular, dark red skin, glowing red eyes, torn butcher's apron, huge fists, imposing, full body, facing left, plain white background |
+| `zombie_frenzied.png` | 狂暴感染者 | 红 `#b04040` | 瘦小敏捷的SD 感染者，皮肤泛红，龇牙咧嘴，四肢着地、半蹲准备扑过来，身边有红色的速度线，全身，身体朝左，纯白背景 | small agile chibi infected, reddish skin, teeth bared, crouched on all fours ready to pounce, red speed lines around it, full body, facing left, plain white background |
 
 ### 2.2 事件头像 → `sprites/portraits/`
 
-- **尺寸 512×512**，透明背景，**半身像（头到胸口）**，脸朝右前方，表情自然。游戏里会裁成圆形，所以**脸放在正中间**，四周留足空白。
+- **尺寸 512×512**，透明背景，**日漫半身立绘（头到胸口，正常人物比例）**，脸朝右前方，表情自然。游戏里会裁成圆形，所以**脸放在正中间**，四周留足空白。
 - 描述和上面的战斗角色保持一致（同一个人），这里只写半身的重点。
 
-| 文件名 | 角色 | 中文提示词（前面加通用前缀） | English (after prefix) |
+| 文件名 | 角色 | 中文提示词（前面加**前缀 A**） | English (after prefix A) |
 |---|---|---|---|
 | `portrait_ethan.png` | 伊森 | 半身像，30多岁副警长，棕色短发，胡茬，深蓝色警用夹克，胸前小星形警徽，神情坚毅又带着一点疲惫和思念，纯白背景 | bust portrait, deputy in his 30s, short brown hair, stubble, navy police jacket with small star badge, determined yet tired and longing expression, plain white background |
 | `portrait_martha.png` | 玛莎 | 半身像，60岁胖奶奶，灰白发髻，圆框眼镜，超市围裙，双手叉腰，嘴硬心软的表情，纯白背景 | bust portrait, plump 60-year-old grandma, grey bun, round glasses, grocery apron, hands on hips, tough-talking but kind expression, plain white background |
@@ -100,10 +140,10 @@
 
 ### 2.3 营地建筑 → `sprites/buildings/`
 
-- **尺寸 512×512**，透明背景，**45 度俯视（等距视角）的小建筑**，风格统一，都是“在超市停车场里就地搭建”的感觉。
+- **尺寸 512×512**，透明背景，**45 度俯视（等距视角）的小建筑**，日漫背景的手绘质感，风格统一，都是“在超市停车场里就地搭建”的感觉。
 - 每个建筑只画 1 张，代表 1 级的样子（以后可以再加高级版本）。
 
-| 文件名 | 建筑 | 中文提示词（前面加通用前缀） | English (after prefix) |
+| 文件名 | 建筑 | 中文提示词（前面加**前缀 C**） | English (after prefix C) |
 |---|---|---|---|
 | `building_hq.png` | 指挥部 | 等距视角，小镇超市的经理办公室，门口插着一面小旗子，屋顶有一根收音机天线，窗户透出暖黄的灯光，单独一个建筑，纯白背景 | isometric view, small-town supermarket manager's office, a small flag at the door, radio antenna on the roof, warm yellow light in the windows, single building, plain white background |
 | `building_wall.png` | 路障 | 等距视角，一段用货架、购物车、木板和沙袋堆成的防御墙，墙上挂着一盏灯，单独一段，纯白背景 | isometric view, a section of defensive wall made of shelves, shopping carts, planks and sandbags, a lamp hanging on it, single section, plain white background |
@@ -122,7 +162,7 @@
 ### 3.1 图标 → `sprites/icons/`
 
 - **尺寸 256×256**，透明背景，**单个物品、正面略俯视**，粗描边，适合缩小到 40 像素还能认出来。
-- 所有图标的提示词都用这个模板：`通用前缀 + 游戏图标，单个物品居中，【物品描述】，纯白背景`
+- 所有图标的提示词都用这个模板：`前缀 D + 【物品描述】，纯白背景`
 
 | 文件名 | 用途 | 物品描述（中文） | English |
 |---|---|---|---|
@@ -134,7 +174,7 @@
 | `pickup_crate.png` | 拾荒：补给箱 | 一个木制补给箱，箱盖半开，露出食物 | a wooden supply crate with the lid half open, food inside |
 | `pickup_scrap.png` | 拾荒：废铁堆 | 一小堆废铁、铁皮和木板 | a small pile of scrap metal, sheet metal and planks |
 | `pickup_medkit.png` | 拾荒：急救箱 | 一个白底红十字的急救箱 | a white first-aid box with a red cross |
-| `pickup_walker.png` | 拾荒：落单的行尸 | Q版行尸的脑袋，灰绿皮肤，白点眼睛，傻傻的 | a chibi zombie head, grey-green skin, white dot eyes, goofy |
+| `pickup_walker.png` | 拾荒：落单的行尸 | SD 行尸的脑袋，灰绿皮肤，白点眼睛，傻傻的 | a chibi zombie head, grey-green skin, white dot eyes, goofy |
 | `pickup_cans.png` | 拾荒：罐头 | 两个滚在地上的罐头 | two tin cans lying on the ground |
 | `item_molotov.png` | 物品：燃烧瓶 | 一个塞着布条、布条在燃烧的玻璃瓶 | a glass bottle with a burning rag stuffed in it |
 | `item_medkit.png` | 物品：急救包 | 一卷绷带和一个小药盒 | a roll of bandage and a small medicine box |
@@ -148,11 +188,11 @@
 
 背景**不需要透明**，提示词里**不要写“纯白背景”**。
 
-| 文件名 | 尺寸 | 中文提示词（前面加通用前缀） | English (after prefix) |
+| 文件名 | 尺寸 | 中文提示词（前面加**前缀 C**，封面加**前缀 A**） | English (after prefix C / A) |
 |---|---|---|---|
 | `bg_camp.png` | **1080×1920**（竖屏） | 游戏场景背景，45 度俯视的美国小镇超市停车场营地，超市外墙和大门在画面上方，停车场里有帐篷、篝火、晾衣绳、用购物车和货架堆的路障，远处是废弃的汽车和小镇街道，黄昏，暖色调，**画面中间和下半部分留出比较空的地面**（要放界面），没有人物，没有文字 | game background, 45-degree top-down view of a small American town supermarket parking lot turned into a camp, store front at the top, tents, campfire, clotheslines, barricades of shopping carts and shelves, abandoned cars and quiet town street in the distance, dusk, warm tones, **leave the middle and lower area fairly empty** for UI, no characters, no text |
 | `bg_battle.png` | **1080×720**（横条） | 游戏战斗背景，**横版侧视**，夜晚的小镇街道，左边是营地的围栏和一盏路灯，右边是一条延伸出去的马路，路边有废弃的汽车和倒下的路牌，天上有月亮，蓝紫色夜色，**画面底部 20% 是平坦的地面**（角色站在上面），没有人物，没有文字 | game battle background, **side-scrolling side view**, small town street at night, camp fence and a street lamp on the left, road stretching to the right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground in the bottom 20%** for characters to stand on, no characters, no text |
-| `bg_title.png` | **1080×1920** | 游戏封面，黄昏下的超市营地，几个Q版幸存者的背影围坐在篝火旁（剪影即可），远处天边有尸群的黑色剪影，温暖又有一点不安的氛围，**画面上方 1/3 留空**（放游戏标题），没有文字 | game title screen, supermarket camp at dusk, silhouettes of a few chibi survivors sitting around a campfire seen from behind, a dark silhouette of a zombie horde on the distant horizon, warm yet slightly uneasy mood, **leave the top third empty** for the title, no text |
+| `bg_title.png` | **1080×1920** | 游戏封面，黄昏下的超市营地，几个幸存者的背影围坐在篝火旁（剪影即可），远处天边有尸群的黑色剪影，温暖又有一点不安的氛围，**画面上方 1/3 留空**（放游戏标题），没有文字 | game title screen, supermarket camp at dusk, silhouettes of a few survivors sitting around a campfire seen from behind, a dark silhouette of a zombie horde on the distant horizon, warm yet slightly uneasy mood, **leave the top third empty** for the title, no text |
 | `bg_bloodmoon.png` | 1080×720 | 和 `bg_battle` 同一条街道、同一个构图，但天上是一轮巨大的**血红色月亮**，整体是暗红色调（血月夜的战斗用） | same street and same composition as bg_battle, but a huge **blood-red moon** in the sky, overall dark red tones (for blood moon nights) |
 
 ---
@@ -163,7 +203,7 @@
 
 **尺寸 1080×608**（16:9 横图，搬迁界面的卡片用），不需要透明，没有人物、没有文字。
 
-| 文件名 | 地点 | 中文提示词（前面加通用前缀） |
+| 文件名 | 地点 | 中文提示词（前面加**前缀 C**） |
 |---|---|---|
 | `site_supermarket.png` | 枫谷超市 | 45 度俯视，小镇超市和它的停车场，门口堆着货架路障，黄昏 |
 | `site_garage.png` | 镇口加油站 | 45 度俯视，镇口的小加油站，油罐、汽修间、墙上挂满工具，白天 |
@@ -185,8 +225,8 @@
 
 | 文件名 | 尺寸 | 说明 |
 |---|---|---|
-| `app_icon.png` | **1024×1024**，不透明 | 小游戏图标：伊森的Q版大头像，背景是黄昏的超市营地和篝火，构图简单，缩小到 60 像素也能看清。上传微信后台时按要求再缩小 |
-| `share_default.png` | **500×400**（5:4） | 微信分享卡片图：几个Q版幸存者站在路障后面，远处有尸群，**右侧留空**（以后加“我的营地存活了 N 天”的文字） |
+| `app_icon.png` | **1024×1024**，不透明 | 小游戏图标：伊森的日漫风头像（前缀 A），背景是黄昏的超市营地和篝火，构图简单，缩小到 60 像素也能看清。上传微信后台时按要求再缩小 |
+| `share_default.png` | **500×400**（5:4） | 微信分享卡片图：几个 SD 小人幸存者站在路障后面，远处有尸群，**右侧留空**（以后加“我的营地存活了 N 天”的文字） |
 
 ---
 
