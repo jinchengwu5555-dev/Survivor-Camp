@@ -51,7 +51,7 @@ describe('亲手守夜', () => {
         expect(replay.events.length).toBe(live.battle.events.length);
     });
 
-    it('花木材修补路障，有次数限制', () => {
+    it('花木材修补栅栏，有次数限制', () => {
         const game = newGame();
         game.state.resources.wood = 200;
         game.tick(T0 + RAID);

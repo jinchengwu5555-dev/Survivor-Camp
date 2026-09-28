@@ -1,6 +1,6 @@
 // 亲手守夜：尸潮来了以后，界面用 LiveRaid 把战斗实时演出来，玩家可以
 //   · 点角色的技能按钮放手动技能（也可以打开“自动释放”）
-//   · 花木材修补路障（每场有次数限制）
+//   · 花木材修补栅栏（每场有次数限制）
 // 所有操作都记在 Battle.inputs 里，写进战报后可以完整重放。
 
 import { Battle } from './battle/Battle';
@@ -73,7 +73,7 @@ export class LiveRaid {
         return Math.max(0, this.config.balance.raidRepair.maxUses - this.pending.repairs);
     }
 
-    /** 花木材修补路障；返回 null 表示成功 */
+    /** 花木材修补栅栏；返回 null 表示成功 */
     repair(): string | null {
         if (this.repairsLeft() <= 0) return '这一夜已经修不动了';
         const { hp, wood } = this.repairCost();

@@ -10,7 +10,7 @@
         { "id": "pickup_3", "text": "在营地附近捡 3 样东西", "stat": "pickups_collected", "amount": 3, "reward": { "wood": 20, "parts": 5 } },
         { "id": "event_2", "text": "做出 2 次抉择", "stat": "events_resolved", "amount": 2, "reward": { "food": 25 } },
         { "id": "raid_1", "text": "守住 1 次尸潮", "stat": "raids_won", "amount": 1, "reward": { "parts": 15, "cans": 1 }, "conditions": { "flags": ["raids_started"] } },
-        { "id": "repair_1", "text": "守夜时修补 1 次路障", "stat": "barricade_repairs", "amount": 1, "reward": { "wood": 30 }, "conditions": { "flags": ["raids_started"] } },
+        { "id": "repair_1", "text": "守夜时修补 1 次栅栏", "stat": "barricade_repairs", "amount": 1, "reward": { "wood": 30 }, "conditions": { "flags": ["raids_started"] } },
         { "id": "craft_1", "text": "在工坊做 1 个物品", "stat": "items_crafted", "amount": 1, "reward": { "parts": 10 }, "requiresBuilding": "workshop" },
         { "id": "treat_1", "text": "在医务室治好 1 个伤员", "stat": "treated", "amount": 1, "reward": { "medicine": 5 }, "requiresBuilding": "infirmary" }
     ]

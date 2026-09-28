@@ -39,7 +39,7 @@
         "id": "spike_trap",
         "name": "钉板陷阱",
         "icon": "📌",
-        "description": "木板上钉满长钉，铺在路障前面。踩上去的丧尸被扎住动弹不得。",
+        "description": "木板上钉满长钉，铺在栅栏前面。踩上去的丧尸被扎住动弹不得。",
         "workshopLevel": 2,
         "cost": { "wood": 10, "parts": 6 },
         "battleSkill": "item_spike"

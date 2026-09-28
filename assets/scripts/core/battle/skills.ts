@@ -19,7 +19,7 @@ export function enemiesOf(ctx: BattleContext, unit: BattleUnit): BattleUnit[] {
     return ctx.units.filter((u) => u.alive && u.side !== unit.side);
 }
 
-/** 队友（不含路障这类建筑） */
+/** 队友（不含栅栏这类建筑） */
 export function alliesOf(ctx: BattleContext, unit: BattleUnit): BattleUnit[] {
     return ctx.units.filter((u) => u.alive && u.side === unit.side && u.def.faction !== 'structure');
 }

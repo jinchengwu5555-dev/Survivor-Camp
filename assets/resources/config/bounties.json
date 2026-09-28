@@ -1,6 +1,6 @@
 [
     { "id": "b_walkers", "title": "清理街道", "description": "主街上的行尸越来越多了。消灭 15 只行尸。", "rank": 0, "goal": { "stat": "kill_walker", "amount": 15 }, "reward": { "food": 40, "parts": 10 }, "xp": 20 },
-    { "id": "b_runners", "title": "追猎奔跑者", "description": "奔跑者总是第一个冲到路障前。消灭 6 只奔跑者。", "rank": 0, "goal": { "stat": "kill_runner", "amount": 6 }, "reward": { "parts": 20 }, "xp": 20 },
+    { "id": "b_runners", "title": "追猎奔跑者", "description": "奔跑者总是第一个冲到栅栏前。消灭 6 只奔跑者。", "rank": 0, "goal": { "stat": "kill_runner", "amount": 6 }, "reward": { "parts": 20 }, "xp": 20 },
     { "id": "b_gas_station", "title": "补给线", "description": "加油站便利店是最近的补给点。再搜刮 2 次。", "rank": 0, "conditions": { "flags": ["cleared_gas_station"] }, "goal": { "stat": "clear_gas_station", "amount": 2 }, "reward": { "wood": 50 }, "xp": 15 },
     { "id": "b_fatty", "title": "毒气罐头", "description": "胖子死后会炸出毒气，小心点。消灭 3 只胖子。", "rank": 1, "goal": { "stat": "kill_fatty", "amount": 3 }, "reward": { "medicine": 15 }, "xp": 30 },
     { "id": "b_armored", "title": "拆铁皮", "description": "铁甲尸身上的护甲还能拆下来用。消灭 3 只铁甲尸。", "rank": 1, "goal": { "stat": "kill_armored", "amount": 3 }, "reward": { "parts": 40 }, "xp": 30 },

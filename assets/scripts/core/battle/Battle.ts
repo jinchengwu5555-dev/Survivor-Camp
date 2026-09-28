@@ -20,7 +20,7 @@ export interface UnitSetup {
     x?: number;
     /** 第几秒出场（用于尸潮分波） */
     spawnAt?: number;
-    /** 覆盖最大生命（比如路障的生命由营地安全值决定） */
+    /** 覆盖最大生命（比如栅栏的生命由营地安全值决定） */
     maxHp?: number;
     /** 调用方自定义标记，会原样放到 BattleUnit.tag 上（营地用它记录幸存者 id） */
     tag?: string;
@@ -38,9 +38,9 @@ export interface BattleSetup {
     seed: number;
     /** 手动技能也自动释放（营地里自动结算的战斗没人点按钮） */
     autoCastActive?: boolean;
-    /** 这些 tag 的我方单位倒下就算输（守夜时路障被拆 = 尸群冲进营地） */
+    /** 这些 tag 的我方单位倒下就算输（守夜时栅栏被拆 = 尸群冲进营地） */
     mustSurvive?: string[];
-    /** 我方最远只能走到这个位置（守夜时大家守在路障后面） */
+    /** 我方最远只能走到这个位置（守夜时大家守在栅栏后面） */
     allyHoldLine?: number;
     /** 玩家的操作记录：重放战报时按时间点原样执行（手动守夜的战报靠它完整重放） */
     inputs?: BattleInput[];
@@ -50,7 +50,7 @@ export interface BattleSetup {
  * 玩家在战斗中的一次操作，t 是操作时的战斗时间（在下一帧开始前执行）。
  *   cast：让 uid 这个单位放手动技能
  *   auto：切换“手动技能自动释放”
- *   heal：给 tag 这个单位回 amount 点血（比如花木材修补路障）
+ *   heal：给 tag 这个单位回 amount 点血（比如花木材修补栅栏）
  */
 export type BattleInput = { t: number; cast: number } | { t: number; auto: boolean } | { t: number; heal: string; amount: number };
 
@@ -138,7 +138,7 @@ export class Battle implements BattleContext {
         this.inputs.push({ t: this.time, auto: on });
     }
 
-    /** 给 tag 这个我方单位回血（修补路障）；返回 null 表示成功 */
+    /** 给 tag 这个我方单位回血（修补栅栏）；返回 null 表示成功 */
     healTagged(tag: string, amount: number): string | null {
         if (this.result !== 'ongoing') return '战斗已结束';
         const unit = this.units.find((u) => u.tag === tag && u.side === 'ally');
@@ -215,7 +215,7 @@ export class Battle implements BattleContext {
 
     /**
      * 索敌：当前目标还活着、并且在攻击距离内就继续打；否则换最近的敌人。
-     * 不在攻击距离内也要重新找——守夜时大家不能越过路障，锁定远处的敌人会让近战的人站着发呆。
+     * 不在攻击距离内也要重新找——守夜时大家不能越过栅栏，锁定远处的敌人会让近战的人站着发呆。
      */
     private pickTarget(u: BattleUnit): BattleUnit | undefined {
         const current = this.getUnit(u.targetUid);

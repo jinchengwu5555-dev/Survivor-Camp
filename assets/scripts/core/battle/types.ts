@@ -41,7 +41,7 @@ export interface UnitAppearance {
 export interface UnitDef {
     id: string;
     name: string;
-    /** structure = 路障这类建筑：会挨打，但不会被队友治疗或加增益；beast = 野狗这类变异动物（不算丧尸击杀） */
+    /** structure = 栅栏这类建筑：会挨打，但不会被队友治疗或加增益；beast = 野狗这类变异动物（不算丧尸击杀） */
     faction: 'survivor' | 'zombie' | 'structure' | 'beast';
     appearance: UnitAppearance;
     stats: UnitStats;

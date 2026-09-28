@@ -130,7 +130,7 @@ export function validateConfig(config: GameConfig): string[] {
     for (const s of config.survivors) {
         if (s.battleUnit && !battle.hasUnit(s.battleUnit)) errors.push(`幸存者 ${s.id}：未知战斗角色 ${s.battleUnit}`);
     }
-    if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的路障`);
+    if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的栅栏`);
     if (!battle.hasUnit(DOG_UNIT)) errors.push(`units.json 里必须有 id 为 ${DOG_UNIT} 的狗`);
     checkBag('治疗花费', config.balance.healCost);
 

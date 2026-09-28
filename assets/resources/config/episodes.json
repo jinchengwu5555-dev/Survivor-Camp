@@ -6,7 +6,7 @@
         "title": "堵住大门",
         "startEvent": "s1e1_open",
         "objectives": [
-            { "type": "buildingLevel", "building": "wall", "level": 2, "text": "把路障升到 2 级" }
+            { "type": "buildingLevel", "building": "wall", "level": 2, "text": "把栅栏升到 2 级" }
         ],
         "rewards": { "food": 30 },
         "endEvent": "s1e1_end"

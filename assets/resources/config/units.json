@@ -49,7 +49,7 @@
         "skills": []
     },
     {
-        "id": "barricade", "name": "路障", "faction": "structure",
+        "id": "barricade", "name": "栅栏", "faction": "structure",
         "appearance": { "sprite": "barricade", "color": "#8a7a5a", "scale": 1.2 },
         "stats": { "maxHp": 1, "atk": 0, "def": 20, "moveSpeed": 0, "attackRange": 0, "attackInterval": 1, "critRate": 0, "critDamage": 1 },
         "skills": []

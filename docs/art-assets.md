@@ -110,7 +110,7 @@
 | `unit_hank.png` | 汉克 · 退伍老兵 | 军绿 `#5a6a4a` | 60岁左右的退伍老兵，灰白络腮胡，戴针织帽，穿军绿色旧外套，背着步枪、双手端枪瞄准，眼神锐利沉默，全身，身体朝右，纯白背景 | veteran around 60, grey full beard, knit beanie, worn olive-green army jacket, aiming a hunting rifle, sharp silent eyes, full body, facing right, plain white background |
 | `unit_militia.png` | 普通幸存者（流浪者通用） | 灰绿 `#7a8a7a` | 普通的末日幸存者，性别模糊，戴兜帽，穿打满补丁的灰绿色卫衣，背着小背包，手里握一根铁管，全身，身体朝右，纯白背景 | ordinary survivor, gender-neutral, hood up, patched grey-green hoodie, small backpack, holding a metal pipe, full body, facing right, plain white background |
 | `unit_dog.png` | 罐头 · 营地的狗 | 金黄 `#c8a050` | 一只金黄色的中型土狗，脖子上系红色旧头巾，竖着耳朵，摆出要冲出去的姿势，忠诚勇敢，全身，身体朝右，纯白背景 | medium golden mixed-breed dog, old red bandana on its neck, ears up, ready-to-charge pose, loyal and brave, full body, facing right, plain white background |
-| `barricade.png` | 路障 | 旧木色 `#8a7a5a` | 用超市货架、购物车、木板、轮胎和沙袋堆起来的路障墙，**侧面视角**，高大竖长，有钉子和铁丝加固，没有人物，纯白背景 | barricade wall made of grocery shelves, shopping carts, wooden planks, tires and sandbags, **side view**, tall and narrow, reinforced with nails and wire, no characters, plain white background |
+| `barricade.png` | 栅栏 | 旧木色 `#8a7a5a` | 用超市货架、购物车、木板、轮胎和沙袋堆起来的栅栏墙，**侧面视角**，高大竖长，有钉子和铁丝加固，没有人物，纯白背景 | barricade wall made of grocery shelves, shopping carts, wooden planks, tires and sandbags, **side view**, tall and narrow, reinforced with nails and wire, no characters, plain white background |
 | `zombie_walker.png` | 行尸（最普通的丧尸） | 灰绿 `#6a8a5a` | SD 丧尸，灰绿色皮肤，眼睛是空洞的白色圆点，穿破烂的衬衫和牛仔裤，双手向前伸、摇摇晃晃地走，傻傻的有点可怜，不恐怖、不流血，全身，身体朝左，纯白背景 | chibi zombie, grey-green skin, blank white dot eyes, torn shirt and jeans, arms reaching forward, shambling walk, goofy and a bit pitiful, not scary, no blood, full body, facing left, plain white background |
 | `zombie_runner.png` | 奔跑者 | 浅黄绿 `#9aaa6a` | 瘦长的SD 丧尸，浅黄绿色皮肤，穿破旧的运动服和跑鞋，身体前倾、正在狂奔，头发乱飞，全身，身体朝左，纯白背景 | skinny chibi zombie, pale yellow-green skin, torn jogging tracksuit and sneakers, leaning forward mid-sprint, hair flying, full body, facing left, plain white background |
 | `zombie_fatty.png` | 胖子（死后放毒气） | 绿 `#7a9a4a` | 圆滚滚的巨大SD 丧尸，绿色皮肤，肚子鼓得很大，身上冒着淡绿色的毒气泡泡，穿撑破的背心，全身，身体朝左，纯白背景 | huge round chibi zombie, green skin, massively bloated belly, faint green toxic gas bubbles around it, tank top stretched and torn, full body, facing left, plain white background |
@@ -151,7 +151,7 @@
 | 文件名 | 建筑 | 中文提示词（前面加**前缀 C**） | English (after prefix C) |
 |---|---|---|---|
 | `building_hq.png` | 指挥部 | 等距视角，小镇超市的经理办公室，门口插着一面小旗子，屋顶有一根收音机天线，窗户透出暖黄的灯光，单独一个建筑，纯白背景 | isometric view, small-town supermarket manager's office, a small flag at the door, radio antenna on the roof, warm yellow light in the windows, single building, plain white background |
-| `building_wall.png` | 路障 | 等距视角，一段用货架、购物车、木板和沙袋堆成的防御墙，墙上挂着一盏灯，单独一段，纯白背景 | isometric view, a section of defensive wall made of shelves, shopping carts, planks and sandbags, a lamp hanging on it, single section, plain white background |
+| `building_wall.png` | 栅栏 | 等距视角，一段用货架、购物车、木板和沙袋堆成的防御墙，墙上挂着一盏灯，单独一段，纯白背景 | isometric view, a section of defensive wall made of shelves, shopping carts, planks and sandbags, a lamp hanging on it, single section, plain white background |
 | `building_kitchen.png` | 厨房 | 等距视角，露天野战厨房，用砖头垒的灶台上架着一口冒热气的大锅，旁边有木桌、调料罐和挂着的锅碗瓢盆，纯白背景 | isometric view, open-air field kitchen, a big steaming pot on a brick stove, wooden table, spice jars and hanging pots and pans, plain white background |
 | `building_scrapyard.png` | 废料场 | 等距视角，一个小废料场，堆着拆掉的旧汽车、轮胎、木板和铁皮，有一台小吊车，纯白背景 | isometric view, small scrapyard, piles of dismantled old cars, tires, planks and sheet metal, a small crane, plain white background |
 | `building_infirmary.png` | 医务室 | 等距视角，由药房柜台改建的简易医务室，门口挂着红十字布帘，里面有一张病床和药柜，纯白背景 | isometric view, makeshift infirmary converted from a pharmacy counter, red cross curtain at the entrance, a hospital bed and medicine cabinet inside, plain white background |
@@ -209,7 +209,7 @@
 
 | 文件名 | 尺寸 | 中文提示词（前面加**前缀 C**，封面加**前缀 A**） | English (after prefix C / A) |
 |---|---|---|---|
-| `bg_camp.png` | **1440×1330**（接近正方形，营地地图区域的比例） | 营地地图的**地面底图**：45 度俯视的美国小镇超市停车场，超市外墙和大门在画面最上方一条，其余是**开阔、平整的停车场地面**（柏油、停车线、几处杂草和裂缝、零星的轮胎和木箱），最下方边缘有一圈简陋的围栏，黄昏暖光，**不要画帐篷、厨房之类的设施**（设施是单独的建筑图，程序会摆上去），没有人物，没有文字 | camp map **ground layer**: 45-degree top-down view of a small American town supermarket parking lot, store front as a thin strip at the very top, the rest is **open flat parking lot ground** (asphalt, parking lines, some weeds and cracks, a few scattered tires and crates), a simple fence along the bottom edge, warm dusk light, **no tents or facilities** (buildings are separate sprites placed by the game), no characters, no text |
+| `bg_camp.png` | **1440×1330**（接近正方形，营地地图区域的比例） | 营地地图的**地面底图**：45 度俯视的美国小镇超市停车场，超市外墙和大门在画面最上方一条，其余是**开阔、平整的停车场地面**（柏油、停车线、几处杂草和裂缝、零星的轮胎和木箱），黄昏暖光，**不要画帐篷、厨房之类的设施**（设施是单独的建筑图，程序会摆上去），没有人物，没有文字 | camp map **ground layer**: 45-degree top-down view of a small American town supermarket parking lot, store front as a thin strip at the very top, the rest is **open flat parking lot ground** (asphalt, parking lines, some weeds and cracks, a few scattered tires and crates), warm dusk light, **no tents or facilities** (buildings are separate sprites placed by the game), no characters, no text |
 | `bg_battle.png` | **1080×720**（横条） | 游戏战斗背景，**横版侧视**，夜晚的小镇街道，左边是营地的围栏和一盏路灯，右边是一条延伸出去的马路，路边有废弃的汽车和倒下的路牌，天上有月亮，蓝紫色夜色，**画面底部 20% 是平坦的地面**（角色站在上面），没有人物，没有文字 | game battle background, **side-scrolling side view**, small town street at night, camp fence and a street lamp on the left, road stretching to the right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground in the bottom 20%** for characters to stand on, no characters, no text |
 | `bg_town.png` | **1440×1460**（接近正方形，探索页地图区域的比例） | 小镇地图底图：**正上方俯视**的美国小镇，一条小河从左边弯弯曲曲流到右边，主路从左下角的镇口通到中间、再分岔去北边的山和右边，右上和左上是树林，北边是山坡，街区之间有很多空地（地点标记由程序摆上去，**不要画具体的建筑名字和文字**），低饱和的末日配色，杂草丛生，没有人物 | **top-down** map of a small American town, a small river winding from left to right, a main road from the lower-left town entrance to the center then branching north to the hills and to the right, woods in the upper corners, hillside to the north, plenty of open space between blocks (location markers are placed by the game, **no building names or text**), desaturated post-apocalyptic palette, overgrown, no characters |
 | `bg_title.png` | **1080×1920** | 游戏封面，黄昏下的超市营地，几个幸存者的背影围坐在篝火旁（剪影即可），远处天边有尸群的黑色剪影，温暖又有一点不安的氛围，**画面上方 1/3 留空**（放游戏标题），没有文字 | game title screen, supermarket camp at dusk, silhouettes of a few survivors sitting around a campfire seen from behind, a dark silhouette of a zombie horde on the distant horizon, warm yet slightly uneasy mood, **leave the top third empty** for the title, no text |
@@ -225,7 +225,7 @@
 
 | 文件名 | 地点 | 中文提示词（前面加**前缀 C**） |
 |---|---|---|
-| `site_supermarket.png` | 枫谷超市 | 45 度俯视，小镇超市和它的停车场，门口堆着货架路障，黄昏 |
+| `site_supermarket.png` | 枫谷超市 | 45 度俯视，小镇超市和它的停车场，门口堆着货架栅栏，黄昏 |
 | `site_garage.png` | 镇口加油站 | 45 度俯视，镇口的小加油站，油罐、汽修间、墙上挂满工具，白天 |
 | `site_farm.png` | 河谷农场 | 45 度俯视，河谷里的农场，红色谷仓、果园和一口水井，四周开阔，傍晚 |
 | `site_clinic.png` | 镇卫生所 | 45 度俯视，小镇卫生所，白墙红十字，窗户用木板钉住，门外远处有几只丧尸的剪影，阴天 |
@@ -239,14 +239,14 @@
 | `ui_panel.png` | 256×256 | 界面面板底板：旧木板拼成的方形面板，四角有金属包角和铆钉，中间平整干净（会被拉伸），纯白背景 |
 | `ui_button.png` | 256×96 | 按钮底图：墨绿色旧金属牌子，边缘有一点磨损和铆钉，中间平整，纯白背景 |
 | `ui_button_gold.png` | 256×96 | 同上，但是暖金色（引导高亮 / 可领取时用） |
-| `ui_logo.png` | 1024×512 | **游戏标题“末日营地”建议用设计工具做**（稿定设计 / Canva / Photoshop）：粗体卡通字，木牌或铁皮质感，旁边点缀一个小篝火和路障。AI 只负责生成装饰部分 |
+| `ui_logo.png` | 1024×512 | **游戏标题“末日营地”建议用设计工具做**（稿定设计 / Canva / Photoshop）：粗体卡通字，木牌或铁皮质感，旁边点缀一个小篝火和栅栏。AI 只负责生成装饰部分 |
 
 ### 4.3 上架用
 
 | 文件名 | 尺寸 | 说明 |
 |---|---|---|
 | `app_icon.png` | **1024×1024**，不透明 | 小游戏图标：伊森的日漫风头像（前缀 A），背景是黄昏的超市营地和篝火，构图简单，缩小到 60 像素也能看清。上传微信后台时按要求再缩小 |
-| `share_default.png` | **500×400**（5:4） | 微信分享卡片图：几个 SD 小人幸存者站在路障后面，远处有尸群，**右侧留空**（以后加“我的营地存活了 N 天”的文字） |
+| `share_default.png` | **500×400**（5:4） | 微信分享卡片图：几个 SD 小人幸存者站在栅栏后面，远处有尸群，**右侧留空**（以后加“我的营地存活了 N 天”的文字） |
 
 ---
 

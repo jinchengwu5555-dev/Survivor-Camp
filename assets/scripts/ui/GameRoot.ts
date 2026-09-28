@@ -618,6 +618,7 @@ export class GameRoot extends Component {
             this.drawMapPlaceholder(map, camp);
         }
 
+        this.drawCampFence(map, state.buildings.wall?.level ?? 0);
         const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
         config.buildings.forEach((def, i) => this.renderMapBuilding(map, camp, def, i, now, guided === def.id));
 
@@ -694,6 +695,64 @@ export class GameRoot extends Component {
         }
     }
 
+    /**
+     * 营地的栅栏：围着停车场一圈，样子随栅栏等级变化——
+     * 0 级：散落的货架；1～3 级：木栅栏；4～7 级：加固木墙；8～12 级：铁皮墙；13 级以上：水泥墙加铁丝网。
+     * 下方中间留一个大门（栅栏建筑就站在门口）。
+     */
+    private drawCampFence(map: Node, level: number): void {
+        const node = makeNode('Fence', map, MAP_WIDTH, MAP_HEIGHT);
+        const g = node.addComponent(Graphics);
+        const left = -MAP_WIDTH / 2 + 16;
+        const right = MAP_WIDTH / 2 - 16;
+        const bottom = -MAP_HEIGHT / 2 + 16;
+        const top = MAP_HEIGHT / 2 - 160;
+        const gate = { from: -10, to: 130 };
+        const style =
+            level >= 13
+                ? { color: hexColor('#9a9a92'), width: 12, post: hexColor('#6a6a64'), wire: true }
+                : level >= 8
+                  ? { color: hexColor('#7c8a94'), width: 10, post: hexColor('#4e5a62'), wire: false }
+                  : level >= 4
+                    ? { color: hexColor('#8a6a44'), width: 9, post: hexColor('#5e4428'), wire: false }
+                    : level >= 1
+                      ? { color: hexColor('#9a7a50'), width: 5, post: hexColor('#6e5232'), wire: false }
+                      : { color: new Color(150, 130, 100, 150), width: 3, post: new Color(110, 90, 60, 150), wire: false };
+        // 墙身：左、右、下（下方中间是大门），上面接着超市外墙
+        g.strokeColor = style.color;
+        g.lineWidth = style.width;
+        g.moveTo(left, top);
+        g.lineTo(left, bottom);
+        g.lineTo(gate.from, bottom);
+        g.moveTo(gate.to, bottom);
+        g.lineTo(right, bottom);
+        g.lineTo(right, top);
+        g.stroke();
+        // 立柱
+        g.fillColor = style.post;
+        const post = (x: number, y: number) => {
+            g.rect(x - style.width / 2 - 2, y - style.width / 2 - 2, style.width + 4, style.width + 4);
+        };
+        for (let y = bottom; y <= top; y += 42) {
+            post(left, y);
+            post(right, y);
+        }
+        for (let x = left; x <= right; x += 42) if (x < gate.from - 6 || x > gate.to + 6) post(x, bottom);
+        g.fill();
+        // 最高级：墙头的铁丝网
+        if (style.wire) {
+            g.strokeColor = new Color(200, 200, 200, 160);
+            g.lineWidth = 2;
+            for (let y = bottom; y < top; y += 14) {
+                g.moveTo(left - 6, y);
+                g.lineTo(left + 6, y + 7);
+                g.moveTo(right - 6, y);
+                g.lineTo(right + 6, y + 7);
+            }
+            g.stroke();
+        }
+    }
+
     /** 没有 bg_camp 背景图时，画一个简单的超市停车场 */
     private drawMapPlaceholder(map: Node, camp: CampGame): void {
         const g = map.addComponent(Graphics);
@@ -720,12 +779,6 @@ export class GameRoot extends Component {
         g.fillColor = hexColor('#6e5a44');
         g.rect(-w / 2, h / 2 - 158, w, 12);
         g.fill();
-        // 围栏
-        g.strokeColor = hexColor('#8a7a5a');
-        g.lineWidth = 4;
-        g.moveTo(-w / 2, -h / 2 + 8);
-        g.lineTo(w / 2, -h / 2 + 8);
-        g.stroke();
         const site = currentSite(camp.config, camp.state);
         addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 22, new Color(255, 220, 150, 180), { width: 300 }).node.setPosition(-230, h / 2 - 70);
     }
@@ -1068,7 +1121,7 @@ export class GameRoot extends Component {
             this.text(`${site.icon}${site.name}：${site.description}`, 20);
             this.text(`👍 ${site.pros}　👎 ${site.cons}`, 20, DIM);
             const blocker = relocationBlocker(config, state, site.id, now);
-            const label = `举营搬迁（路上 ${relocationFoodCost(config, state)} 食物，只能带走一半物资，路障要重建）`;
+            const label = `举营搬迁（路上 ${relocationFoodCost(config, state)} 食物，只能带走一半物资，栅栏要重建）`;
             this.button(blocker ? `${label}（${blocker}）` : label, WIDTH, () => {
                 const res = camp.relocate(site.id, camp.now);
                 if (res.ok) {

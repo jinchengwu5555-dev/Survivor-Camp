@@ -56,7 +56,7 @@ export interface CarriedItem {
  * 直接修改 setups 的 extraSkills，返回谁带了什么，战后用来结算消耗。
  */
 export function equipItems(config: GameConfig, state: GameState, setups: UnitSetup[]): CarriedItem[] {
-    // 只有幸存者会带物品（路障、狗也有 tag，但不算）
+    // 只有幸存者会带物品（栅栏、狗也有 tag，但不算）
     const carriers = setups.filter((s) => s.tag && state.survivors.some((x) => x.id === s.tag));
     const carried: CarriedItem[] = [];
     if (carriers.length === 0) return carried;

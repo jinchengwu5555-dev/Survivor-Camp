@@ -143,7 +143,7 @@ describe('尸潮夜袭', () => {
         expect(game.state.nextRaidAt).toBe(T0 + 2 * RAID + MIN);
     });
 
-    it('到时间自动守夜：全员 + 路障上阵，守住了发奖励', () => {
+    it('到时间自动守夜：全员 + 栅栏上阵，守住了发奖励', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 2;
@@ -166,7 +166,7 @@ describe('尸潮夜袭', () => {
         expect(game.state.reports[0].setup.allies[1].level).toBe(3);
     });
 
-    it('路障被拆就算输，哪怕守夜的人都还活着', () => {
+    it('栅栏被拆就算输，哪怕守夜的人都还活着', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 1;
@@ -176,7 +176,7 @@ describe('尸潮夜袭', () => {
         expect(report.injured.length).toBeLessThan(5);
     });
 
-    it('没人守、路障被拆：守夜失败，损失 10% 资源，之后的尸潮减弱（喘息）', () => {
+    it('没人守、栅栏被拆：守夜失败，损失 10% 资源，之后的尸潮减弱（喘息）', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.survivors.forEach((s) => (s.injured = true));
@@ -213,7 +213,7 @@ describe('尸潮夜袭', () => {
         expect(replay.runToEnd()).toBe(report.result);
     });
 
-    it('路障不会被医生治疗', () => {
+    it('栅栏不会被医生治疗', () => {
         const game = newGame();
         const b = new Battle(battleRegistry(game.config), {
             allies: [{ unit: 'barricade', x: 1.5, maxHp: 300 }, { unit: 'sophie' }],

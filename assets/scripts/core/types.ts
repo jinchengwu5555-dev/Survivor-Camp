@@ -58,11 +58,11 @@ export interface BalanceDef {
     raidIntervalMinutes: number;
     /** 第 1 集结束后，第一次尸潮多少分钟后就来（新手尽早体验守夜） */
     firstRaidMinutes: number;
-    /** 守夜时花木材修补路障：每次回 hpRatio 的路障生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
+    /** 守夜时花木材修补栅栏：每次回 hpRatio 的栅栏生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
     raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
     /** 守夜时最多几个人上阵 */
     maxDefenders: number;
-    /** 路障在战斗中的生命 = 安全值 × 这个数 */
+    /** 栅栏在战斗中的生命 = 安全值 × 这个数 */
     barricadeHpPerSafety: number;
     /** 守夜失败时损失的资源比例 */
     raidLossRatio: number;
@@ -376,7 +376,7 @@ export interface SiteModifiers {
     production?: ResourceBag;
     /** 不需要工人的被动产出（每分钟），比如水坝的鱼 */
     passive?: ResourceBag;
-    /** 安全值倍率（影响路障生命） */
+    /** 安全值倍率（影响栅栏生命） */
     safety?: number;
     /** 额外床位 */
     beds?: number;
@@ -403,9 +403,9 @@ export interface SiteDef {
     pros: string;
     cons: string;
     modifiers: SiteModifiers;
-    /** 搬过来时路障保留原来等级的比例 */
+    /** 搬过来时栅栏保留原来等级的比例 */
     wallRetention: number;
-    /** 这里自带的路障等级（比如警局本来就有铁门） */
+    /** 这里自带的栅栏等级（比如警局本来就有铁门） */
     minWallLevel: number;
     /** 路上的伏击战 */
     journey: { enemies: UnitSetup[]; timeLimit: number };
@@ -762,7 +762,7 @@ export interface PendingRaid {
     setup: BattleSetup;
     /** 谁带了什么物品（物品 id） */
     carried: { tag: string; item: string }[];
-    /** 这场战斗里修补了几次路障 */
+    /** 这场战斗里修补了几次栅栏 */
     repairs: number;
 }
 

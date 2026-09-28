@@ -30,12 +30,12 @@ import {
     SurvivorState,
 } from './types';
 
-/** 路障在战斗里对应的角色 id（units.json） */
+/** 栅栏在战斗里对应的角色 id（units.json） */
 export const BARRICADE_UNIT = 'barricade';
 /** 营地的狗（收养后跟大家一起守夜） */
 export const DOG_UNIT = 'dog';
 export const DOG_FLAG = 'has_dog';
-/** 路障站在我方最前面 */
+/** 栅栏站在我方最前面 */
 const BARRICADE_X = 1.5;
 const MAX_REPORTS = 10;
 
@@ -169,7 +169,7 @@ export function bloodMoonEnemies(enemies: UnitSetup[]): UnitSetup[] {
     return [...enemies, ...extra];
 }
 
-/** 守夜战斗的参数：路障站在最前面，大家守在路障后面，路障被拆就算输，撑到时间结束算赢 */
+/** 守夜战斗的参数：栅栏站在最前面，大家守在栅栏后面，栅栏被拆就算输，撑到时间结束算赢 */
 export function raidSetup(
     config: GameConfig,
     raid: RaidDef,
@@ -450,7 +450,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         for (const s of state.survivors) s.mood = Math.max(0, s.mood - 10);
     }
     const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了');
-    // 路障被冲破：尸群冲进营地，有人被咬死
+    // 栅栏被冲破：尸群冲进营地，有人被咬死
     if (result === 'lose') {
         for (let i = 0; i < config.balance.raidBreachDeaths && state.survivors.length > 0; i++) {
             const name = killRandom(config, state, at, '被冲进营地的尸群咬死了');

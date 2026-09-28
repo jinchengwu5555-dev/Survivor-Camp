@@ -159,7 +159,7 @@ describe('换营地', () => {
         expect(relocationBlocker(config, state, 'farm', T0 + 3 * MIN)).toBeNull();
     });
 
-    it('搬到农场：路上打一仗，物资只能带一半，路障重建，农场的效果生效，3 天内不能再搬', () => {
+    it('搬到农场：路上打一仗，物资只能带一半，栅栏重建，农场的效果生效，3 天内不能再搬', () => {
         const game = newGame();
         const { config, state } = game;
         state.discoveredSites.push('farm', 'police');

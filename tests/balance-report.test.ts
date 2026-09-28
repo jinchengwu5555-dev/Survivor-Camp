@@ -1,4 +1,4 @@
-// 数值平衡报告：每个探索地点、每种尸潮在不同的训练场 / 路障等级下各打 50 场，统计胜率和平均受伤人数。
+// 数值平衡报告：每个探索地点、每种尸潮在不同的训练场 / 栅栏等级下各打 50 场，统计胜率和平均受伤人数。
 // 最后一张表是无尽模式：不同加成的尸潮对上不同建设进度的营地。
 //   npm run balance
 // 平时跑 npm test 时不输出。战斗参数和游戏里完全一样（expeditionSetup / raidSetup）。
@@ -47,7 +47,7 @@ it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
     }
 
     const combos = [1, 2, 3, 4].flatMap((w) => [0, 2].map((t) => ({ w, t })));
-    header('—— 尸潮：5 人 + 路障的胜率（平均受伤人数）——', combos.map((c) => `路障${c.w}/训练${c.t}`));
+    header('—— 尸潮：5 人 + 栅栏的胜率（平均受伤人数）——', combos.map((c) => `栅栏${c.w}/训练${c.t}`));
     for (const raid of config.raids) {
         for (const bloodMoon of [false, true]) {
             for (const dog of bloodMoon ? [false, true] : [false]) {
@@ -57,10 +57,10 @@ it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
         }
     }
 
-    // 无尽模式：营地建设进度（路障 = 训练场 = 指挥部等级）对上不同加成的大尸潮
+    // 无尽模式：营地建设进度（栅栏 = 训练场 = 指挥部等级）对上不同加成的大尸潮
     const great = config.raids[config.raids.length - 1];
     const camps = [5, 10, 15, 20, 25];
-    header(`—— 无尽尸潮：${great.name}+N 对上不同建设进度的营地（路障、训练场都和指挥部同级）——`, camps.map((lv) => `营地${lv}级`));
+    header(`—— 无尽尸潮：${great.name}+N 对上不同建设进度的营地（栅栏、训练场都和指挥部同级）——`, camps.map((lv) => `营地${lv}级`));
     for (const bonus of [0, 5, 10, 20, 30, 40, 50]) {
         row(`${great.name} +${bonus}`, camps.map((lv) => stats((seed) => raidSetup(config, great, defenders, wallHp(lv), battleLevel(lv), seed, { enemyBonus: bonus }))));
     }

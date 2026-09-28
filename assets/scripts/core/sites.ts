@@ -3,7 +3,7 @@
 // 搬迁的代价：
 //   - 路上会遭遇伏击（所有能战斗的人上阵），倒下的人可能牺牲
 //   - 只能带走一部分物资（罐头和工坊物品全部带走）
-//   - 路障要重建：保留 wallRetention 比例的等级，但不低于新地点自带的 minWallLevel
+//   - 栅栏要重建：保留 wallRetention 比例的等级，但不低于新地点自带的 minWallLevel
 //   - 其他建筑保留（设备带走了），搬完后 cooldownDays 天内不能再搬
 
 import { Battle } from './battle/Battle';
@@ -78,7 +78,7 @@ export function relocate(config: GameConfig, state: GameState, siteId: string, n
         }
     }
 
-    // 路障重建，其他建筑保留；正在升级的路障作废
+    // 栅栏重建，其他建筑保留；正在升级的栅栏作废
     const wall = state.buildings['wall'];
     if (wall) {
         wall.level = Math.max(site.minWallLevel, Math.floor(wall.level * site.wallRetention), 1);
@@ -114,6 +114,6 @@ export function relocate(config: GameConfig, state: GameState, siteId: string, n
     state.reports.push(report);
     if (state.reports.length > MAX_REPORTS) state.reports.splice(0, state.reports.length - MAX_REPORTS);
     addLog(state, now, summary);
-    addLog(state, now, `新营地从第 ${currentDay(config, state, now)} 天开始。记得重新分配工作、修好路障。`);
+    addLog(state, now, `新营地从第 ${currentDay(config, state, now)} 天开始。记得重新分配工作、修好栅栏。`);
     return { ok: true };
 }

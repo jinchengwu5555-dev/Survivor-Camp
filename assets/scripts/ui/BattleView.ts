@@ -1,7 +1,7 @@
-// 战斗画面：守夜时实时演出战斗，玩家点技能、修路障；战报里的战斗也可以用它回放。
+// 战斗画面：守夜时实时演出战斗，玩家点技能、修栅栏；战报里的战斗也可以用它回放。
 // 有美术图（assets/resources/sprites/units/<appearance.sprite>.png）就画图；
 // 没有图的角色是一个彩色圆（颜色来自 units.json 的 appearance.color），中间写名字的第一个字。
-// 头顶是血条；路障没图时是一堵棕色的墙。伤害、治疗会飘字。
+// 头顶是血条；栅栏没图时是一堵棕色的墙。伤害、治疗会飘字。
 
 import { Color, Graphics, Label, Node } from 'cc';
 import { Battle, BattleSetup } from '../core/battle/Battle';
@@ -110,7 +110,7 @@ export class BattleView {
                 const error = opts.live!.repair();
                 const wall = opts.live!.barricade;
                 if (error) this.floatAt(error, 0, 40, COLORS.lose, 24);
-                else if (wall) this.floatAt('🪵 路障加固了！', this.toScreenX(wall.x), this.topY(wall), COLORS.heal, 26);
+                else if (wall) this.floatAt('🪵 栅栏加固了！', this.toScreenX(wall.x), this.topY(wall), COLORS.heal, 26);
             });
             this.repairButton.node.setPosition(0, -130);
         }
@@ -304,7 +304,7 @@ export class BattleView {
         const b = this.battle;
         const left = Math.max(0, Math.ceil(b.setup.timeLimit - b.time));
         const wall = this.opts.live?.barricade ?? b.units.find((u) => u.tag === 'barricade');
-        const wallText = wall ? `路障 ${Math.max(0, Math.round((wall.hp / wall.stats.maxHp) * 100))}%` : '';
+        const wallText = wall ? `栅栏 ${Math.max(0, Math.round((wall.hp / wall.stats.maxHp) * 100))}%` : '';
         const goal = b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
         this.status.string = this.finished ? '' : `${goal}   ${wallText}`;
 
@@ -315,14 +315,14 @@ export class BattleView {
             this.hint.string = this.finished ? '' : '战斗回放';
             return;
         }
-        this.hint.string = this.finished ? '' : '技能好了就点！路障快撑不住时花木材修补';
+        this.hint.string = this.finished ? '' : '技能好了就点！栅栏快撑不住时花木材修补';
         this.autoButton!.set(`自动技能：${b.autoCastActive ? '开' : '关'}`, this.finished ? 'disabled' : b.autoCastActive ? 'ready' : 'normal');
 
         const { hp, wood } = live.repairCost();
         const uses = live.repairsLeft();
         const needed = wall ? wall.hp < wall.stats.maxHp * 0.6 : false;
         const canRepair = !this.finished && uses > 0 && !!wall?.alive && live.state.resources.wood >= wood;
-        this.repairButton!.set(`🪵 修补路障 +${hp}（木材 ${wood}，还能修 ${uses} 次）`, !canRepair ? 'disabled' : needed ? 'highlight' : 'normal');
+        this.repairButton!.set(`🪵 修补栅栏 +${hp}（木材 ${wood}，还能修 ${uses} 次）`, !canRepair ? 'disabled' : needed ? 'highlight' : 'normal');
 
         // 技能按钮：每个有主动技能、还活着的角色一个，两列排
         const buttons = live.skillButtons();
@@ -372,7 +372,7 @@ export class BattleView {
         panel.setPosition(0, 150);
         drawPanel(panel.addComponent(Graphics), WIDTH, 420, COLORS.panel, 16, win ? COLORS.win : COLORS.lose, 4);
         const kind = report?.kind ?? 'raid';
-        const head = kind === 'raid' ? (win ? '🛡️ 守住了！' : '💀 路障被冲破了……') : win ? '🎒 探索成功！' : '🏃 小队撤退了';
+        const head = kind === 'raid' ? (win ? '🛡️ 守住了！' : '💀 栅栏被冲破了……') : win ? '🎒 探索成功！' : '🏃 小队撤退了';
         addLabel(panel, head, 44, win ? COLORS.win : COLORS.lose, { width: WIDTH - 40 }).node.setPosition(0, 150);
         const text = report?.summary ?? '这是演示战斗，不影响营地。';
         const summary = addLabel(panel, text, 24, COLORS.text, { width: WIDTH - 60, wrap: true, align: 'left' });
