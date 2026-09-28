@@ -11,7 +11,6 @@ import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game,
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
 import {
-    availableLocations,
     barricadeHp,
     currentRaid,
     DOG_FLAG,
@@ -49,6 +48,8 @@ import { activePickups, pickupKind } from '../core/pickups';
 import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
+import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
+import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup } from '../core/badges';
 import { formatProps, propBlocker, propCount, propReward } from '../core/props';
 import { createAdService } from '../platform/AdService';
@@ -62,7 +63,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v0.9 背包道具';
+const GAME_VERSION = 'v1.0 小镇地图';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -91,6 +92,9 @@ const NAV_BOTTOM = -640;
 const INFO_TOP = MAP_BOTTOM - 8;
 /** 打开的面板（人员、探索……）占据状态栏和导航之间的区域 */
 const SHEET_TOP = HUD_BOTTOM - 10;
+/** 探索页的小镇地图：占面板上部，下面是选中地点的详情 */
+const TOWN_HEIGHT = 730;
+const TOWN_CENTER_Y = SHEET_TOP - TOWN_HEIGHT / 2;
 /** 建筑在地图上的默认大小（再乘 buildings.json 里 map.scale） */
 const BUILDING_BOX = { width: 150, height: 118 };
 /** 拾荒物在地图上出现的位置（相对地图中心） */
@@ -162,6 +166,8 @@ export class GameRoot extends Component {
     private tab: Tab = 'camp';
     /** 营地页选中的建筑（下方显示详情） */
     private selectedBuilding: string | null = null;
+    /** 探索页选中的地点 */
+    private selectedLocation: string | null = null;
     /** 当前的新手引导 */
     private guide: GuideHint | null = null;
     // 拖动滚动
@@ -506,9 +512,11 @@ export class GameRoot extends Component {
         this.mapLayer!.destroyAllChildren();
         this.target = this.content;
         if (this.sheetOpen(camp)) {
-            // 面板：状态栏和导航之间，可以上下拖动
+            // 面板：状态栏和导航之间，可以上下拖动（探索页是地图，不滚动）
+            const townMap = this.tab === 'explore' && !camp.currentEvent;
             this.viewTop = SHEET_TOP;
-            this.viewHeight = SHEET_TOP - NAV_TOP;
+            this.viewHeight = townMap ? 0 : SHEET_TOP - NAV_TOP;
+            if (townMap) this.scrollY = 0;
             this.cursorY = SHEET_TOP;
             this.renderSheet(camp, now);
         } else {
@@ -1262,31 +1270,231 @@ export class GameRoot extends Component {
         this.gap(6);
     }
 
+    /** 探索页：枫谷镇地图（迷雾、道路、地点、在路上的小队、侦察点）+ 下方选中地点的详情 */
     private renderExplore(camp: CampGame, now: number): void {
         const { config, state } = camp;
+        const map = makeNode('TownMap', this.content!, MAP_WIDTH, TOWN_HEIGHT);
+        map.setPosition(0, TOWN_CENTER_Y);
+        map.addComponent(Mask).type = Mask.Type.GRAPHICS_RECT;
+        const bg = getSprite(SPRITE_DIRS.bg + 'bg_town');
+        if (bg) {
+            const scale = Math.max(MAP_WIDTH / (bg.rect.width || 1), TOWN_HEIGHT / (bg.rect.height || 1));
+            addSprite(map, bg, bg.rect.width * scale, bg.rect.height * scale);
+        } else {
+            this.drawTownPlaceholder(map);
+        }
+
+        const camp0 = campPoint(config, state);
+        const statusOf = new Map(config.locations.map((l) => [l.id, locationStatus(config, state, l, now)]));
+        const visible = config.locations.filter((l) => l.map && statusOf.get(l.id) !== 'hidden');
+        const guidedLoc = this.guide?.target?.startsWith('explore:') ? this.guide.target.slice('explore:'.length) : null;
+        if (!this.selectedLocation || !visible.some((l) => l.id === this.selectedLocation)) {
+            this.selectedLocation = guidedLoc ?? visible.find((l) => statusOf.get(l.id) === 'known')?.id ?? null;
+        }
+
+        // 道路：前置地点（没有前置就是营地）连到每个看得见的地点
+        const roads = map.addComponent(Graphics);
+        for (const loc of visible) {
+            const from = prerequisiteOf(config, loc)?.map ?? camp0;
+            const cleared = statusOf.get(loc.id) === 'cleared';
+            dashedLine(roads, from, loc.map!, cleared ? new Color(210, 180, 120, 230) : new Color(200, 200, 190, 140), cleared ? 5 : 3, cleared ? 0 : 10);
+        }
+
+        // 战争迷雾：没亮起来的格子盖上一层深色
+        const pts = revealers(config, state, now);
+        const fogNode = makeNode('Fog', map, MAP_WIDTH, TOWN_HEIGHT);
+        const fog = fogNode.addComponent(Graphics);
+        fog.fillColor = new Color(10, 12, 10, 215);
+        const cell = 30;
+        for (let x = -MAP_WIDTH / 2; x < MAP_WIDTH / 2; x += cell) {
+            for (let y = -TOWN_HEIGHT / 2; y < TOWN_HEIGHT / 2; y += cell) {
+                if (!isRevealed(pts, x + cell / 2, y + cell / 2)) fog.rect(x, y, cell, cell);
+            }
+        }
+        fog.fill();
+
+        // 已经发现的其他营地地点（可以搬过去）
+        for (const site of config.sites) {
+            if (!site.map || site.id === state.siteId || !state.discoveredSites.includes(site.id)) continue;
+            const node = this.mapMarker(map, site.map, site.icon, `${site.name}（可搬迁）`, new Color(70, 90, 120, 230), 22);
+            node.on(Node.EventType.TOUCH_END, () => {
+                this.tab = 'camp';
+                this.sheet = 'sites';
+                this.resetScroll();
+                this.render();
+            });
+        }
+
+        // 营地
+        const site = currentSite(config, state);
+        this.mapMarker(map, camp0, '🏕️', `营地·${site?.name ?? ''}`, new Color(214, 150, 40, 240), 30);
+
+        // 地点
+        for (const loc of visible) {
+            const status = statusOf.get(loc.id)!;
+            const rumor = status === 'rumor';
+            const color = rumor ? new Color(70, 70, 70, 230) : status === 'cleared' ? new Color(80, 130, 90, 240) : new Color(170, 110, 50, 240);
+            const ex = state.expeditions.find((e) => e.location === loc.id);
+            const restock = restockSecondsLeft(state, loc.id, now);
+            const sub = rumor ? '？？？' : ex ? '小队在路上' : restock > 0 ? `🔄 ${formatTime(realSeconds(config, restock * 1000))}` : status === 'cleared' ? '✅ 可以再去' : '⚔️ 未探索';
+            const node = this.mapMarker(map, loc.map!, rumor ? '❓' : loc.icon ?? '📍', rumor ? '???' : loc.name, color, 28, sub);
+            const g = node.getComponent(Graphics)!;
+            if (this.selectedLocation === loc.id) {
+                g.lineWidth = 4;
+                g.strokeColor = ACCENT;
+                g.circle(0, 0, 36);
+                g.stroke();
+            }
+            if (guidedLoc === loc.id) addLabel(node, '👉', 30, TEXT, { width: 40 }).node.setPosition(-48, 0);
+            node.on(Node.EventType.TOUCH_END, () => {
+                punch(node);
+                this.selectedLocation = loc.id;
+                this.render();
+            });
+        }
+
+        // 在路上的小队：出发走一半路到目的地，另一半路走回来
+        const walker = (from: { x: number; y: number }, to: { x: number; y: number }, start: number, end: number, icon: string) => {
+            const p = Math.max(0, Math.min(1, (now - start) / Math.max(1, end - start)));
+            const t = p < 0.5 ? p * 2 : (1 - p) * 2;
+            const pos = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+            const node = makeNode('Walker', map, 44, 44);
+            node.setPosition(pos.x, pos.y);
+            const wg = node.addComponent(Graphics);
+            wg.fillColor = new Color(40, 70, 100, 235);
+            wg.circle(0, 0, 18);
+            wg.fill();
+            wg.lineWidth = 2;
+            wg.strokeColor = TEXT;
+            wg.circle(0, 0, 18);
+            wg.stroke();
+            addLabel(node, icon, 22, TEXT, { width: 40 });
+        };
+        for (const ex of state.expeditions) {
+            const target = config.locations.find((l) => l.id === ex.location)?.map;
+            if (target) walker(camp0, target, ex.startedAt, ex.returnsAt, '🚶');
+        }
+        for (const sc of state.scouts ?? []) walker(camp0, sc, sc.startedAt, sc.returnsAt, '🔭');
+
+        // 侦察点
+        for (const spot of activeScoutSpots(state, now)) {
+            const kind = scoutKind(config, spot.kind);
+            if (!kind) continue;
+            const node = this.mapMarker(map, spot, kind.icon, kind.name, new Color(214, 150, 40, 235), 22, `🔭 ${formatTime(realSeconds(config, kind.travelMinutes * 60_000))}`);
+            node.on(Node.EventType.TOUCH_END, () => {
+                const res = camp.sendScout(spot.id, camp.now);
+                if (res.ok) this.effect(`🔭 ${res.message}出发去侦察${kind.name}`, ACCENT);
+                else this.showToast(res.reason);
+                this.render();
+            });
+        }
+
+        // 标题：已探索多少
+        const title = makeNode('Title', map, 330, 38);
+        title.setPosition(-MAP_WIDTH / 2 + 175, TOWN_HEIGHT / 2 - 26);
+        drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
+        addLabel(title, `🗺️ 枫谷镇 · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
+
+        // 下方：选中地点的详情
+        this.cursorY = TOWN_CENTER_Y - TOWN_HEIGHT / 2 - 8;
+        this.renderLocationCard(camp, now, statusOf);
+    }
+
+    /** 地图上的一个标记：圆形底 + 图标 + 名字（+ 一行小字） */
+    private mapMarker(parent: Node, at: { x: number; y: number }, icon: string, name: string, fill: Color, r: number, sub?: string): Node {
+        const node = makeNode('Marker', parent, r * 2 + 20, r * 2 + 50);
+        node.setPosition(at.x, at.y);
+        const g = node.addComponent(Graphics);
+        g.fillColor = fill;
+        g.circle(0, 0, r);
+        g.fill();
+        g.lineWidth = 2;
+        g.strokeColor = new Color(20, 20, 20, 200);
+        g.circle(0, 0, r);
+        g.stroke();
+        addLabel(node, icon, Math.round(r * 1.1), TEXT, { width: r * 2 }).node.setPosition(0, 2);
+        const plate = makeNode('Name', node, 150, 24);
+        plate.setPosition(0, -r - 14);
+        drawPanel(plate.addComponent(Graphics), 150, 24, new Color(15, 17, 15, 200), 12);
+        addLabel(plate, name, 16, TEXT, { width: 146, height: 22 });
+        if (sub) addLabel(node, sub, 15, ACCENT, { width: 150, height: 20 }).node.setPosition(0, -r - 36);
+        return node;
+    }
+
+    /** 没有 bg_town 背景图时，画一个简单的小镇：草地、河、主路、树林 */
+    private drawTownPlaceholder(map: Node): void {
+        const g = map.addComponent(Graphics);
+        const w = MAP_WIDTH;
+        const h = TOWN_HEIGHT;
+        g.fillColor = hexColor('#4a5a3e');
+        g.rect(-w / 2, -h / 2, w, h);
+        g.fill();
+        // 河
+        g.strokeColor = hexColor('#4f7890');
+        g.lineWidth = 26;
+        g.moveTo(-w / 2, 120);
+        g.lineTo(-180, 110);
+        g.lineTo(-90, 150);
+        g.lineTo(60, 120);
+        g.lineTo(w / 2, 170);
+        g.stroke();
+        // 主路
+        g.strokeColor = hexColor('#6b6558');
+        g.lineWidth = 14;
+        g.moveTo(-w / 2, -300);
+        g.lineTo(0, -60);
+        g.lineTo(w / 2, -140);
+        g.moveTo(0, -60);
+        g.lineTo(-20, h / 2);
+        g.stroke();
+        // 树林
+        g.fillColor = hexColor('#34452e');
+        for (const [x, y, r] of [[-300, 280, 50], [300, 300, 60], [290, -310, 45], [-60, -330, 40], [320, 40, 35]]) {
+            g.circle(x, y, r);
+            g.fill();
+        }
+    }
+
+    /** 地图下面：选中地点的详情和按钮 */
+    private renderLocationCard(camp: CampGame, now: number, statusOf: Map<string, string>): void {
+        const { config, state } = camp;
+        const loc = this.selectedLocation ? config.locations.find((l) => l.id === this.selectedLocation) : undefined;
+        const scouting = (state.scouts ?? []).length;
+        if (!loc) {
+            this.text('点地图上的地点查看详情。金色的小圆点是侦察点，点一下派一个人去。', 20, DIM);
+            if (scouting) this.text(`🔭 ${scouting} 个人在外面侦察`, 20, ACCENT);
+            return;
+        }
+        const status = statusOf.get(loc.id);
+        if (status === 'rumor') {
+            this.text(`❓ 远处还有个地方……`, 24, ACCENT);
+            this.text(`解锁条件：${unlockHint(config, state, loc, now)}`, 20, DIM);
+            return;
+        }
         const squad = suggestSquad(config, state);
         const names = squad.map((id) => survivorInfo(config, state, id)?.name ?? id);
-        this.text(`—— 探索（自动编队：${names.join('、') || '没有能出发的人'}）——`, 22, DIM);
-        for (const loc of availableLocations(config, state, now)) {
-            this.text(`${loc.name}  ⏱${formatTime(realSeconds(config, loc.durationMinutes * 60_000))}  战利品 ${formatBag(config, expeditionLoot(config, state, loc))}`, 24);
-            this.text(loc.description, 20, DIM);
-            const ex = state.expeditions.find((e) => e.location === loc.id);
-            if (ex) {
-                const left = realSeconds(config, ex.returnsAt - now);
-                this.button(`小队在外面，${formatTime(left)} 后返回 · 看广告立即返回`, WIDTH, () => this.speedUpExpedition(ex.id));
-            } else if (restockSecondsLeft(state, loc.id, now) > 0) {
-                const left = realSeconds(config, restockSecondsLeft(state, loc.id, now) * 1000);
-                this.button(`刚搜刮过，${formatTime(left)} 后物资重新聚起来`, WIDTH, () => {}, LEFT, 'disabled');
-            } else {
-                const guided = this.isGuided(`explore:${loc.id}`);
-                this.button(`${guided ? '👉 ' : ''}派出小队`, WIDTH, () => {
-                    const res = camp.explore(loc.id, camp.now);
-                    if (res.ok) this.effect(`🚶 小队出发前往${loc.name}`, ACCENT);
-                    else this.showToast(res.reason);
-                    this.render();
-                }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 24, 52);
-            }
-            this.gap(12);
+        const drops = (loc.drops ?? []).map((d) => {
+            const def = config.props.find((p) => p.id === d.prop);
+            return `${def?.icon ?? ''}${def?.name ?? d.prop}`;
+        });
+        this.text(`${loc.icon ?? ''} ${loc.name}  ⏱${formatTime(realSeconds(config, loc.durationMinutes * 60_000))}  ${status === 'cleared' ? '✅ 已打下' : '⚔️ 未探索'}`, 24, ACCENT);
+        this.text(loc.description, 18, DIM);
+        this.text(`战利品 ${formatBag(config, expeditionLoot(config, state, loc))}${drops.length ? `   可能找到：${drops.join('、')}` : ''}`, 18);
+        const ex = state.expeditions.find((e) => e.location === loc.id);
+        if (ex) {
+            const left = realSeconds(config, ex.returnsAt - now);
+            this.button(`小队在路上，${formatTime(left)} 后回来 · 看广告立即返回`, WIDTH, () => this.speedUpExpedition(ex.id), LEFT, 'normal', 22, 50);
+        } else if (restockSecondsLeft(state, loc.id, now) > 0) {
+            const left = realSeconds(config, restockSecondsLeft(state, loc.id, now) * 1000);
+            this.button(`刚搜刮过，${formatTime(left)} 后物资重新聚起来`, WIDTH, () => {}, LEFT, 'disabled', 22, 50);
+        } else {
+            const guided = this.isGuided(`explore:${loc.id}`);
+            this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
+                const res = camp.explore(loc.id, camp.now);
+                if (res.ok) this.effect(`🚶 小队出发前往${loc.name}`, ACCENT);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
         }
     }
 
@@ -1444,4 +1652,24 @@ function levelSummary(config: GameConfig, lv: BuildingLevelDef): string {
     if (lv.spoilReduction) parts.push(`食物腐烂 -${Math.round(lv.spoilReduction * 100)}%`);
     if (lv.workshopLevel) parts.push(`工坊 ${lv.workshopLevel} 级`);
     return parts.join('  ');
+}
+
+/** 虚线（gap = 0 时画实线） */
+function dashedLine(g: Graphics, from: { x: number; y: number }, to: { x: number; y: number }, color: Color, width: number, gap: number): void {
+    g.strokeColor = color;
+    g.lineWidth = width;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (gap <= 0 || len === 0) {
+        g.moveTo(from.x, from.y);
+        g.lineTo(to.x, to.y);
+    } else {
+        for (let d = 0; d < len; d += gap * 2) {
+            const e = Math.min(len, d + gap);
+            g.moveTo(from.x + (dx * d) / len, from.y + (dy * d) / len);
+            g.lineTo(from.x + (dx * e) / len, from.y + (dy * e) / len);
+        }
+    }
+    g.stroke();
 }

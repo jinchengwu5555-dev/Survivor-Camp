@@ -8,7 +8,7 @@
         "journey": { "enemies": [ { "unit": "walker" }, { "unit": "walker" } ], "timeLimit": 60 }
     },
     {
-        "id": "garage", "map": { "x": -200, "y": -245 }, "name": "镇口加油站", "icon": "⛽",
+        "id": "garage", "map": { "x": -40, "y": -255 }, "name": "镇口加油站", "icon": "⛽",
         "description": "托比以前上班的地方。油罐、汽修间、一整面墙的工具。",
         "pros": "零件产量 +40%，汽修间每分钟自产零件", "cons": "只有一圈铁丝网，安全值 -40%",
         "modifiers": { "production": { "parts": 1.4 }, "passive": { "parts": 0.2 }, "safety": 0.6 },
@@ -24,7 +24,7 @@
         "journey": { "enemies": [ { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "runner", "level": 2 }, { "unit": "fatty" } ], "timeLimit": 75 }
     },
     {
-        "id": "clinic", "map": { "x": 245, "y": 215 }, "name": "镇卫生所", "icon": "🏥",
+        "id": "clinic", "map": { "x": 290, "y": 275 }, "name": "镇卫生所", "icon": "🏥",
         "description": "清理干净的卫生所。病床、药柜、手术灯，只是门外的感染者从来没少过。",
         "pros": "药品产量翻倍，伤好得快一倍，战斗中倒下的死亡概率减半", "cons": "周围感染者多，尸潮 +2 级",
         "modifiers": { "production": { "medicine": 2 }, "injuryRecovery": 0.5, "deathChance": 0.5, "raidLevel": 2 },
@@ -32,7 +32,7 @@
         "journey": { "enemies": [ { "unit": "walker", "level": 3 }, { "unit": "fatty", "level": 2 }, { "unit": "runner", "level": 2 }, { "unit": "frenzied" } ], "timeLimit": 75 }
     },
     {
-        "id": "police", "map": { "x": -70, "y": 250 }, "name": "警长办公室", "icon": "🚓",
+        "id": "police", "map": { "x": -150, "y": 300 }, "name": "警长办公室", "icon": "🚓",
         "description": "伊森工作了十五年的地方。铁门、高墙，还有一间军械库。",
         "pros": "安全值 +40%，军械库让所有人战斗等级 +2", "cons": "没有地可种，食物产量 -20%",
         "modifiers": { "safety": 1.4, "battleLevel": 2, "production": { "food": 0.8 } },
