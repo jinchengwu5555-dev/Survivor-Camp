@@ -16,30 +16,32 @@
 | 图里的文字 | **不要让 AI 生成文字**（中文基本会乱码）。招牌、标题字以后用设计软件加 |
 | 边距 | 角色、建筑四周留 5%～10% 空白，不要贴边、不要被裁切 |
 
-### 统一画风：现代日系动画赛璐璐（已定）
+### 统一画风：成熟向日系 SD（已定，以伊森定稿图为准）
 
-**风格定义**：现代日本动画 / 日系手游立绘的**赛璐璐上色**——干净利落的线稿，二到三阶的硬边阴影，明亮通透的高光，眼睛刻画细致；配色是**低饱和的末日色调**（灰绿、锈棕、水泥灰、褪色的天蓝），用营地灯火的**暖橙色**做点缀和逆光。气氛是“末日里的日常”：有危险，但人物温暖、有生活感，**不血腥、不猎奇**。
+**风格参考图**：伊森的定稿战斗小人（`docs/art-reference/ethan_final.png`，拿到透明 PNG 后放进去）。**之后每张图都带上这张做风格参考。**
+
+**风格定义**：**成熟向的日系 SD**——大头小身，但五官偏写实、不夸张（眼睛大小适中，**不要**典型动漫的大眼睛和刺猬头），**按角色年龄画出年纪感**（胡茬、皱纹、白发、疲惫的眼神），人物要有故事感。上色是日系动画的**赛璐璐**：干净的深色线稿，二阶硬边阴影，**身体边缘一圈暖橙色的逆光**；配色是**低饱和的末日色调**（灰绿、锈棕、水泥灰、褪色的天蓝），用营地灯火的**暖橙色**做点缀和逆光。气氛是“末日里的日常”：有危险，但人物温暖、有生活感，**不血腥、不猎奇**。
 
 同一个游戏里分四种用途，每种用自己的前缀，但上色和配色完全一致：
 
 | 前缀 | 用在 | 比例 |
 |---|---|---|
 | **A 日漫立绘** | 事件头像、封面、分享图、小游戏图标 | 正常人物比例（6～7 头身），半身像 |
-| **B 日系 SD 小人** | 战斗角色（伊森、丧尸……） | 2～2.5 头身的 SD / ちびキャラ（日式手游战斗小人的常见做法：立绘正常比例，战斗用 SD） |
+| **B 成熟向 SD 小人** | 战斗角色（伊森、丧尸……） | 2.5～3 头身的 SD（日式手游战斗小人的常见做法：立绘正常比例，战斗用 SD） |
 | **C 日漫背景** | 场景背景、营地地点、建筑 | 日本动画的美术背景质感 |
 | **D 日系手游图标** | 资源、物品、技能、拾荒物图标 | 单个物品 |
 
 **前缀 A · 日漫立绘**
 
-> 中文：日本动画风格角色立绘，现代日系手游美术，赛璐璐上色，干净利落的线稿，二阶硬边阴影，细致的眼睛和头发高光，低饱和的末日配色（灰绿、锈棕、水泥灰），暖橙色的边缘逆光，表情生动，高清，
+> 中文：日系动画风格角色半身立绘，成熟向画风，五官偏写实、眼睛大小适中，按角色年龄画出年纪感，赛璐璐上色，干净的深色线稿，二阶硬边阴影，低饱和的末日配色（灰绿、锈棕、水泥灰），暖橙色的边缘逆光，表情有故事感，高清，
 >
-> English: anime style character illustration, modern Japanese mobile game art, cel shading, clean crisp lineart, two-tone hard shadows, detailed eyes and hair highlights, desaturated post-apocalyptic palette (grey-green, rust brown, concrete grey), warm orange rim light, expressive face, high quality,
+> English: anime style bust portrait, mature character design, semi-realistic facial features, moderate eye size, age-appropriate details, cel shading, clean dark lineart, two-tone hard shadows, desaturated post-apocalyptic palette (grey-green, rust brown, concrete grey), warm orange rim light, expressive storytelling face, high quality,
 
-**前缀 B · 日系 SD 小人**
+**前缀 B · 成熟向 SD 小人**
 
-> 中文：日系手游 SD 战斗小人，2 头身，头大身小，动画赛璐璐上色，干净的线稿，二阶阴影，低饱和末日配色加暖橙点缀，动作姿势清楚、轮廓分明，可爱但帅气，全身，
+> 中文：成熟向日系 SD 战斗小人，约 2.5～3 头身，头大身小，五官偏写实不夸张，眼睛大小适中，按角色年龄画出年纪感（胡茬、皱纹、白发），赛璐璐上色，干净的深色线稿，二阶硬边阴影，身体边缘一圈暖橙色逆光，低饱和末日配色，3/4 侧身，动作姿势清楚、轮廓分明，全身，角色居中四周留白，纯白色背景，不要画棋盘格，
 >
-> English: Japanese mobile game SD battle sprite, super deformed chibi, 2 heads tall, anime cel shading, clean lineart, two-tone shadows, desaturated post-apocalyptic palette with warm orange accents, clear action pose, strong silhouette, cute but cool, full body,
+> English: mature-style Japanese SD battle sprite, about 2.5 to 3 heads tall, big head small body, semi-realistic facial features, moderate eye size, age-appropriate details (stubble, wrinkles, grey hair), cel shading, clean dark lineart, two-tone hard shadows, warm orange rim light along the body edges, desaturated post-apocalyptic palette, three-quarter view, clear action pose, strong silhouette, full body, centered with margins, plain pure white background, no checkerboard pattern,
 
 **前缀 C · 日漫背景**
 
@@ -55,15 +57,17 @@
 
 **反向提示词（负面提示词，能填就填）：**
 
-> 写实，照片，3D 渲染，欧美卡通，美漫，厚涂，血腥，血浆飞溅，内脏，猎奇，文字，水印，签名，logo，多余的手指，畸形的手，被裁切，多个角色，复杂背景，牛仔帽警长
+> 写实，照片，3D 渲染，美漫，厚涂，过大的动漫眼睛，刺猬头，血腥，血浆飞溅，内脏，猎奇，文字，水印，签名，logo，多余的手指，畸形的手，被裁切，多个角色，复杂背景，牛仔帽警长
 >
-> realistic, photo, 3d render, western cartoon, american comic style, painterly, gore, blood splatter, guts, grotesque, text, watermark, signature, logo, extra fingers, deformed hands, cropped, multiple characters, busy background, cowboy sheriff hat
+> realistic, photo, 3d render, american comic style, painterly, oversized anime eyes, spiky anime hair, gore, blood splatter, guts, grotesque, text, watermark, signature, logo, extra fingers, deformed hands, cropped, multiple characters, busy background, cowboy sheriff hat
 
 **用哪个工具**
 
 - **Midjourney**：在提示词最后加 **`--niji 6`**（Midjourney 专门做日漫风的模型）。头像加 `--ar 1:1`，背景加 `--ar 9:16` 或 `--ar 3:2`。
 - **即梦 / 可灵 / 通义万相**：模型或风格选“**动漫**”“二次元”一类，再贴中文提示词。
 - **Stable Diffusion**：用动漫类底模（比如 Animagine XL、Pony 系列的动漫模型），英文提示词效果更好。
+
+- **Gemini**：用自然语言描述效果最好，也很擅长**在原图上修改**（“保持角色不变，只改……”）。⚠️ Gemini 经常把透明棋盘格**画进图里**（假透明），一定要写“纯白色背景，不要画棋盘格”，然后自己抠图。它给的 `.webp` 要转成 PNG。
 
 **不要在提示词里写具体画师或具体动画作品的名字**。一是版权风险，二是画出来会“像别人的游戏”。用上面的风格描述就够了。
 
