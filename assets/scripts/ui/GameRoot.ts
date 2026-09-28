@@ -1,10 +1,10 @@
 // 原型阶段的调试界面：全部用代码生成文字和按钮，先验证玩法，之后再换成正式美术界面。
 // 用法：把这个组件挂到场景的 Canvas 节点上（见 README）。
 
-import { _decorator, Color, Component, game, Game, Graphics, JsonAsset, Label, Layers, Node, resources, UITransform } from 'cc';
+import { _decorator, Color, Component, game, Game, Graphics, JsonAsset, Label, Layers, Node, resources, SubContextView, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
-import { availableLocations, currentRaid, expeditionLoot, formatBag, isOnExpedition, nextRaidIsBloodMoon, raidEnemyBonus, suggestSquad } from '../core/combat';
+import { availableLocations, currentRaid, expeditionLoot, formatBag, isOnExpedition, nextRaidIsBloodMoon, raidEnemyBonus, restockSecondsLeft, suggestSquad } from '../core/combat';
 import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel } from '../core/economy';
 import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
 import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
@@ -20,8 +20,12 @@ import { survivorInfo } from '../core/roster';
 import { currentSite } from '../core/siteMods';
 import { relocationBlocker, relocationFoodCost, relocationTargets } from '../core/sites';
 import { expandConfig } from '../core/configExpand';
+import { realSeconds } from '../core/clock';
+import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
+import { createLeaderboard } from '../platform/Leaderboard';
+import { createNetworkService } from '../platform/Network';
 
 const { ccclass } = _decorator;
 
@@ -36,7 +40,7 @@ const BUTTON_DISABLED = new Color(80, 80, 80);
 const WIN = new Color(140, 220, 140);
 const LOSE = new Color(240, 120, 110);
 
-type Tab = 'camp' | 'survivors' | 'explore' | 'bounties' | 'workshop' | 'achievements' | 'reports';
+type Tab = 'camp' | 'survivors' | 'explore' | 'bounties' | 'workshop' | 'achievements' | 'reports' | 'rank';
 const TABS: [Tab, string][] = [
     ['camp', '营地'],
     ['survivors', '幸存者'],
@@ -45,6 +49,7 @@ const TABS: [Tab, string][] = [
     ['workshop', '工坊'],
     ['achievements', '成就'],
     ['reports', '战报'],
+    ['rank', '排行'],
 ];
 const TABS_PER_ROW = 4;
 
@@ -57,6 +62,16 @@ export class GameRoot extends Component {
     private runRecorded = false;
     private newBest = false;
     private readonly ads = createAdService();
+    private readonly network = createNetworkService();
+    private readonly leaderboard = createLeaderboard();
+    private connected = false;
+    private loading = false;
+    private config: GameConfig | null = null;
+    /** 上一次上报成绩时是第几天（每过一天报一次） */
+    private submittedDay = 0;
+    private ranking: GlobalRanking | null = null;
+    private rankingError = '';
+    private friendView: Node | null = null;
     private content: Node | null = null;
     private cursorY = TOP;
     private secondTimer = 0;
@@ -68,22 +83,56 @@ export class GameRoot extends Component {
     onLoad(): void {
         this.drawBackground();
         this.content = this.makeNode('Content', this.node);
-        game.on(Game.EVENT_HIDE, this.save, this);
-        this.loadConfig();
+        game.on(Game.EVENT_HIDE, this.onHide, this);
+        this.network.onChange((online) => {
+            this.connected = online;
+            if (online && !this.config) this.loadConfig();
+            this.render();
+        });
+        this.connect();
+    }
+
+    /** 游戏需要联网：没网时显示提示和重试按钮 */
+    private connect(): void {
+        this.network.check().then((online) => {
+            this.connected = online;
+            if (!online) {
+                this.showOffline();
+                return;
+            }
+            if (!this.config) this.loadConfig();
+        });
+    }
+
+    private showOffline(): void {
+        if (!this.content) return;
+        this.content.destroyAllChildren();
+        this.cursorY = TOP;
+        this.text('需要联网', 40, ACCENT);
+        this.text('《末日营地》需要联网才能玩：存活天数要上传到排行榜。\n断网期间营地会暂停，不会有尸潮，也不会死人；离线的时间会算成挂机收益。', 24);
+        this.gap(20);
+        this.button('重新连接', WIDTH, () => this.connect());
+    }
+
+    private onHide(): void {
+        this.submitScore(true);
+        this.save();
     }
 
     onDestroy(): void {
-        game.off(Game.EVENT_HIDE, this.save, this);
+        game.off(Game.EVENT_HIDE, this.onHide, this);
         this.save();
     }
 
     update(dt: number): void {
-        if (!this.camp) return;
+        // 断网时不推进时间：之后重新连上，这段会算成离线（营地暂停，只发挂机收益）
+        if (!this.camp || !this.connected) return;
         this.secondTimer += dt;
         this.saveTimer += dt;
         if (this.secondTimer >= 1) {
             this.secondTimer = 0;
-            this.camp.tick(Date.now());
+            this.goOnline();
+            this.submitScore();
             this.render();
         }
         if (this.saveTimer >= 10) {
@@ -93,6 +142,8 @@ export class GameRoot extends Component {
     }
 
     private loadConfig(): void {
+        if (this.loading) return;
+        this.loading = true;
         resources.loadDir('config', JsonAsset, (err, assets) => {
             if (err) {
                 this.showFatal(`配置加载失败：${err.message}`);
@@ -107,14 +158,42 @@ export class GameRoot extends Component {
                 this.showFatal(`配置表有错误：\n${errors.slice(0, 10).join('\n')}`);
                 return;
             }
-            const now = Date.now();
+            this.config = config;
             const saved = loadGame(this.storage, config);
-            this.camp = saved ? new CampGame(config, saved) : this.newRun(config, now);
+            this.camp = saved ? new CampGame(config, saved) : this.newRun(config, Date.now());
             // 读到的是已经覆灭的存档：说明上次覆灭时已经记录过了
             this.runRecorded = !!saved?.gameOver;
-            this.camp.tick(now);
+            this.goOnline();
             this.render();
         });
+    }
+
+    /** 推进在线时钟；离线回来时提示挂机收益 */
+    private goOnline(): void {
+        if (!this.camp) return;
+        const { offlineReward } = this.camp.online(Date.now());
+        if (offlineReward) this.showToast(`离线期间，留守的人攒下了 ${formatBag(this.camp.config, offlineReward)}`);
+    }
+
+    /** 每过一天（或切到后台、营地覆灭时）上报一次成绩 */
+    private submitScore(force = false): void {
+        const camp = this.camp;
+        if (!camp || !this.connected) return;
+        const entry = scoreEntry(camp.config, camp.state, this.records, camp.now);
+        if (!force && entry.days === this.submittedDay) return;
+        this.submittedDay = entry.days;
+        this.leaderboard.submit(entry).catch(() => {
+            this.submittedDay = 0; // 下一秒重试
+        });
+    }
+
+    private loadRanking(): void {
+        this.rankingError = '';
+        this.leaderboard
+            .globalTop()
+            .then((r) => (this.ranking = r))
+            .catch(() => (this.rankingError = '排行榜加载失败，稍后再试'))
+            .then(() => this.render());
     }
 
     private save(): void {
@@ -134,6 +213,7 @@ export class GameRoot extends Component {
         this.newBest = recordRun(camp.config, this.records, camp.state);
         saveRecords(this.storage, this.records);
         this.runRecorded = true;
+        this.submitScore(true);
         this.save();
     }
 
@@ -166,10 +246,16 @@ export class GameRoot extends Component {
     private render(): void {
         const camp = this.camp;
         if (!camp || !this.content) return;
+        if (!this.connected) {
+            this.setFriendView(false);
+            this.showOffline();
+            return;
+        }
         this.content.destroyAllChildren();
         this.cursorY = TOP;
-        const now = Date.now();
+        const now = camp.now;
         const { config, state } = camp;
+        this.setFriendView(this.tab === 'rank' && !state.gameOver && !camp.currentEvent);
 
         if (state.gameOver) {
             this.recordGameOver(camp);
@@ -187,7 +273,7 @@ export class GameRoot extends Component {
         this.text(this.resourceLine(config, camp, now), 22);
         const raid = currentRaid(config, state, now);
         if (raid) {
-            const left = Math.max(0, Math.ceil((state.nextRaidAt - now) / 1000));
+            const left = realSeconds(config, state.nextRaidAt - now);
             const bloodMoon = nextRaidIsBloodMoon(config, state);
             const bonus = raidEnemyBonus(config, state, now);
             const level = bonus > 0 ? ` +${bonus}` : '';
@@ -224,12 +310,42 @@ export class GameRoot extends Component {
                 this.renderWorkshop(camp);
             } else if (this.tab === 'achievements') {
                 this.renderAchievements(camp, now);
+            } else if (this.tab === 'rank') {
+                this.renderRanking(camp, now);
             } else {
                 this.renderReports(camp);
             }
         }
 
-        if (this.toast && now < this.toastUntil) this.text(this.toast, 22, ACCENT);
+        if (this.toast && Date.now() < this.toastUntil) this.text(this.toast, 22, ACCENT);
+    }
+
+    private renderRanking(camp: CampGame, now: number): void {
+        const entry = scoreEntry(camp.config, camp.state, this.records, now);
+        this.text(`这一局：第 ${entry.days} 天   我的最长纪录：${entry.bestDays} 天`, 24, ACCENT);
+        this.text('天数只按在线时间算：在线约 10 分钟过一天，离线时营地暂停。', 20, DIM);
+        this.gap(8);
+        this.text('—— 全服排行（最长存活天数）——', 22, DIM);
+        if (this.rankingError) this.text(this.rankingError, 22, LOSE);
+        else if (!this.ranking) this.text('加载中……', 22, DIM);
+        else {
+            this.ranking.list.slice(0, 10).forEach((r, i) => this.text(`${i + 1}. ${r.name}  ${r.bestDays} 天${r.me ? '（我）' : ''}`, 22, r.me ? ACCENT : TEXT));
+            if (this.ranking.me) this.text(`我的全服排名：第 ${this.ranking.me.rank} 名`, 22, ACCENT);
+        }
+        this.button('刷新排行', WIDTH, () => this.loadRanking());
+    }
+
+    /** 好友榜只能由开放数据域画在 sharedCanvas 上，这里用 SubContextView 显示；不在微信里时不显示 */
+    private setFriendView(visible: boolean): void {
+        if (visible && !this.friendView) {
+            if (!this.leaderboard.showFriends()) return;
+            const node = this.makeNode('FriendRanking', this.node);
+            node.getComponent(UITransform)!.setContentSize(WIDTH, 600);
+            node.setPosition(0, -300);
+            node.addComponent(SubContextView);
+            this.friendView = node;
+        }
+        if (this.friendView) this.friendView.active = visible;
     }
 
     private resourceLine(config: GameConfig, camp: CampGame, now: number): string {
@@ -239,7 +355,8 @@ export class GameRoot extends Component {
             .map((r) => {
                 const cap = storageCap(config, state, r.id);
                 const amount = Math.floor(state.resources[r.id]);
-                const rate = rates[r.id];
+                // 显示成每分钟在线时间的变化
+                const rate = rates[r.id] * config.balance.clock.onlineTimeScale;
                 const rateText = Math.abs(rate) >= 0.05 ? `(${rate > 0 ? '+' : ''}${rate.toFixed(1)})` : '';
                 return `${r.icon}${amount}${cap === Infinity ? '' : '/' + cap}${rateText}`;
             })
@@ -253,7 +370,7 @@ export class GameRoot extends Component {
         this.gap(16);
         event.choices.forEach((choice, i) => {
             this.button(choice.text, WIDTH, () => {
-                const res = camp.choose(i, Date.now());
+                const res = camp.choose(i, camp.now);
                 this.showToast(res.ok ? res.outcomeText ?? '' : res.reason ?? '');
                 this.render();
             });
@@ -272,7 +389,7 @@ export class GameRoot extends Component {
             const blocker = relocationBlocker(config, state, site.id, now);
             const label = `举营搬迁（路上 ${relocationFoodCost(config, state)} 食物，只能带走一半物资，路障要重建）`;
             this.button(blocker ? `${label}（${blocker}）` : label, WIDTH, () => {
-                const res = camp.relocate(site.id, Date.now());
+                const res = camp.relocate(site.id, camp.now);
                 this.showToast(res.ok ? `搬到了${site.name}` : res.reason);
                 this.render();
             }, LEFT, blocker !== null);
@@ -289,14 +406,14 @@ export class GameRoot extends Component {
             this.text(`${def.name} Lv${b.level}`, 24, b.level > 0 ? TEXT : DIM, 300);
             this.cursorY = rowY;
             if (b.upgradeEndsAt !== null) {
-                const left = Math.max(0, Math.ceil((b.upgradeEndsAt - now) / 1000));
+                const left = realSeconds(config, b.upgradeEndsAt - now);
                 this.button(`${formatTime(left)} 看广告加速`, 360, () => this.speedUp(def.id), LEFT + 320);
             } else {
                 const next = def.levels[b.level];
                 const blocker = upgradeBlocker(config, state, def.id);
                 const label = next ? `${b.level === 0 ? '建造' : '升级'} ${formatCost(config, next.cost)}` : '已满级';
                 this.button(blocker && next ? `${label}（${blocker}）` : label, 360, () => {
-                    const res = camp.upgrade(def.id, Date.now());
+                    const res = camp.upgrade(def.id, camp.now);
                     this.showToast(res.ok ? `开始${b.level === 0 ? '建造' : '升级'}${def.name}` : res.reason);
                     this.render();
                 }, LEFT + 320, blocker !== null);
@@ -315,6 +432,7 @@ export class GameRoot extends Component {
             this.cursorY = rowTop;
             this.button(this.tab === tab ? `【${name}】` : name, w, () => {
                 this.tab = tab;
+                if (tab === 'rank') this.loadRanking();
                 this.render();
             }, LEFT + col * (w + 10), this.tab !== tab);
         });
@@ -332,7 +450,7 @@ export class GameRoot extends Component {
             this.text(`🎯 ${def.title}  ${current}/${target}  奖励 ${formatBag(config, def.reward)}`, 22);
             const done = current >= target;
             this.button(done ? '领取奖励' : '放弃', WIDTH, () => {
-                const res = done ? camp.claimBounty(def.id, Date.now()) : camp.abandonBounty(def.id, Date.now());
+                const res = done ? camp.claimBounty(def.id, camp.now) : camp.abandonBounty(def.id, camp.now);
                 this.showToast(res.ok ? (done ? `悬赏「${def.title}」完成！` : '已放弃') : res.reason);
                 this.render();
             }, LEFT, false);
@@ -342,7 +460,7 @@ export class GameRoot extends Component {
         for (const def of availableBounties(config, state, now)) {
             this.text(`${def.title}：${def.description}  奖励 ${formatBag(config, def.reward)} · 经验 ${def.xp}`, 20);
             this.button('接取', WIDTH, () => {
-                const res = camp.acceptBounty(def.id, Date.now());
+                const res = camp.acceptBounty(def.id, camp.now);
                 this.showToast(res.ok ? `接下了「${def.title}」` : res.reason);
                 this.render();
             });
@@ -358,7 +476,7 @@ export class GameRoot extends Component {
             this.text(`${item.icon}${item.name} ×${itemCount(state, item.id)}  ${item.description}`, 22);
             const blocker = craftBlocker(config, state, item.id);
             this.button(`制作 ${formatCost(config, item.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
-                const res = camp.craft(item.id, Date.now());
+                const res = camp.craft(item.id, camp.now);
                 this.showToast(res.ok ? `做好了一个${item.name}` : res.reason);
                 this.render();
             }, LEFT, blocker !== null);
@@ -400,7 +518,7 @@ export class GameRoot extends Component {
             if (col === 0) rowTop = this.cursorY;
             else this.cursorY = rowTop;
             const def = survivorInfo(config, state, s.id);
-            const recover = s.recoverAt !== null ? formatTime(Math.max(0, Math.ceil((s.recoverAt - now) / 1000))) : '';
+            const recover = s.recoverAt !== null ? formatTime(realSeconds(config, s.recoverAt - now)) : '';
             const job = s.injured
                 ? `🩹${recover}`
                 : isOnExpedition(state, s.id)
@@ -410,14 +528,14 @@ export class GameRoot extends Component {
                     : '空闲';
             this.button(`${def?.name ?? s.id} 😊${Math.round(s.mood)} ${job}`, colWidth, () => {
                 if (s.injured) {
-                    const res = camp.treat(s.id, Date.now());
+                    const res = camp.treat(s.id, camp.now);
                     this.showToast(res.ok ? `${def?.name}的伤治好了` : res.reason);
                     this.render();
                     return;
                 }
                 const start = jobs.indexOf(s.assignment);
                 for (let step = 1; step <= jobs.length; step++) {
-                    if (camp.assign(s.id, jobs[(start + step) % jobs.length], Date.now()).ok) break;
+                    if (camp.assign(s.id, jobs[(start + step) % jobs.length], camp.now).ok) break;
                 }
                 this.render();
             }, col === 0 ? LEFT : LEFT + colWidth + 10);
@@ -432,15 +550,18 @@ export class GameRoot extends Component {
         const names = squad.map((id) => survivorInfo(config, state, id)?.name ?? id);
         this.text(`—— 探索（自动编队：${names.join('、') || '没有能出发的人'}）——`, 22, DIM);
         for (const loc of availableLocations(config, state, now)) {
-            this.text(`${loc.name}  ⏱${loc.durationMinutes}分钟  战利品 ${formatBag(config, expeditionLoot(config, state, loc))}`, 24);
+            this.text(`${loc.name}  ⏱${formatTime(realSeconds(config, loc.durationMinutes * 60_000))}  战利品 ${formatBag(config, expeditionLoot(config, state, loc))}`, 24);
             this.text(loc.description, 20, DIM);
             const ex = state.expeditions.find((e) => e.location === loc.id);
             if (ex) {
-                const left = Math.max(0, Math.ceil((ex.returnsAt - now) / 1000));
+                const left = realSeconds(config, ex.returnsAt - now);
                 this.button(`小队在外面，${formatTime(left)} 后返回 · 看广告立即返回`, WIDTH, () => this.speedUpExpedition(ex.id));
+            } else if (restockSecondsLeft(state, loc.id, now) > 0) {
+                const left = realSeconds(config, restockSecondsLeft(state, loc.id, now) * 1000);
+                this.button(`刚搜刮过，${formatTime(left)} 后物资重新聚起来`, WIDTH, () => {}, LEFT, true);
             } else {
                 this.button('派出小队', WIDTH, () => {
-                    const res = camp.explore(loc.id, Date.now());
+                    const res = camp.explore(loc.id, camp.now);
                     this.showToast(res.ok ? `小队出发前往${loc.name}` : res.reason);
                     this.render();
                 }, LEFT, squad.length === 0);
@@ -469,7 +590,7 @@ export class GameRoot extends Component {
         this.ads.showRewarded().then((watched) => {
             if (!this.camp) return;
             if (watched) {
-                const res = this.camp.speedUpUpgrade(buildingId, Date.now());
+                const res = this.camp.speedUpUpgrade(buildingId, this.camp.now);
                 this.showToast(res.ok ? res.message ?? '' : res.reason);
             } else {
                 this.showToast('需要看完广告才能加速');
@@ -482,7 +603,7 @@ export class GameRoot extends Component {
         this.ads.showRewarded().then((watched) => {
             if (!this.camp) return;
             if (watched) {
-                this.camp.speedUpExpedition(expeditionId, Date.now());
+                this.camp.speedUpExpedition(expeditionId, this.camp.now);
                 this.tab = 'reports';
             } else {
                 this.showToast('需要看完广告才能加速');

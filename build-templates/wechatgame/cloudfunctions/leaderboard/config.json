@@ -1,0 +1,7 @@
+{
+    "dayLengthMinutes": 80,
+    "onlineTimeScale": 8,
+    "tolerance": 1.2,
+    "graceDays": 2,
+    "maxTop": 50
+}

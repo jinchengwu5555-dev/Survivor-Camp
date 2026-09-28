@@ -11,7 +11,10 @@
 - 生存竞赛：人会死（`roster.ts`），全死光就覆灭（`state.gameOver`，时间停止）；跨局记录在 `records.ts`（单独存档）。**查幸存者资料一律用 `survivorInfo()` / `survivorName()`**，流浪者不在 `survivors.json` 里。营地地点效果只从 `siteMods.ts` 读，搬迁在 `sites.ts`。
 - `CampGame` 的每个操作都会经过 `act()`，结束后统一检查剧情目标和成就；新增操作也要走 `act()`。
 - `platform/` 放微信 / Cocos 平台相关代码，`ui/` 放界面。
+- **时间只按在线时间算**（`core/clock.ts`）：core 里的 `now` 都是游戏时间，界面操作一律用 `camp.now`，每秒调用 `camp.online(Date.now())`；倒计时用 `realSeconds()` 换算。离线时营地暂停，只发 `offline.ts` 的挂机收益。改时钟参数要同步 `build-templates/wechatgame/cloudfunctions/leaderboard/config.json`（测试会检查）。
+- 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。
+- **每次修改结束都要 git commit 并 push**（推到当前开发分支），不要把改动留在本地。
 - 不要提交 AppSecret 等密钥；`.meta` 文件和场景文件需要提交。
 - 版权：不使用《行尸走肉》的角色名、地名、标志性造型和原剧情。`docs/reference/` 里参考作品的专有名词、原剧情同样不能用，只借鉴机制和情绪。
 - `docs/reference/` 是备用资料库，里面的点子都是“待定”，用户点名采用后才实现，并把 `ideas.md` 里的状态改成“已采用”。
