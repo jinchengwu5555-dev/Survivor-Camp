@@ -63,6 +63,8 @@ tests/                  ← 单元测试
 build-templates/wechatgame/  ← 构建微信小游戏时原样拷进输出目录
   openDataContext/      ← 开放数据域：好友排行榜
   cloudfunctions/leaderboard/  ← 云函数：全服排行榜和防刷校验
+art-raw/                ← 美术原图（任何格式），tools/process_art.py 抠图后输出到 assets/resources/sprites/
+tools/process_art.py    ← 美术图批处理：去背景、去白边、裁边、缩放
 docs/GDD.md             ← 游戏设计文档
 docs/reference/         ← 备用资料库：参考作品分析、点子池、候选事件（尚未采用）
 ```
