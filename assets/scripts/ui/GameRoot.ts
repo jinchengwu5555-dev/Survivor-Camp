@@ -42,6 +42,9 @@ import { addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode,
 
 const { ccclass } = _decorator;
 
+/** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
+const GAME_VERSION = 'v0.5 拾荒+每日目标';
+
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
 const TOP = 620;
@@ -396,6 +399,9 @@ export class GameRoot extends Component {
         }
         this.guide = nextHint(config, state, now);
         const { season, dayInSeason } = seasonAt(config, state, now);
+        const versionY = this.cursorY;
+        this.text(GAME_VERSION, 16, DIM, WIDTH, LEFT);
+        this.cursorY = versionY - 18;
         this.text(`《末日营地》 第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天`, 34, ACCENT);
         this.text(
             `${currentSite(config, state)?.icon ?? ''}${currentSite(config, state)?.name ?? ''}   士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}   纪录 ${this.records.bestDays} 天`,

@@ -16,6 +16,7 @@
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。
 - **每次修改结束都要 git commit 并 push**（推到当前开发分支），不要把改动留在本地。
+- 改了界面或玩法时，顺手更新 `ui/GameRoot.ts` 里的 `GAME_VERSION`，用户靠它确认自己跑的是不是最新代码。
 - 不要提交 AppSecret 等密钥；`.meta` 文件和场景文件需要提交。
 - 版权：不使用《行尸走肉》的角色名、地名、标志性造型和原剧情。`docs/reference/` 里参考作品的专有名词、原剧情同样不能用，只借鉴机制和情绪。
 - `docs/reference/` 是备用资料库，里面的点子都是“待定”，用户点名采用后才实现，并把 `ideas.md` 里的状态改成“已采用”。
