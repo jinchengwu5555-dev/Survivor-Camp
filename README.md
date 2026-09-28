@@ -3,6 +3,7 @@
 Q 版丧尸末日生存 · 营地经营 · 剧情抉择，微信小游戏（竖屏）。
 
 - 游戏设计文档：[docs/GDD.md](docs/GDD.md)
+- 备用资料库（参考作品分析和待采用的点子）：[docs/reference/](docs/reference/README.md)
 - 引擎：Cocos Creator 3.8 + TypeScript
 - 微信小游戏 AppID：`wx26c43b6b78c92ffe`
 
@@ -30,6 +31,7 @@ assets/
     ui/GameRoot.ts      ← 原型阶段的调试界面（纯文字 + 按钮）
 tests/                  ← 单元测试
 docs/GDD.md             ← 游戏设计文档
+docs/reference/         ← 备用资料库：参考作品分析、点子池、候选事件（尚未采用）
 ```
 
 ## 第一次打开项目

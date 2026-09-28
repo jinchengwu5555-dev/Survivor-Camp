@@ -1,0 +1,137 @@
+[
+    {
+        "id": "ref_deer_crossing",
+        "_idea": "R19 宁静时刻（参考：最后生还者）",
+        "title": "鹿群",
+        "text": "清晨，瞭望的人压低声音喊大家过来。\n一群鹿正慢悠悠地穿过空荡荡的主街，踩过翻倒的邮筒，停在加油站门口啃草。没有人说话。",
+        "weight": 3,
+        "once": true,
+        "conditions": { "minDay": 2 },
+        "choices": [
+            { "text": "就这样静静看着", "outcomes": [ { "weight": 1, "text": "鹿群走远了。玛莎抹了抹眼角：“我都忘了，这个镇子原来这么安静。”", "effects": [ { "type": "mood", "target": "all", "amount": 10 } ] } ] },
+            { "text": "悄悄摸过去，打一只改善伙食", "outcomes": [ { "weight": 1, "text": "汉克一枪就放倒了一只。晚饭很丰盛，但苏菲一口也没吃。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 }, { "type": "mood", "target": "sophie", "amount": -10 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_diary_page_1",
+        "_idea": "R18 日记残页（参考：最后生还者、蹉跎）",
+        "title": "日记残页（一）",
+        "text": "探索队在废墟里捡到半页被雨水泡过的日记，字迹还能辨认：\n“第三天。孩子们一直问什么时候能回家。我不知道该怎么回答。营长说无线电还能用……”\n纸页的抬头印着：松林营地 · 辅导员记事。",
+        "weight": 6,
+        "once": true,
+        "conditions": { "flags": ["cleared_hardware_store"] },
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森把这半页纸看了一遍又一遍，然后小心地夹进了警徽皮夹里。", "effects": [ { "type": "flag", "flag": "diary_page_1" }, { "type": "mood", "target": "ethan", "amount": 10 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_toby_jokes",
+        "_idea": "R38 幽默调剂（参考：最后生还者、剑风传奇）",
+        "title": "冷笑话大全",
+        "text": "托比从书店里翻出一本《冷笑话大全》，非要在晚饭时念给大家听：\n“为什么丧尸从来不迟到？因为它们总是——死——守时间。”",
+        "weight": 4,
+        "once": true,
+        "conditions": { "hasSurvivors": ["toby"] },
+        "choices": [
+            { "text": "“再来一个！”", "outcomes": [ { "weight": 1, "text": "德里克骂了句“烂透了”，然后笑得最大声。", "effects": [ { "type": "mood", "target": "all", "amount": 6 } ] } ] },
+            { "text": "“……托比，把书给我。”", "outcomes": [ { "weight": 1, "text": "托比委屈地交出了书。第二天，书出现在了玛莎的枕头底下。", "effects": [ { "type": "mood", "target": "toby", "amount": -5 }, { "type": "mood", "target": "martha", "amount": 8 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_stray_dog",
+        "_idea": "R10 营地的狗（参考：蹉跎、全球进化）",
+        "title": "跟回来的狗",
+        "text": "探索队回来时，身后多了一条瘦得皮包骨的黄狗。它不叫也不闹，就蹲在路障外面，眼巴巴地看着你们。",
+        "weight": 5,
+        "once": true,
+        "conditions": { "minDay": 2 },
+        "choices": [
+            { "text": "收养它（5 食物）", "cost": { "food": 5 }, "outcomes": [ { "weight": 1, "text": "托比给它起名叫“罐头”。当天夜里，它冲着黑暗叫了整整一刻钟——半小时后，尸群来了。", "effects": [ { "type": "flag", "flag": "has_dog" }, { "type": "mood", "target": "all", "amount": 8 } ] } ] },
+            { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_harvest_festival",
+        "_idea": "R02 末日民俗（参考：蹉跎）",
+        "title": "丰收会",
+        "text": "罗莎在屋顶种的第一批土豆熟了。她提议办个“丰收会”：“以前镇上每年秋天都办。现在更该办。”",
+        "weight": 4,
+        "once": true,
+        "conditions": { "hasSurvivors": ["rosa"] },
+        "choices": [
+            { "text": "办！（15 食物）", "cost": { "food": 15 }, "outcomes": [ { "weight": 1, "text": "大家围着火堆分土豆。有人起了个头：“祝土豆丰收！”大家齐声回：“罐头满仓！”——这成了营地的问候语。", "effects": [ { "type": "flag", "flag": "camp_greeting" }, { "type": "mood", "target": "all", "amount": 12 } ] } ] },
+            { "text": "粮食要省着吃", "outcomes": [ { "weight": 1, "text": "罗莎没再坚持，只是把最大的那颗土豆留给了孩子们。", "effects": [ { "type": "mood", "target": "rosa", "amount": -8 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_perfume_trick",
+        "_idea": "R17 潜行与气味（参考：全球进化）",
+        "title": "一箱香水",
+        "text": "探索队在商场专柜找到一整箱香水。诺拉拿起一瓶闻了闻：“行尸是靠气味找人的。把这个洒在身上，它们也许就闻不到我们了。”",
+        "weight": 4,
+        "once": true,
+        "conditions": { "hasSurvivors": ["nora"] },
+        "choices": [
+            { "text": "试试看", "outcomes": [
+                { "weight": 2, "text": "真的有用！托比浑身喷满香水，从三只行尸身边走过，它们连头都没回。", "effects": [ { "type": "flag", "flag": "scent_masking" }, { "type": "resource", "resource": "parts", "amount": 10 } ] },
+                { "weight": 1, "text": "香味太冲，把附近所有的行尸都引了过来。小队狼狈撤回。", "effects": [ { "type": "injure", "survivor": "random" } ] }
+            ] },
+            { "text": "拿回去换东西", "outcomes": [ { "weight": 1, "text": "下次商队来的时候，一箱香水换了一大袋米。", "effects": [ { "type": "resource", "resource": "food", "amount": 30 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_mutant_serum",
+        "_idea": "R28 变异血清（参考：狩魔手记）",
+        "title": "实验血清",
+        "text": "诺拉在卫生所的冷柜里找到一支贴着“实验品 · 勿用”标签的血清。附带的报告写着：注射者力量和反应速度显著提升，副作用未知。\n汉克把袖子卷了起来：“我老了，拿我试。”",
+        "weight": 3,
+        "once": true,
+        "conditions": { "flags": ["cleared_clinic"], "hasSurvivors": ["hank", "nora"] },
+        "choices": [
+            { "text": "让汉克注射", "outcomes": [
+                { "weight": 1, "text": "汉克发了一夜高烧，第二天一拳打穿了仓库的门板。他盯着自己的手，很久没说话。", "effects": [ { "type": "flag", "flag": "hank_serum" }, { "type": "mood", "target": "all", "amount": -5 } ] },
+                { "weight": 1, "text": "汉克抽搐着倒下，差点没挺过来。诺拉守了他两天两夜。", "effects": [ { "type": "injure", "survivor": "hank" }, { "type": "flag", "flag": "hank_serum_failed" } ] }
+            ] },
+            { "text": "销毁它", "outcomes": [ { "weight": 1, "text": "诺拉把血清倒进了下水道。“有些捷径，”她说，“走上去就回不了头。”", "effects": [ { "type": "mood", "target": "nora", "amount": 5 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_cult_envoy",
+        "_idea": "R24 人类敌对势力（参考：蹉跎、最后生还者）",
+        "title": "新生会的使者",
+        "text": "两个穿白袍的人站在路障外，举着一面画着太阳的旗子：“我们是新生会。末日是神的筛选，只有信徒能活下去。每七天交三十份粮食，你们就受神的庇护。”",
+        "weight": 4,
+        "once": true,
+        "conditions": { "minDay": 4 },
+        "choices": [
+            { "text": "交粮，不想惹麻烦（30 食物）", "cost": { "food": 30 }, "outcomes": [ { "weight": 1, "text": "使者满意地走了。德里克一脚踢翻了水桶：“这次是粮食，下次呢？”", "effects": [ { "type": "flag", "flag": "cult_tribute" }, { "type": "mood", "target": "derek", "amount": -10 } ] } ] },
+            { "text": "“滚。”", "outcomes": [ { "weight": 1, "text": "使者没有生气，只是笑了笑：“神会记住的。”", "effects": [ { "type": "flag", "flag": "cult_defied" }, { "type": "mood", "target": "all", "amount": 5 } ] } ] },
+            { "text": "扣下他们，问出老巢在哪", "outcomes": [ { "weight": 1, "text": "年轻的那个吓得全说了。年长的那个，第二天早上不见了。", "effects": [ { "type": "flag", "flag": "cult_location_known" }, { "type": "mood", "target": "sophie", "amount": -8 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_berserk_derek",
+        "_idea": "R12 心理创伤 / R29 极限爆发（参考：剑风传奇）",
+        "title": "停不下来的斧头",
+        "text": "尸潮退了，德里克却还在路障边一斧一斧地砍着一具早已不动的行尸，浑身是血，谁叫都不理。",
+        "weight": 3,
+        "once": true,
+        "conditions": { "flags": ["raids_started"], "hasSurvivors": ["derek"] },
+        "choices": [
+            { "text": "伊森走过去，按住他的肩膀", "outcomes": [ { "weight": 1, "text": "德里克终于停了手，蹲在地上说起了他弟弟。那是他第一次提起这件事。", "effects": [ { "type": "flag", "flag": "derek_opened_up" }, { "type": "mood", "target": "derek", "amount": 15 } ] } ] },
+            { "text": "让他发泄完", "outcomes": [ { "weight": 1, "text": "天亮时他自己回来了，一句话也没说。之后好几天，没人敢和他搭话。", "effects": [ { "type": "mood", "target": "all", "amount": -5 } ] } ] }
+        ]
+    },
+    {
+        "id": "ref_airdrop_seeds",
+        "_idea": "R08 军方空投种子（参考：全球进化）",
+        "title": "空投箱",
+        "text": "一架飞机从高空掠过，远处的田野里飘下一顶降落伞。箱子上印着褪色的军方标志，里面是几包种子和一张传单：“坚持住。救援正在路上。”",
+        "weight": 3,
+        "once": true,
+        "conditions": { "minDay": 3 },
+        "choices": [
+            { "text": "种下去", "outcomes": [ { "weight": 1, "text": "种子发芽了。传单被贴在了厨房墙上，谁也没提“救援”这两个字，但每个人都看过好几遍。", "effects": [ { "type": "resource", "resource": "food", "amount": 30 }, { "type": "mood", "target": "all", "amount": 8 }, { "type": "flag", "flag": "military_alive" } ] } ] }
+        ]
+    }
+]
