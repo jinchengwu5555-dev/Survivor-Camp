@@ -51,6 +51,18 @@ export interface BalanceDef {
     barricadeHpPerSafety: number;
     /** 守夜失败时损失的资源比例 */
     raidLossRatio: number;
+    /** 新鲜食物每分钟腐烂的比例（0.001 = 每分钟 0.1%）；罐头不会坏 */
+    foodSpoilPerMinute: number;
+    /** 冬天没柴取暖时，心情每分钟下降多少 */
+    coldMoodPenaltyPerMinute: number;
+    /** 每第几次尸潮是血月夜；0 = 关闭 */
+    bloodMoonEvery: number;
+    /** 血月夜击退后奖励的倍数 */
+    bloodMoonRewardMultiplier: number;
+    /** 最多同时接几个悬赏 */
+    maxActiveBounties: number;
+    /** 猎人等级：累计悬赏经验达到 xp 就升到这一级 */
+    hunterRanks: { name: string; xp: number }[];
 }
 
 export interface ResourceDef {
@@ -77,6 +89,10 @@ export interface BuildingLevelDef {
     safety?: number;
     /** 所有幸存者的战斗等级 +N */
     battleLevel?: number;
+    /** 食物腐烂速度降低的比例（0.3 = 慢 30%），多个建筑相加，最多 90% */
+    spoilReduction?: number;
+    /** 工坊等级：决定能做哪些物品 */
+    workshopLevel?: number;
 }
 
 export interface BuildingDef {
@@ -114,7 +130,9 @@ export type Effect =
     | { type: 'injure'; survivor: string | 'random' }
     | { type: 'heal'; survivor: string | 'all' }
     | { type: 'flag'; flag: string }
-    | { type: 'triggerEvent'; event: string };
+    | { type: 'triggerEvent'; event: string }
+    /** 累计统计数据（成就、悬赏会用到），amount 默认 1 */
+    | { type: 'stat'; stat: string; amount?: number };
 
 export interface Condition {
     minDay?: number;
@@ -156,7 +174,11 @@ export type Objective =
     | { type: 'buildingLevel'; building: string; level: number; text: string }
     | { type: 'resource'; resource: ResourceId; amount: number; text: string }
     | { type: 'flag'; flag: string; text: string }
-    | { type: 'survivors'; count: number; text: string };
+    | { type: 'survivors'; count: number; text: string }
+    /** 统计数据达到 amount，比如击杀数、守夜胜利次数 */
+    | { type: 'stat'; stat: string; amount: number; text: string }
+    /** 营地存活到第 day 天 */
+    | { type: 'day'; day: number; text: string };
 
 export interface EpisodeDef {
     id: string;
@@ -201,6 +223,59 @@ export interface RaidDef {
     reward: ResourceBag;
 }
 
+export interface SeasonDef {
+    id: string;
+    name: string;
+    icon: string;
+    /** 这个季节持续几天 */
+    days: number;
+    /** 食物产量倍率 */
+    foodProduction: number;
+    /** 每个幸存者每分钟烧掉多少木材取暖 */
+    heatingWoodPerSurvivorPerMinute: number;
+    /** 食物腐烂速度倍率（冬天冷，坏得慢） */
+    spoilMultiplier: number;
+    description: string;
+    /** 进入这个季节时触发的事件 */
+    startEvent?: string;
+}
+
+export interface ItemDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** 需要的工坊等级 */
+    workshopLevel: number;
+    cost: ResourceBag;
+    /** 战斗中携带者获得的技能（skills.json），用掉才消耗 */
+    battleSkill: string;
+}
+
+export interface BountyDef {
+    id: string;
+    title: string;
+    description: string;
+    /** 需要的猎人等级（hunterRanks 的下标） */
+    rank: number;
+    conditions?: Condition;
+    /** 接取之后，这个统计值再增加 amount 就算完成 */
+    goal: { stat: string; amount: number };
+    reward: ResourceBag;
+    xp: number;
+}
+
+export interface AchievementDef {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    /** 隐藏成就：解锁前只显示“？？？” */
+    hidden?: boolean;
+    goal: Objective;
+    reward: ResourceBag;
+}
+
 export interface GameConfig {
     balance: BalanceDef;
     resources: ResourceDef[];
@@ -210,6 +285,10 @@ export interface GameConfig {
     episodes: EpisodeDef[];
     locations: LocationDef[];
     raids: RaidDef[];
+    seasons: SeasonDef[];
+    items: ItemDef[];
+    bounties: BountyDef[];
+    achievements: AchievementDef[];
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -284,6 +363,17 @@ export interface GameState {
     reports: BattleReport[];
     /** 自增 id，给远征和战报用 */
     nextId: number;
+    /** 累计统计：击杀数、胜利次数等，成就和悬赏都读这里 */
+    stats: Record<string, number>;
+    achievements: { id: string; at: number }[];
+    /** 工坊做出来的物品库存 */
+    items: Record<string, number>;
+    bounties: { active: { id: string; baseline: number }[]; completed: string[] };
+    hunterXp: number;
+    /** 已经发生过几次尸潮（用来算血月夜） */
+    raidCount: number;
+    /** 上一次结算时的季节，用来发现换季 */
+    seasonId: string;
 }
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; reason: string };

@@ -2,7 +2,7 @@
 
 import { Condition, Effect, GameConfig, GameEventDef, GameState } from './types';
 import { addResource, bedCount, canAfford, clampMood, pay } from './economy';
-import { addLog, currentDay, hasFlag, healSurvivorState, injureSurvivor, newSurvivorState, setFlag } from './state';
+import { addLog, addStat, currentDay, hasFlag, healSurvivorState, injureSurvivor, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
@@ -60,6 +60,7 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
 
     state.eventQueue.shift();
     if (!state.seenEvents.includes(event.id)) state.seenEvents.push(event.id);
+    addStat(state, 'events_resolved');
 
     const outcome = pickWeighted(state, choice.outcomes);
     if (!outcome) return { ok: true };
@@ -102,6 +103,7 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
                 break;
             }
             state.survivors.push(newSurvivorState(config, effect.survivor));
+            addStat(state, 'recruited');
             addLog(state, now, `${survivorName(config, effect.survivor)}加入了营地。`);
             break;
         }
@@ -131,6 +133,9 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             break;
         case 'triggerEvent':
             queueEvent(state, effect.event);
+            break;
+        case 'stat':
+            addStat(state, effect.stat, effect.amount ?? 1);
             break;
     }
 }

@@ -4,11 +4,15 @@
 import { _decorator, Color, Component, game, Game, Graphics, JsonAsset, Label, Layers, Node, resources, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
-import { availableLocations, currentRaid, formatBag, isOnExpedition, suggestSquad } from '../core/combat';
-import { bedCount, getBuildingDef, morale, productionPerMinute, foodConsumptionPerMinute, safety, storageCap, survivorBattleLevel } from '../core/economy';
+import { availableLocations, currentRaid, formatBag, isOnExpedition, nextRaidIsBloodMoon, suggestSquad } from '../core/combat';
+import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel } from '../core/economy';
+import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
+import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
+import { isUnlocked } from '../core/achievements';
+import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay } from '../core/state';
-import { currentEpisode, objectiveDone } from '../core/story';
+import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
 import { GameConfig, RESOURCE_IDS, ResourceBag } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { createAdService } from '../platform/AdService';
@@ -27,13 +31,17 @@ const BUTTON_DISABLED = new Color(80, 80, 80);
 const WIN = new Color(140, 220, 140);
 const LOSE = new Color(240, 120, 110);
 
-type Tab = 'camp' | 'survivors' | 'explore' | 'reports';
+type Tab = 'camp' | 'survivors' | 'explore' | 'bounties' | 'workshop' | 'achievements' | 'reports';
 const TABS: [Tab, string][] = [
     ['camp', '营地'],
     ['survivors', '幸存者'],
     ['explore', '探索'],
+    ['bounties', '悬赏'],
+    ['workshop', '工坊'],
+    ['achievements', '成就'],
     ['reports', '战报'],
 ];
+const TABS_PER_ROW = 4;
 
 @ccclass('GameRoot')
 export class GameRoot extends Component {
@@ -111,24 +119,28 @@ export class GameRoot extends Component {
         const now = Date.now();
         const { config, state } = camp;
 
-        this.text(`《末日营地》 第 ${currentDay(config, state, now)} 天`, 34, ACCENT);
+        this.showNewAchievements(camp);
+        const { season, dayInSeason } = seasonAt(config, state, now);
+        this.text(`《末日营地》 第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天`, 34, ACCENT);
         this.text(
             `士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}`,
             22,
             DIM,
         );
-        this.text(this.resourceLine(config, camp), 22);
+        this.text(this.resourceLine(config, camp, now), 22);
         const raid = currentRaid(config, state, now);
         if (raid) {
             const left = Math.max(0, Math.ceil((state.nextRaidAt - now) / 1000));
-            this.text(`🧟 ${formatTime(left)} 后${raid.name}来袭（路障生命取决于安全值）`, 22, LOSE);
+            const bloodMoon = nextRaidIsBloodMoon(config, state);
+            const name = bloodMoon ? `🩸血月夜！${raid.name}（数量多一半，奖励翻倍）` : raid.name;
+            this.text(`🧟 ${formatTime(left)} 后${name}来袭（路障生命取决于安全值）`, 22, LOSE);
         }
         this.gap(8);
 
         const ep = currentEpisode(config, state);
         if (ep) {
             this.text(`第 ${ep.season} 季 第 ${ep.episode} 集「${ep.title}」`, 24, ACCENT);
-            for (const o of ep.objectives) this.text(`${objectiveDone(state, o) ? '✅' : '⬜'} ${o.text}`, 22);
+            for (const o of ep.objectives) this.text(`${objectiveDone(config, state, o, now) ? '✅' : '⬜'} ${o.text}`, 22);
         } else {
             this.text('第一季完（未完待续）', 24, ACCENT);
         }
@@ -145,6 +157,12 @@ export class GameRoot extends Component {
                 this.renderSurvivors(camp, now);
             } else if (this.tab === 'explore') {
                 this.renderExplore(camp, now);
+            } else if (this.tab === 'bounties') {
+                this.renderBounties(camp, now);
+            } else if (this.tab === 'workshop') {
+                this.renderWorkshop(camp);
+            } else if (this.tab === 'achievements') {
+                this.renderAchievements(camp, now);
             } else {
                 this.renderReports(camp);
             }
@@ -153,10 +171,9 @@ export class GameRoot extends Component {
         if (this.toast && now < this.toastUntil) this.text(this.toast, 22, ACCENT);
     }
 
-    private resourceLine(config: GameConfig, camp: CampGame): string {
+    private resourceLine(config: GameConfig, camp: CampGame, now: number): string {
         const { state } = camp;
-        const rates = productionPerMinute(config, state);
-        rates.food -= foodConsumptionPerMinute(config, state);
+        const rates = economyRates(config, state, now).net;
         return config.resources
             .map((r) => {
                 const cap = storageCap(config, state, r.id);
@@ -210,16 +227,86 @@ export class GameRoot extends Component {
     }
 
     private renderTabs(): void {
-        const w = (WIDTH - 30) / 4;
-        const top = this.cursorY;
+        const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
+        let rowTop = this.cursorY;
         TABS.forEach(([tab, name], i) => {
-            this.cursorY = top;
+            const col = i % TABS_PER_ROW;
+            if (col === 0 && i > 0) rowTop -= 52;
+            this.cursorY = rowTop;
             this.button(this.tab === tab ? `【${name}】` : name, w, () => {
                 this.tab = tab;
                 this.render();
-            }, LEFT + i * (w + 10), this.tab !== tab);
+            }, LEFT + col * (w + 10), this.tab !== tab);
         });
         this.gap(14);
+    }
+
+    private renderBounties(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        this.text(`—— 悬赏板（${hunterRankName(config, state)} · 经验 ${state.hunterXp}）——`, 22, DIM);
+        this.text(`进行中 ${state.bounties.active.length}/${config.balance.maxActiveBounties}`, 22, ACCENT);
+        for (const active of state.bounties.active) {
+            const def = getBounty(config, active.id);
+            if (!def) continue;
+            const { current, target } = bountyProgress(config, state, def.id);
+            this.text(`🎯 ${def.title}  ${current}/${target}  奖励 ${formatBag(config, def.reward)}`, 22);
+            const done = current >= target;
+            this.button(done ? '领取奖励' : '放弃', WIDTH, () => {
+                const res = done ? camp.claimBounty(def.id, Date.now()) : camp.abandonBounty(def.id, Date.now());
+                this.showToast(res.ok ? (done ? `悬赏「${def.title}」完成！` : '已放弃') : res.reason);
+                this.render();
+            }, LEFT, false);
+            this.gap(8);
+        }
+        this.text('可以接的悬赏', 22, ACCENT);
+        for (const def of availableBounties(config, state, now)) {
+            this.text(`${def.title}：${def.description}  奖励 ${formatBag(config, def.reward)} · 经验 ${def.xp}`, 20);
+            this.button('接取', WIDTH, () => {
+                const res = camp.acceptBounty(def.id, Date.now());
+                this.showToast(res.ok ? `接下了「${def.title}」` : res.reason);
+                this.render();
+            });
+            this.gap(8);
+        }
+    }
+
+    private renderWorkshop(camp: CampGame): void {
+        const { config, state } = camp;
+        const level = workshopLevel(config, state);
+        this.text(level > 0 ? `—— 工坊 ${level} 级（物品在战斗中自动使用，用掉才扣）——` : '—— 工坊（先在营地里建造工坊）——', 22, DIM);
+        for (const item of config.items) {
+            this.text(`${item.icon}${item.name} ×${itemCount(state, item.id)}  ${item.description}`, 22);
+            const blocker = craftBlocker(config, state, item.id);
+            this.button(`制作 ${formatCost(config, item.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
+                const res = camp.craft(item.id, Date.now());
+                this.showToast(res.ok ? `做好了一个${item.name}` : res.reason);
+                this.render();
+            }, LEFT, blocker !== null);
+            this.gap(10);
+        }
+    }
+
+    private renderAchievements(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        this.text(`—— 成就 ${state.achievements.length}/${config.achievements.length} ——`, 22, DIM);
+        for (const def of config.achievements) {
+            const unlocked = isUnlocked(state, def.id);
+            if (!unlocked && def.hidden) {
+                this.text('🔒 ？？？  隐藏成就', 20, DIM);
+                continue;
+            }
+            const { current, target } = objectiveProgress(config, state, def.goal, now);
+            const progress = unlocked ? '已解锁' : `${Math.min(current, target)}/${target}`;
+            this.text(`${unlocked ? def.icon : '🔒'} ${def.name}  ${def.description}  ${progress}`, 20, unlocked ? WIN : TEXT);
+        }
+    }
+
+    /** 新解锁的成就用 toast 提示一次 */
+    private showNewAchievements(camp: CampGame): void {
+        if (camp.newAchievements.length === 0) return;
+        const names = camp.newAchievements.map((a) => `${a.icon}${a.name}`).join('、');
+        camp.newAchievements.length = 0;
+        this.showToast(`🏆 解锁成就：${names}`);
     }
 
     private renderSurvivors(camp: CampGame, now: number): void {

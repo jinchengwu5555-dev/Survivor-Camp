@@ -68,7 +68,7 @@ describe('模块 3：技能编排登记表', () => {
     it('按触发方式筛选，按技能反查角色', () => {
         const reg = registry();
         expect(reg.listSkills({ trigger: 'active' }).map((s) => s.id)).toEqual(['cover_fire', 'hot_soup', 'molotov', 'tripwire']);
-        expect(reg.unitsWithSkill('zombie_bite').map((u) => u.id)).toEqual(['walker', 'runner', 'armored']);
+        expect(reg.unitsWithSkill('zombie_bite').map((u) => u.id)).toEqual(['walker', 'runner', 'armored', 'frenzied']);
     });
 
     it('调试覆盖只影响之后创建的战斗', () => {

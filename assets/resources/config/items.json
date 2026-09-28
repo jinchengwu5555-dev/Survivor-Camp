@@ -1,0 +1,29 @@
+[
+    {
+        "id": "molotov",
+        "name": "燃烧瓶",
+        "icon": "🔥",
+        "description": "酒精加布条。扔出去点燃一片尸群。和急救包抢同一份酒精（药品）。",
+        "workshopLevel": 1,
+        "cost": { "wood": 5, "parts": 3, "medicine": 2 },
+        "battleSkill": "item_molotov"
+    },
+    {
+        "id": "medkit",
+        "name": "急救包",
+        "icon": "🩹",
+        "description": "携带者生命危急时自动使用，大量回血。",
+        "workshopLevel": 1,
+        "cost": { "medicine": 4, "wood": 2 },
+        "battleSkill": "item_medkit"
+    },
+    {
+        "id": "nail_bomb",
+        "name": "钉子炸弹",
+        "icon": "💣",
+        "description": "罐头盒里塞满钉子和火药，炸伤一片还能拖慢尸群。",
+        "workshopLevel": 2,
+        "cost": { "parts": 10, "wood": 5 },
+        "battleSkill": "item_nailbomb"
+    }
+]

@@ -89,5 +89,40 @@
         "targeting": { "rule": "self" },
         "effects": [ { "type": "status", "status": "rage", "duration": 10 } ],
         "tags": ["zombie", "buff"]
+    },
+    {
+        "id": "item_molotov", "name": "燃烧瓶", "description": "扔出燃烧瓶，点燃一片尸群。",
+        "trigger": { "type": "auto" }, "cooldown": 999, "range": 5,
+        "targeting": { "rule": "nearestEnemy", "radius": 2 },
+        "effects": [ { "type": "damage", "ratio": 1.8, "damageType": "fire" }, { "type": "status", "status": "burn", "duration": 5, "power": 0.4 } ],
+        "tags": ["item", "aoe"]
+    },
+    {
+        "id": "item_medkit", "name": "急救包", "description": "生命危急时自动包扎。",
+        "trigger": { "type": "hpBelow", "ratio": 0.35 }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "heal", "ratio": 5.0 } ],
+        "tags": ["item", "heal"]
+    },
+    {
+        "id": "item_nailbomb", "name": "钉子炸弹", "description": "炸伤一片敌人并拖慢它们。",
+        "trigger": { "type": "auto" }, "cooldown": 999, "range": 4,
+        "targeting": { "rule": "nearestEnemy", "radius": 2.5 },
+        "effects": [ { "type": "damage", "ratio": 2.5 }, { "type": "status", "status": "slow", "duration": 4 } ],
+        "tags": ["item", "aoe", "control"]
+    },
+    {
+        "id": "frenzy_rush", "name": "狂暴冲锋", "description": "狂暴感染者一出现就陷入狂怒。",
+        "trigger": { "type": "battleStart" }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "status", "status": "rage", "duration": 6 } ],
+        "tags": ["zombie", "buff"]
+    },
+    {
+        "id": "dog_bite", "name": "扑咬", "description": "营地的狗咬住行尸的腿，拖慢它。",
+        "trigger": { "type": "onAttack", "chance": 0.3 }, "cooldown": 0,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "status", "status": "slow", "duration": 2 } ],
+        "tags": ["control"]
     }
 ]

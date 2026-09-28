@@ -88,5 +88,19 @@
         "stats": { "maxHp": 2000, "atk": 50, "def": 25, "moveSpeed": 0.7, "attackRange": 1.1, "attackInterval": 1.8, "critRate": 0.1, "critDamage": 1.5 },
         "growth": { "maxHp": 150, "atk": 4, "def": 2 },
         "skills": ["pounce", "frenzy"]
+    },
+    {
+        "id": "dog", "name": "罐头（狗）", "faction": "survivor",
+        "appearance": { "sprite": "unit_dog", "color": "#c8a050", "scale": 0.7 },
+        "stats": { "maxHp": 180, "atk": 14, "def": 5, "moveSpeed": 2.2, "attackRange": 0.8, "attackInterval": 0.8, "critRate": 0.1, "critDamage": 1.5 },
+        "growth": { "maxHp": 18, "atk": 1.5 },
+        "skills": ["dog_bite"]
+    },
+    {
+        "id": "frenzied", "name": "狂暴感染者", "faction": "zombie",
+        "appearance": { "sprite": "zombie_frenzied", "color": "#b04040", "scale": 0.95 },
+        "stats": { "maxHp": 170, "atk": 22, "def": 4, "moveSpeed": 2.4, "attackRange": 0.8, "attackInterval": 0.7, "critRate": 0.3, "critDamage": 2.0 },
+        "growth": { "maxHp": 17, "atk": 2.2, "def": 0.5 },
+        "skills": ["frenzy_rush", "zombie_bite"]
     }
 ]

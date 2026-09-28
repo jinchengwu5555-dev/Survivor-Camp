@@ -10,7 +10,8 @@ import { loadConfig } from './helpers';
 const showReport = (import.meta as unknown as { env: { MODE: string } }).env.MODE === 'balance';
 const RUNS = 50;
 
-it('数值平衡报告', () => {
+// 要打上千场战斗，平时跑 npm test 时跳过
+it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
     const config = loadConfig();
     const reg = battleRegistry(config);
     const squad = ['derek', 'ethan', 'martha', 'toby'];
@@ -34,20 +35,25 @@ it('数值平衡报告', () => {
     const width = (s: string) => [...s].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e80 ? 2 : 1), 0);
     const pad = (s: string, w: number) => s + ' '.repeat(Math.max(1, w - width(s)));
     const lines: string[] = [];
-    const header = (title: string, cols: string[]) => lines.push('', title, pad('', 14) + cols.map((c) => pad(c, 14)).join(''));
-    const row = (name: string, cells: string[]) => lines.push(pad(name, 14) + cells.map((c) => pad(c, 14)).join(''));
+    const header = (title: string, cols: string[]) => lines.push('', title, pad('', 20) + cols.map((c) => pad(c, 14)).join(''));
+    const row = (name: string, cells: string[]) => lines.push(pad(name, 20) + cells.map((c) => pad(c, 14)).join(''));
 
     header('—— 探索：4 人小队的胜率（平均受伤人数）——', trainingLevels.map((t) => `训练场${t}级`));
     for (const loc of config.locations) {
         row(loc.name, trainingLevels.map((t) => stats((seed) => expeditionSetup(config, loc, squad, 1 + t, seed))));
     }
 
-    const combos = [0, 1, 2].flatMap((w) => [0, 1].map((t) => ({ w, t })));
+    const combos = wallHps.map((_, w) => w).flatMap((w) => [0, 2].map((t) => ({ w, t })));
     header('—— 尸潮：5 人 + 路障的胜率（平均受伤人数）——', combos.map((c) => `路障${c.w + 1}/训练${c.t}`));
     for (const raid of config.raids) {
-        row(raid.name, combos.map(({ w, t }) => stats((seed) => raidSetup(config, raid, defenders, wallHps[w], 1 + t, seed))));
+        for (const bloodMoon of [false, true]) {
+            for (const dog of bloodMoon ? [false, true] : [false]) {
+                const name = `${bloodMoon ? '血月·' : ''}${raid.name}${dog ? '+狗' : ''}`;
+                row(name, combos.map(({ w, t }) => stats((seed) => raidSetup(config, raid, defenders, wallHps[w], 1 + t, seed, { bloodMoon, dog }))));
+            }
+        }
     }
 
-    if (showReport) console.log(lines.join('\n'));
+    console.log(lines.join('\n'));
     expect(lines.length).toBeGreaterThan(0);
 });

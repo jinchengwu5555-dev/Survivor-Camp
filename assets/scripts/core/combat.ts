@@ -8,10 +8,11 @@ import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
-import { addResource, canAfford, currentLevelDef, pay, safety, survivorBattleLevel } from './economy';
+import { addResource, canAfford, currentLevelDef, grantResources, pay, safety, survivorBattleLevel } from './economy';
 import { conditionMet, queueEvent } from './events';
 import { nextRandom } from './rng';
-import { addLog, hasFlag, healSurvivorState, injureSurvivor, setFlag } from './state';
+import { addLog, addStat, hasFlag, healSurvivorState, injureSurvivor, setFlag } from './state';
+import { consumeUsedItems, equipItems } from './crafting';
 import {
     ActionResult,
     BattleReport,
@@ -27,6 +28,9 @@ import {
 
 /** 路障在战斗里对应的角色 id（units.json） */
 export const BARRICADE_UNIT = 'barricade';
+/** 营地的狗（收养后跟大家一起守夜） */
+export const DOG_UNIT = 'dog';
+export const DOG_FLAG = 'has_dog';
 /** 路障站在我方最前面 */
 const BARRICADE_X = 1.5;
 const MAX_REPORTS = 10;
@@ -89,11 +93,33 @@ export function expeditionSetup(config: GameConfig, loc: LocationDef, squad: str
     };
 }
 
+export interface RaidOptions {
+    /** 营地养了狗：狗一起上阵 */
+    dog?: boolean;
+    /** 血月夜：尸群多一半 */
+    bloodMoon?: boolean;
+}
+
+/** 血月夜的敌人：原来的尸群里每隔一只再来一只（多 50%），晚 2 秒出场 */
+export function bloodMoonEnemies(enemies: UnitSetup[]): UnitSetup[] {
+    const extra = enemies.filter((_, i) => i % 2 === 0).map((e) => ({ ...e, spawnAt: (e.spawnAt ?? 0) + 2 }));
+    return [...enemies, ...extra];
+}
+
 /** 守夜战斗的参数：路障站在最前面，大家守在路障后面，路障被拆就算输，撑到时间结束算赢 */
-export function raidSetup(config: GameConfig, raid: RaidDef, defenders: string[], wallHp: number, level: number, seed: number): BattleSetup {
+export function raidSetup(
+    config: GameConfig,
+    raid: RaidDef,
+    defenders: string[],
+    wallHp: number,
+    level: number,
+    seed: number,
+    options: RaidOptions = {},
+): BattleSetup {
+    const dog: UnitSetup[] = options.dog ? [{ unit: DOG_UNIT, level, tag: DOG_UNIT }] : [];
     return {
-        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(config, defenders, level)],
-        enemies: raid.enemies,
+        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(config, defenders, level), ...dog],
+        enemies: options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies,
         timeLimit: raid.timeLimit,
         timeoutResult: 'win',
         seed,
@@ -107,13 +133,32 @@ interface Outcome {
     result: BattleResult;
     /** 倒下的我方单位的 tag */
     fallen: string[];
+    /** 这场战斗里用掉的物品名 */
+    itemsUsed: string[];
 }
 
-function simulate(config: GameConfig, setup: BattleSetup): Outcome {
+/** 打一场营地战斗：先分配物品，打完记录击杀统计、扣掉用掉的物品 */
+function fight(config: GameConfig, state: GameState, setup: BattleSetup): Outcome {
+    const carried = equipItems(config, state, setup.allies);
     const battle = new Battle(battleRegistry(config), setup);
     const result = battle.runToEnd();
+    for (const u of battle.side('enemy')) {
+        if (u.alive) continue;
+        addStat(state, `kill_${u.def.id}`);
+        if (u.def.faction === 'zombie') addStat(state, 'zombies_killed');
+    }
     const fallen = battle.side('ally').filter((u) => !u.alive && u.tag).map((u) => u.tag!);
-    return { result, fallen };
+    return { result, fallen, itemsUsed: consumeUsedItems(state, battle, carried) };
+}
+
+/** 下一次尸潮是不是血月夜 */
+export function nextRaidIsBloodMoon(config: GameConfig, state: GameState): boolean {
+    const every = config.balance.bloodMoonEvery;
+    return every > 0 && (state.raidCount + 1) % every === 0;
+}
+
+function usedText(items: string[]): string {
+    return items.length ? `（用掉了${items.join('、')}）` : '';
 }
 
 function randomSeed(state: GameState): number {
@@ -189,17 +234,20 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     if (!loc || squad.length === 0) return;
 
     const setup = expeditionSetup(config, loc, squad, survivorBattleLevel(config, state), ex.seed);
-    const { result, fallen } = simulate(config, setup);
+    const { result, fallen, itemsUsed } = fight(config, state, setup);
     let loot: ResourceBag = {};
 
     if (result === 'win') {
-        loot = grant(config, state, loc.loot);
+        addStat(state, 'expeditions_won');
+        addStat(state, `clear_${loc.id}`);
+        loot = grantResources(config, state, loc.loot);
         if (!hasFlag(state, clearedFlag(loc.id))) {
             setFlag(state, clearedFlag(loc.id));
             if (loc.firstClearFlag) setFlag(state, loc.firstClearFlag);
             if (loc.firstClearEvent) queueEvent(state, loc.firstClearEvent);
         }
     } else {
+        addStat(state, 'expeditions_lost');
         for (const s of state.survivors) if (squad.includes(s.id)) s.mood = Math.max(0, s.mood - 5);
     }
     injureFallen(config, state, fallen, at);
@@ -209,7 +257,8 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         result === 'win'
             ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}` + (names.length ? `，${names.join('、')}受了伤。` : '。')
             : `探索${loc.name}失败，小队狼狈撤回` + (names.length ? `，${names.join('、')}受了伤。` : '。');
-    addReport(state, { kind: 'expedition', title: loc.name, at, result, setup, loot, lost: {}, injured: fallen, summary });
+    const fullSummary = summary + usedText(itemsUsed);
+    addReport(state, { kind: 'expedition', title: loc.name, at, result, setup, loot, lost: {}, injured: fallen, summary: fullSummary });
 }
 
 // ---------- 尸潮夜袭 ----------
@@ -240,16 +289,27 @@ export function maybeRunRaid(config: GameConfig, state: GameState, now: number):
 export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): BattleReport {
     const defenders = raidDefenders(config, state);
     const level = survivorBattleLevel(config, state);
-    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state));
-    const { result, fallen } = simulate(config, setup);
-    const injured = fallen.filter((t) => t !== BARRICADE_UNIT);
+    const bloodMoon = nextRaidIsBloodMoon(config, state);
+    state.raidCount += 1;
+    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG) };
+    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state), options);
+    const { result, fallen, itemsUsed } = fight(config, state, setup);
+    const survivorIds = new Set(state.survivors.map((s) => s.id));
+    const injured = fallen.filter((t) => survivorIds.has(t));
+    const title = bloodMoon ? `血月·${raid.name}` : raid.name;
     let loot: ResourceBag = {};
     const lost: ResourceBag = {};
 
     if (result === 'win') {
-        loot = grant(config, state, raid.reward);
+        addStat(state, 'raids_won');
+        if (bloodMoon) addStat(state, 'blood_moons_won');
+        const mult = bloodMoon ? config.balance.bloodMoonRewardMultiplier : 1;
+        const reward: ResourceBag = {};
+        for (const id of RESOURCE_IDS) if (raid.reward[id]) reward[id] = raid.reward[id]! * mult;
+        loot = grantResources(config, state, reward);
         for (const s of state.survivors) s.mood = Math.min(100, s.mood + 3);
     } else {
+        addStat(state, 'raids_lost');
         for (const id of RESOURCE_IDS) {
             if (id === 'cans') continue;
             const amount = Math.floor(state.resources[id] * config.balance.raidLossRatio);
@@ -266,9 +326,9 @@ export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at:
     const hurt = names.length ? `${names.join('、')}受了伤。` : '';
     const summary =
         result === 'win'
-            ? `【${raid.name}】营地守住了！${hurt}`
-            : `【${raid.name}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。${hurt}`;
-    return addReport(state, { kind: 'raid', title: raid.name, at, result, setup, loot, lost, injured, summary });
+            ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}${hurt}`
+            : `【${title}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。${hurt}`;
+    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost, injured, summary: summary + usedText(itemsUsed) });
 }
 
 // ---------- 伤员 ----------
@@ -296,25 +356,12 @@ export function treatSurvivor(config: GameConfig, state: GameState, survivorId: 
     if (!canAfford(state, config.balance.healCost)) return { ok: false, reason: '药品不足' };
     pay(state, config.balance.healCost);
     healSurvivorState(s);
+    addStat(state, 'treated');
     addLog(state, now, `${survivorName(config, s.id)}在医务室接受了治疗。`);
     return { ok: true };
 }
 
 // ---------- 工具 ----------
-
-/** 发放资源，返回实际到手的数量（仓库满了会少拿） */
-function grant(config: GameConfig, state: GameState, bag: ResourceBag): ResourceBag {
-    const gained: ResourceBag = {};
-    for (const id of RESOURCE_IDS) {
-        const amount = bag[id];
-        if (!amount) continue;
-        const before = state.resources[id];
-        addResource(config, state, id, amount);
-        const got = Math.floor(state.resources[id] - before);
-        if (got > 0) gained[id] = got;
-    }
-    return gained;
-}
 
 function addReport(state: GameState, data: Omit<BattleReport, 'id'>): BattleReport {
     const report: BattleReport = { id: state.nextId++, ...data };

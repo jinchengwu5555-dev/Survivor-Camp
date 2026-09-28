@@ -1,56 +1,5 @@
 [
     {
-        "id": "ref_deer_crossing",
-        "_idea": "R19 宁静时刻（参考：最后生还者）",
-        "title": "鹿群",
-        "text": "清晨，瞭望的人压低声音喊大家过来。\n一群鹿正慢悠悠地穿过空荡荡的主街，踩过翻倒的邮筒，停在加油站门口啃草。没有人说话。",
-        "weight": 3,
-        "once": true,
-        "conditions": { "minDay": 2 },
-        "choices": [
-            { "text": "就这样静静看着", "outcomes": [ { "weight": 1, "text": "鹿群走远了。玛莎抹了抹眼角：“我都忘了，这个镇子原来这么安静。”", "effects": [ { "type": "mood", "target": "all", "amount": 10 } ] } ] },
-            { "text": "悄悄摸过去，打一只改善伙食", "outcomes": [ { "weight": 1, "text": "汉克一枪就放倒了一只。晚饭很丰盛，但苏菲一口也没吃。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 }, { "type": "mood", "target": "sophie", "amount": -10 } ] } ] }
-        ]
-    },
-    {
-        "id": "ref_diary_page_1",
-        "_idea": "R18 日记残页（参考：最后生还者、蹉跎）",
-        "title": "日记残页（一）",
-        "text": "探索队在废墟里捡到半页被雨水泡过的日记，字迹还能辨认：\n“第三天。孩子们一直问什么时候能回家。我不知道该怎么回答。营长说无线电还能用……”\n纸页的抬头印着：松林营地 · 辅导员记事。",
-        "weight": 6,
-        "once": true,
-        "conditions": { "flags": ["cleared_hardware_store"] },
-        "choices": [
-            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森把这半页纸看了一遍又一遍，然后小心地夹进了警徽皮夹里。", "effects": [ { "type": "flag", "flag": "diary_page_1" }, { "type": "mood", "target": "ethan", "amount": 10 } ] } ] }
-        ]
-    },
-    {
-        "id": "ref_toby_jokes",
-        "_idea": "R38 幽默调剂（参考：最后生还者、剑风传奇）",
-        "title": "冷笑话大全",
-        "text": "托比从书店里翻出一本《冷笑话大全》，非要在晚饭时念给大家听：\n“为什么丧尸从来不迟到？因为它们总是——死——守时间。”",
-        "weight": 4,
-        "once": true,
-        "conditions": { "hasSurvivors": ["toby"] },
-        "choices": [
-            { "text": "“再来一个！”", "outcomes": [ { "weight": 1, "text": "德里克骂了句“烂透了”，然后笑得最大声。", "effects": [ { "type": "mood", "target": "all", "amount": 6 } ] } ] },
-            { "text": "“……托比，把书给我。”", "outcomes": [ { "weight": 1, "text": "托比委屈地交出了书。第二天，书出现在了玛莎的枕头底下。", "effects": [ { "type": "mood", "target": "toby", "amount": -5 }, { "type": "mood", "target": "martha", "amount": 8 } ] } ] }
-        ]
-    },
-    {
-        "id": "ref_stray_dog",
-        "_idea": "R10 营地的狗（参考：蹉跎、全球进化）",
-        "title": "跟回来的狗",
-        "text": "探索队回来时，身后多了一条瘦得皮包骨的黄狗。它不叫也不闹，就蹲在路障外面，眼巴巴地看着你们。",
-        "weight": 5,
-        "once": true,
-        "conditions": { "minDay": 2 },
-        "choices": [
-            { "text": "收养它（5 食物）", "cost": { "food": 5 }, "outcomes": [ { "weight": 1, "text": "托比给它起名叫“罐头”。当天夜里，它冲着黑暗叫了整整一刻钟——半小时后，尸群来了。", "effects": [ { "type": "flag", "flag": "has_dog" }, { "type": "mood", "target": "all", "amount": 8 } ] } ] },
-            { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] }
-        ]
-    },
-    {
         "id": "ref_harvest_festival",
         "_idea": "R02 末日民俗（参考：蹉跎）",
         "title": "丰收会",

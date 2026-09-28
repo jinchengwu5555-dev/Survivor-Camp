@@ -225,7 +225,7 @@ describe('伤员治疗', () => {
 });
 
 describe('老存档升级', () => {
-    it('第 1 版存档可以读取，补全远征、尸潮、战报字段', () => {
+    it('第 1 版存档可以读取，补全远征、尸潮、战报以及第 3 版的新字段', () => {
         const game = newGame();
         const old = JSON.parse(JSON.stringify(game.state));
         old.version = 1;
@@ -238,8 +238,11 @@ describe('老存档升级', () => {
         const storage = new MemoryStorage();
         storage.setItem('doomsday-camp-save', JSON.stringify(old));
         const loaded = loadGame(storage, game.config, T0)!;
-        expect(loaded.version).toBe(2);
+        expect(loaded.version).toBe(3);
         expect(loaded.expeditions).toEqual([]);
+        expect(loaded.stats).toEqual({});
+        expect(loaded.bounties).toEqual({ active: [], completed: [] });
+        expect(loaded.seasonId).toBe('summer');
         expect(loaded.nextRaidAt).toBe(T0 + 120 * MIN);
         expect(loaded.survivors[0].recoverAt).toBe(T0 + 30 * MIN);
     });

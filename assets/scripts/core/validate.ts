@@ -1,9 +1,9 @@
 // 配置表检查：改完 JSON 后跑 `npm test`，写错的 id、引用不存在的事件等都会被报出来。
 
-import { Effect, GameConfig, RESOURCE_IDS, ResourceBag } from './types';
+import { Effect, GameConfig, Objective, RESOURCE_IDS, ResourceBag } from './types';
 import { BattleRegistry } from './battle/registry';
 import { UnitSetup } from './battle/Battle';
-import { BARRICADE_UNIT } from './combat';
+import { BARRICADE_UNIT, DOG_UNIT } from './combat';
 
 export function validateConfig(config: GameConfig): string[] {
     const errors: string[] = [];
@@ -75,6 +75,7 @@ export function validateConfig(config: GameConfig): string[] {
                 checkEvent(where, e.event);
                 break;
             case 'flag':
+            case 'stat':
                 break;
             default:
                 errors.push(`${where}：未知效果类型 ${(e as { type: string }).type}`);
@@ -92,15 +93,16 @@ export function validateConfig(config: GameConfig): string[] {
         });
     }
 
+    const checkObjective = (where: string, o: Objective) => {
+        if (o.type === 'buildingLevel' && !buildingIds.has(o.building)) errors.push(`${where}：未知建筑 ${o.building}`);
+        if (o.type === 'resource' && !resourceIds.has(o.resource)) errors.push(`${where}：未知资源 ${o.resource}`);
+    };
     for (const ep of config.episodes) {
         const where = `剧集 ${ep.id}`;
         if (ep.startEvent) checkEvent(where, ep.startEvent);
         if (ep.endEvent) checkEvent(where, ep.endEvent);
         checkBag(where, ep.rewards);
-        for (const o of ep.objectives) {
-            if (o.type === 'buildingLevel' && !buildingIds.has(o.building)) errors.push(`${where}：未知建筑 ${o.building}`);
-            if (o.type === 'resource' && !resourceIds.has(o.resource)) errors.push(`${where}：未知资源 ${o.resource}`);
-        }
+        for (const o of ep.objectives) checkObjective(where, o);
     }
 
     const battle = new BattleRegistry(config);
@@ -109,6 +111,7 @@ export function validateConfig(config: GameConfig): string[] {
         if (s.battleUnit && !battle.hasUnit(s.battleUnit)) errors.push(`幸存者 ${s.id}：未知战斗角色 ${s.battleUnit}`);
     }
     if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的路障`);
+    if (!battle.hasUnit(DOG_UNIT)) errors.push(`units.json 里必须有 id 为 ${DOG_UNIT} 的狗`);
     checkBag('治疗花费', config.balance.healCost);
 
     const checkEnemies = (where: string, enemies: UnitSetup[]) => {
@@ -130,6 +133,38 @@ export function validateConfig(config: GameConfig): string[] {
         checkEnemies(where, raid.enemies);
         checkBag(where, raid.reward);
         for (const id of raid.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+    }
+
+    if (config.seasons.length === 0) errors.push('seasons.json 至少要有一个季节');
+    checkUnique('季节', config.seasons.map((x) => x.id));
+    for (const season of config.seasons) {
+        if (season.days <= 0) errors.push(`季节 ${season.id}：days 必须大于 0`);
+        if (season.startEvent) checkEvent(`季节 ${season.id}`, season.startEvent);
+    }
+
+    const maxWorkshop = config.buildings.reduce((sum, b) => sum + Math.max(0, ...b.levels.map((l) => l.workshopLevel ?? 0)), 0);
+    checkUnique('物品', config.items.map((x) => x.id));
+    for (const item of config.items) {
+        const where = `物品 ${item.id}`;
+        checkBag(where, item.cost);
+        if (!battle.hasSkill(item.battleSkill)) errors.push(`${where}：未知技能 ${item.battleSkill}`);
+        if (item.workshopLevel > maxWorkshop) errors.push(`${where}：需要工坊 ${item.workshopLevel} 级，但工坊最高只有 ${maxWorkshop} 级`);
+    }
+
+    checkUnique('悬赏', config.bounties.map((x) => x.id));
+    if (config.balance.hunterRanks.length === 0) errors.push('balance.hunterRanks 至少要有一级');
+    for (const b of config.bounties) {
+        const where = `悬赏 ${b.id}`;
+        checkBag(where, b.reward);
+        if (b.rank >= config.balance.hunterRanks.length) errors.push(`${where}：猎人等级 ${b.rank} 不存在`);
+        if (b.goal.amount <= 0) errors.push(`${where}：goal.amount 必须大于 0`);
+        for (const id of b.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+    }
+
+    checkUnique('成就', config.achievements.map((x) => x.id));
+    for (const a of config.achievements) {
+        checkBag(`成就 ${a.id}`, a.reward);
+        checkObjective(`成就 ${a.id}`, a.goal);
     }
 
     return errors;

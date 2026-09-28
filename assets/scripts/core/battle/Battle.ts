@@ -24,6 +24,8 @@ export interface UnitSetup {
     maxHp?: number;
     /** 调用方自定义标记，会原样放到 BattleUnit.tag 上（营地用它记录幸存者 id） */
     tag?: string;
+    /** 额外携带的技能（比如工坊做的燃烧瓶、急救包） */
+    extraSkills?: string[];
 }
 
 export interface BattleSetup {
@@ -167,10 +169,13 @@ export class Battle implements BattleContext {
         if (u.alive) fireOnAttack(this, u);
     }
 
-    /** 索敌：当前目标还活着就继续打，否则找最近的敌人 */
+    /**
+     * 索敌：当前目标还活着、并且在攻击距离内就继续打；否则换最近的敌人。
+     * 不在攻击距离内也要重新找——守夜时大家不能越过路障，锁定远处的敌人会让近战的人站着发呆。
+     */
     private pickTarget(u: BattleUnit): BattleUnit | undefined {
         const current = this.getUnit(u.targetUid);
-        if (current?.alive) return current;
+        if (current?.alive && Math.abs(current.x - u.x) <= u.stats.attackRange) return current;
         const next = nearest(u, enemiesOf(this, u));
         u.targetUid = next?.uid ?? null;
         return next;
@@ -187,6 +192,10 @@ export class Battle implements BattleContext {
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
             unit.tag = p.setup.tag;
+            for (const id of p.setup.extraSkills ?? []) {
+                const skill = this.registry.skill(id);
+                unit.skills.push({ def: skill, cooldown: skill.initialCooldown ?? 0, fired: false });
+            }
             this.units.push(unit);
             this.emit({ t: this.time, type: 'spawn', unit: unit.uid });
             if (this.started) fireBattleStart(this, unit);

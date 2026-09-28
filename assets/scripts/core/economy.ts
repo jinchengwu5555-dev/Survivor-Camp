@@ -10,6 +10,7 @@ import {
     ResourceId,
     SurvivorState,
 } from './types';
+import { seasonAt } from './seasons';
 
 export function getBuildingDef(config: GameConfig, id: string): BuildingDef | undefined {
     return config.buildings.find((b) => b.id === id);
@@ -114,34 +115,72 @@ export function addResource(config: GameConfig, state: GameState, id: ResourceId
     state.resources[id] = Math.max(0, Math.min(storageCap(config, state, id), next));
 }
 
+/** 发放资源，返回实际到手的数量（仓库满了会少拿） */
+export function grantResources(config: GameConfig, state: GameState, bag: ResourceBag): ResourceBag {
+    const gained: ResourceBag = {};
+    for (const id of RESOURCE_IDS) {
+        const amount = bag[id];
+        if (!amount) continue;
+        const before = state.resources[id];
+        addResource(config, state, id, amount);
+        // 库存带小数（腐烂按比例扣），相减会有浮点误差，四舍五入到整数
+        const got = Math.round(state.resources[id] - before);
+        if (got > 0) gained[id] = got;
+    }
+    return gained;
+}
+
+export interface EconomyRates {
+    /** 每分钟的净变化（已扣除吃饭、腐烂、取暖） */
+    net: Record<ResourceId, number>;
+    /** 每分钟腐烂掉的食物 */
+    spoil: number;
+    /** 每分钟烧掉的取暖木材 */
+    heating: number;
+}
+
+/** 腐烂速度降低的比例，最多 90% */
+export function spoilReduction(config: GameConfig, state: GameState): number {
+    return Math.min(0.9, sumOverBuildings(config, state, (lv) => lv.spoilReduction));
+}
+
+/** now 所在季节下，每分钟各项资源的变化 */
+export function economyRates(config: GameConfig, state: GameState, now: number): EconomyRates {
+    const { season } = seasonAt(config, state, now);
+    const net = productionPerMinute(config, state);
+    net.food *= season.foodProduction;
+    const spoil = state.resources.food * config.balance.foodSpoilPerMinute * season.spoilMultiplier * (1 - spoilReduction(config, state));
+    const heating = state.survivors.length * season.heatingWoodPerSurvivorPerMinute;
+    net.food -= foodConsumptionPerMinute(config, state) + spoil;
+    net.wood -= heating;
+    return { net, spoil, heating };
+}
+
+/** 净变化为负时，资源多久耗尽；返回在 minutes 里有多少分钟处于“耗尽”状态 */
+function minutesWithout(amount: number, rate: number, minutes: number): number {
+    if (rate >= 0) return 0;
+    return Math.max(0, minutes - amount / -rate);
+}
+
 /**
- * 推进 minutes 分钟的生产、吃饭和心情变化。
- * 如果中途食物吃光，只有吃光之后的那段时间算挨饿。
+ * 推进 minutes 分钟的生产、吃饭、腐烂、取暖和心情变化（按 now 所在的季节计算）。
+ * 如果中途食物吃光 / 木材烧光，只有耗尽之后的那段时间算挨饿 / 受冻。
  */
-export function advanceEconomy(config: GameConfig, state: GameState, minutes: number): void {
+export function advanceEconomy(config: GameConfig, state: GameState, minutes: number, now: number): void {
     if (minutes <= 0) return;
     const b = config.balance;
-    const rates = productionPerMinute(config, state);
+    const { net, heating } = economyRates(config, state, now);
 
-    for (const id of RESOURCE_IDS) {
-        if (id !== 'food') addResource(config, state, id, rates[id] * minutes);
-    }
-
-    const netFood = rates.food - foodConsumptionPerMinute(config, state);
-    const food = state.resources.food;
-    let starvingMinutes = 0;
-    if (netFood < 0) {
-        const minutesUntilEmpty = food / -netFood;
-        starvingMinutes = Math.max(0, minutes - minutesUntilEmpty);
-    }
-    addResource(config, state, 'food', netFood * minutes);
+    const starvingMinutes = minutesWithout(state.resources.food, net.food, minutes);
+    const freezingMinutes = heating > 0 ? minutesWithout(state.resources.wood, net.wood, minutes) : 0;
+    for (const id of RESOURCE_IDS) addResource(config, state, id, net[id] * minutes);
 
     const fedMinutes = minutes - starvingMinutes;
     for (const s of state.survivors) {
         if (s.mood < b.moodRecoveryMax) {
             s.mood = Math.min(b.moodRecoveryMax, s.mood + b.moodRecoveryPerMinute * fedMinutes);
         }
-        s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * starvingMinutes);
+        s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * starvingMinutes - b.coldMoodPenaltyPerMinute * freezingMinutes);
     }
 }
 

@@ -15,7 +15,8 @@
             { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 },
             { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "runner", "level": 2, "spawnAt": 4 },
             { "unit": "walker", "level": 2, "spawnAt": 8 }, { "unit": "walker", "level": 2, "spawnAt": 8 }, { "unit": "armored", "spawnAt": 8 },
-            { "unit": "fatty", "level": 2, "spawnAt": 12 }, { "unit": "fatty", "level": 2, "spawnAt": 12 }
+            { "unit": "fatty", "level": 2, "spawnAt": 12 }, { "unit": "fatty", "level": 2, "spawnAt": 12 },
+            { "unit": "frenzied", "spawnAt": 16 }
         ],
         "timeLimit": 40,
         "reward": { "parts": 10, "wood": 20 }
@@ -28,7 +29,8 @@
             { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 },
             { "unit": "runner", "level": 3, "spawnAt": 5 }, { "unit": "runner", "level": 3, "spawnAt": 5 }, { "unit": "runner", "level": 3, "spawnAt": 5 },
             { "unit": "armored", "level": 2, "spawnAt": 10 }, { "unit": "armored", "level": 2, "spawnAt": 10 },
-            { "unit": "fatty", "level": 2, "spawnAt": 15 }, { "unit": "brute", "spawnAt": 20 }
+            { "unit": "fatty", "level": 2, "spawnAt": 15 }, { "unit": "frenzied", "level": 2, "spawnAt": 15 }, { "unit": "frenzied", "level": 2, "spawnAt": 15 },
+            { "unit": "brute", "spawnAt": 20 }
         ],
         "timeLimit": 60,
         "reward": { "parts": 25, "cans": 5 }

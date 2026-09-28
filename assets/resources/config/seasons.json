@@ -1,0 +1,6 @@
+[
+    { "id": "summer", "name": "夏", "icon": "☀️", "days": 3, "foodProduction": 1.0, "heatingWoodPerSurvivorPerMinute": 0, "spoilMultiplier": 1.5, "description": "天气炎热，食物坏得更快。" },
+    { "id": "autumn", "name": "秋", "icon": "🍂", "days": 3, "foodProduction": 1.2, "heatingWoodPerSurvivorPerMinute": 0, "spoilMultiplier": 1.0, "description": "收获的季节，厨房产量提高。趁现在多囤些木材过冬。" },
+    { "id": "winter", "name": "冬", "icon": "❄️", "days": 3, "foodProduction": 0.5, "heatingWoodPerSurvivorPerMinute": 0.08, "spoilMultiplier": 0.3, "description": "菜园冻住了，食物产量减半；每个人都要烧柴取暖，没柴就会挨冻。", "startEvent": "winter_arrives" },
+    { "id": "spring", "name": "春", "icon": "🌱", "days": 3, "foodProduction": 1.0, "heatingWoodPerSurvivorPerMinute": 0, "spoilMultiplier": 1.0, "description": "冰雪融化，营地熬过了冬天。" }
+]

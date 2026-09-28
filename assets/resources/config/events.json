@@ -218,5 +218,151 @@
         "choices": [
             { "text": "把照片和地图收好", "outcomes": [ { "weight": 1, "text": "伊森把照片贴身放好。他第一次清楚地知道，该往哪里走了。", "effects": [ { "type": "flag", "flag": "found_camp_map" }, { "type": "mood", "target": "ethan", "amount": 20 } ] } ] }
         ]
+    },
+    {
+        "id": "winter_arrives",
+        "title": "第一场雪",
+        "weight": 0,
+        "text": "清早推开门，外面白茫茫一片。菜园冻住了，呼出的气都结成了霜。\n玛莎把所有的毯子都翻了出来：“从今天起，炉子一刻都不能停。”",
+        "choices": [
+            { "text": "把木材集中起来，轮流看火", "outcomes": [ { "weight": 1, "text": "大家围在炉子边。冬天要烧掉很多木材——记得让废料场多干点活。", "effects": [ { "type": "mood", "target": "all", "amount": 3 } ] } ] }
+        ]
+    },
+    {
+        "id": "diary_page_1",
+        "title": "日记残页（一）",
+        "text": "探索队在废墟里捡到半页被雨水泡过的日记，字迹还能辨认：\n“第三天。孩子们一直问什么时候能回家。我不知道该怎么回答。营长说无线电还能用……”\n纸页的抬头印着：松林营地 · 辅导员记事。",
+        "weight": 6,
+        "once": true,
+        "conditions": {"flags": ["cleared_hardware_store"]},
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森把这半页纸看了一遍又一遍，然后小心地夹进了警徽皮夹里。", "effects": [ { "type": "flag", "flag": "diary_page_1" }, { "type": "mood", "target": "ethan", "amount": 10 }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+        ]
+    },
+    {
+        "id": "diary_page_2",
+        "title": "日记残页（二）",
+        "text": "又一页日记，夹在卫生所的病历本里：\n“营长决定带孩子们往北走，去护林站。有个戴黄帽子的小姑娘一直抱着一台对讲机，说她爸爸是警察，一定会来找她。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {"flags": ["diary_page_1", "cleared_clinic"]},
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森的手在发抖。莉莉出门那天，戴的就是那顶黄帽子。", "effects": [ { "type": "flag", "flag": "diary_page_2" }, { "type": "mood", "target": "ethan", "amount": 15 }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+        ]
+    },
+    {
+        "id": "diary_page_3",
+        "title": "日记残页（三）",
+        "text": "托比在一辆被遗弃的校车里捡到第三页：\n“食物只够三天了。我们每人每天分半块饼干。黄帽子的小姑娘把自己那份分给了最小的男孩。她修好了对讲机，每天晚上八点准时呼叫。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {"flags": ["diary_page_2"], "minDay": 3},
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森看了一眼墙上的钟——晚上八点。那天晚上，他守着无线电一直到天亮。", "effects": [ { "type": "flag", "flag": "diary_page_3" }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+        ]
+    },
+    {
+        "id": "diary_page_4",
+        "title": "日记残页（四）",
+        "text": "第四页被塞在警长办公室的门缝里，像是有人特意留下的：\n“护林站守不住了。我们要去北岭水坝，那里有围墙。如果有人看到这张纸——请去水坝。”",
+        "weight": 6,
+        "once": true,
+        "conditions": {"flags": ["diary_page_3", "cleared_sheriff_office"]},
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "北岭水坝。伊森在地图上画了一个圈。", "effects": [ { "type": "flag", "flag": "diary_page_4" }, { "type": "mood", "target": "all", "amount": 5 }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+        ]
+    },
+    {
+        "id": "diary_page_5",
+        "title": "日记残页（五）",
+        "text": "最后一页是用铅笔写的，字迹歪歪扭扭，不像大人的字：\n“爸爸，我们在水坝。这里有好多人，还有热汤。我每天晚上八点都在呼叫你。你说过你一定会来的。——莉莉”",
+        "weight": 6,
+        "once": true,
+        "conditions": {"flags": ["diary_page_4"], "minDay": 5},
+        "choices": [
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "伊森把五页日记按顺序摆好，看了很久很久。然后他站起来，开始清点弹药。（第二季 · 北岭水坝，敬请期待）", "effects": [ { "type": "flag", "flag": "diary_complete" }, { "type": "mood", "target": "ethan", "amount": 30 }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+        ]
+    },
+    {
+        "id": "deer_crossing",
+        "title": "鹿群",
+        "text": "清晨，瞭望的人压低声音喊大家过来。\n一群鹿正慢悠悠地穿过空荡荡的主街，踩过翻倒的邮筒，停在加油站门口啃草。没有人说话。",
+        "weight": 3,
+        "once": true,
+        "conditions": {"minDay": 2},
+        "choices": [
+            { "text": "就这样静静看着", "outcomes": [ { "weight": 1, "text": "鹿群走远了。玛莎抹了抹眼角：“我都忘了，这个镇子原来这么安静。”", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
+            { "text": "悄悄摸过去，打一只改善伙食", "outcomes": [ { "weight": 1, "text": "汉克一枪就放倒了一只。晚饭很丰盛，但苏菲一口也没吃。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 }, { "type": "mood", "target": "sophie", "amount": -10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] }
+        ]
+    },
+    {
+        "id": "quiet_carousel",
+        "title": "旋转木马",
+        "weight": 3,
+        "once": true,
+        "conditions": {"minDay": 2, "hasSurvivors": ["derek"]},
+        "text": "德里克不知道从哪弄来一台发电机，接到了广场上那座废弃的旋转木马上。\n天黑的时候，彩灯一盏一盏亮了起来，老旧的音乐盒叮叮咚咚地响。",
+        "choices": [
+            { "text": "“就转一圈。”", "outcomes": [ { "weight": 1, "text": "大人们坐在木马上，像孩子一样笑。音乐引来了两只行尸，汉克默默处理掉了，没打扰任何人。", "effects": [ { "type": "mood", "target": "all", "amount": 12 }, { "type": "resource", "resource": "parts", "amount": -3 }, { "type": "stat", "stat": "quiet_moments" } ] } ] },
+            { "text": "“太招眼了，关掉吧。”", "outcomes": [ { "weight": 1, "text": "灯灭了。德里克把发电机拆回了工坊，一句话也没说。", "effects": [ { "type": "mood", "target": "derek", "amount": -8 }, { "type": "resource", "resource": "parts", "amount": 5 } ] } ] }
+        ]
+    },
+    {
+        "id": "quiet_stars",
+        "title": "星空",
+        "weight": 3,
+        "once": true,
+        "conditions": {"minDay": 3, "hasSurvivors": ["sophie"]},
+        "text": "停电后的第一个晴夜，整个小镇一片漆黑。\n有人抬头说了句“哇”——大家这才发现，原来天上有这么多星星。",
+        "choices": [
+            { "text": "躺在屋顶上看星星", "outcomes": [ { "weight": 1, "text": "苏菲一颗一颗地指给大家看星座。那天晚上，没有人做噩梦。", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "stat", "stat": "quiet_moments" } ] } ] }
+        ]
+    },
+    {
+        "id": "toby_jokes",
+        "title": "冷笑话大全",
+        "text": "托比从书店里翻出一本《冷笑话大全》，非要在晚饭时念给大家听：\n“为什么丧尸从来不迟到？因为它们总是——死——守时间。”",
+        "weight": 4,
+        "once": true,
+        "conditions": {"hasSurvivors": ["toby"]},
+        "choices": [
+            { "text": "“再来一个！”", "outcomes": [ { "weight": 1, "text": "德里克骂了句“烂透了”，然后笑得最大声。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] },
+            { "text": "“……托比，把书给我。”", "outcomes": [ { "weight": 1, "text": "托比委屈地交出了书。第二天，书出现在了玛莎的枕头底下。", "effects": [ { "type": "mood", "target": "toby", "amount": -5 }, { "type": "mood", "target": "martha", "amount": 8 }, { "type": "stat", "stat": "laughs" } ] } ] }
+        ]
+    },
+    {
+        "id": "joe_tall_tale",
+        "title": "老乔的故事",
+        "weight": 4,
+        "once": true,
+        "conditions": {"hasSurvivors": ["joe"]},
+        "text": "晚饭后，老乔又开始讲他的“英雄事迹”：\n“那年我开着皮卡穿过暴风雪，一头熊扒住了车门，我一拳——”\n“上次你说是一头驼鹿。”德里克头也不抬。",
+        "choices": [
+            { "text": "“后来呢？”", "outcomes": [ { "weight": 1, "text": "熊变成了驼鹿，又变成了两头熊。所有人都笑疯了，连汉克都没忍住。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] },
+            { "text": "“老乔，你那辆皮卡根本开不过五十迈。”", "outcomes": [ { "weight": 1, "text": "老乔气得吹胡子瞪眼，大家笑得更厉害了。", "effects": [ { "type": "mood", "target": "all", "amount": 4 }, { "type": "mood", "target": "joe", "amount": -5 }, { "type": "stat", "stat": "laughs" } ] } ] }
+        ]
+    },
+    {
+        "id": "dog_sausage",
+        "title": "失踪的香肠",
+        "weight": 4,
+        "once": true,
+        "conditions": {"flags": ["has_dog"], "hasSurvivors": ["derek"]},
+        "text": "德里克藏了半个月的一根香肠不见了。\n他挨个审问了所有人，最后把目光落在了罐头身上。罐头正趴在墙角，尾巴摇得飞快，嘴边还沾着油。",
+        "choices": [
+            { "text": "“罐头，是你吗？”", "outcomes": [ { "weight": 1, "text": "罐头打了个嗝。德里克骂了半天，最后还是蹲下来挠了挠它的肚子。", "effects": [ { "type": "mood", "target": "all", "amount": 6 }, { "type": "stat", "stat": "laughs" } ] } ] }
+        ]
+    },
+    {
+        "id": "stray_dog",
+        "title": "跟回来的狗",
+        "text": "探索队回来时，身后多了一条瘦得皮包骨的黄狗。它不叫也不闹，就蹲在路障外面，眼巴巴地看着你们。",
+        "weight": 5,
+        "once": true,
+        "conditions": {"minDay": 2, "flags": ["cleared_gas_station"]},
+        "choices": [
+            { "text": "收养它（5 食物）", "cost": { "food": 5 }, "outcomes": [ { "weight": 1, "text": "托比给它起名叫“罐头”。当天夜里，它冲着黑暗叫了整整一刻钟——半小时后，尸群来了。", "effects": [ { "type": "flag", "flag": "has_dog" }, { "type": "mood", "target": "all", "amount": 8 } ] } ] },
+            { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] }
+        ]
     }
 ]

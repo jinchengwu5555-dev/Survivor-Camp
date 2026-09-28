@@ -18,5 +18,16 @@
     "raidIntervalMinutes": 120,
     "maxDefenders": 5,
     "barricadeHpPerSafety": 30,
-    "raidLossRatio": 0.2
+    "raidLossRatio": 0.2,
+    "foodSpoilPerMinute": 0.001,
+    "coldMoodPenaltyPerMinute": 0.3,
+    "bloodMoonEvery": 4,
+    "bloodMoonRewardMultiplier": 2,
+    "maxActiveBounties": 3,
+    "hunterRanks": [
+        { "name": "见习猎人", "xp": 0 },
+        { "name": "猎人", "xp": 60 },
+        { "name": "老练猎人", "xp": 150 },
+        { "name": "传奇猎人", "xp": 300 }
+    ]
 }

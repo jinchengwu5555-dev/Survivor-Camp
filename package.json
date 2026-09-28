@@ -9,6 +9,7 @@
         "test": "vitest run",
         "battle": "vitest run tests/battle-demo.test.ts --mode battle --silent=false",
         "balance": "vitest run tests/balance-report.test.ts --mode balance --silent=false",
+        "economy": "vitest run tests/economy-report.test.ts --mode economy --silent=false",
         "typecheck": "tsc -p tsconfig.core.json"
     },
     "devDependencies": {

@@ -3,7 +3,7 @@
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const MAX_LOG = 50;
 
 export function createNewState(config: GameConfig, now: number, seed: number): GameState {
@@ -29,6 +29,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         nextRaidAt: now + b.raidIntervalMinutes * 60_000,
         reports: [],
         nextId: 1,
+        ...emptyV3Fields(config),
     };
     syncBuildings(config, state);
     return state;
@@ -62,7 +63,33 @@ export function migrateState(config: GameConfig, state: GameState, now: number):
         }
         state.version = 2;
     }
+    if (state.version === 2) {
+        Object.assign(state, emptyV3Fields(config));
+        state.version = 3;
+    }
     return state.version === SAVE_VERSION;
+}
+
+/** 第 3 版存档新增的字段：统计、成就、物品、悬赏、血月计数、季节 */
+function emptyV3Fields(config: GameConfig) {
+    return {
+        stats: {},
+        achievements: [],
+        items: {},
+        bounties: { active: [], completed: [] },
+        hunterXp: 0,
+        raidCount: 0,
+        seasonId: config.seasons[0]?.id ?? '',
+    };
+}
+
+/** 累计一项统计数据 */
+export function addStat(state: GameState, stat: string, amount = 1): void {
+    state.stats[stat] = (state.stats[stat] ?? 0) + amount;
+}
+
+export function getStat(state: GameState, stat: string): number {
+    return state.stats[stat] ?? 0;
 }
 
 /** 配置里新增的建筑补进老存档，已删除的建筑从存档移除 */
