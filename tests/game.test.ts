@@ -26,10 +26,10 @@ describe('生产和消耗', () => {
     it('对口专长产量更高，吃饭按人数扣食物', () => {
         const game = newGame();
         game.state.survivors.forEach((s) => (s.mood = 50)); // 士气倍率 = 1
-        expect(game.assign('martha', 'kitchen', T0).ok).toBe(true); // 厨师，1.5 倍
-        expect(game.assign('toby', 'kitchen', T0).ok).toBe(true);
+        expect(game.assign('martha', 'kitchen', T0).ok).toBe(true); // 厨师，1.5 倍；天赋“巧手大厨”再 ×1.3
+        expect(game.assign('toby', 'kitchen', T0).ok).toBe(true); // 天赋“勤快” ×1.15
         const rate = productionPerMinute(game.config, game.state).food;
-        expect(rate).toBeCloseTo(1.2 * 1.5 + 1.2);
+        expect(rate).toBeCloseTo(1.2 * 1.5 * 1.3 + 1.2 * 1.15);
         expect(foodConsumptionPerMinute(game.config, game.state)).toBeCloseTo(5 * game.config.balance.foodPerSurvivorPerMinute);
     });
 
@@ -60,6 +60,7 @@ describe('生产和消耗', () => {
         expect(morale(hungry.state)).toBeCloseTo(50 - 0.5 * 10);
 
         const fed = newGame();
+        fed.config.talents = []; // 不算“乐天派”之类的天赋
         fed.state.survivors.forEach((s) => (s.mood = 50));
         fed.tick(T0 + 10 * MIN);
         expect(morale(fed.state)).toBeCloseTo(50 + 0.2 * 10);
@@ -107,7 +108,7 @@ describe('建造', () => {
         game.upgrade('scrapyard', T0); // 90 秒后完成，2 级产量 parts 0.3
         game.state.survivors.forEach((s) => (s.mood = 70));
         game.tick(T0 + 11 * MIN);
-        const mult = 1.5 * moraleMultiplier(game.state);
+        const mult = 1.5 * 1.3 * moraleMultiplier(game.state); // 机械师专长 ×1.5，天赋“修理天才” ×1.3
         expect(game.state.resources.parts).toBeCloseTo(10 + (0.2 * 1.5 + 0.3 * 9.5) * mult, 1);
     });
 });

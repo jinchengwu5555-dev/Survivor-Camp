@@ -11,6 +11,7 @@ import {
     SurvivorState,
 } from './types';
 import { seasonAt } from './seasons';
+import { moodRecoveryMultiplier, workMultiplier } from './talents';
 import { siteBattleLevel, siteBeds, sitePassive, siteProduction, siteSafety, siteSpoil } from './siteMods';
 
 export function getBuildingDef(config: GameConfig, id: string): BuildingDef | undefined {
@@ -89,7 +90,7 @@ export function productionPerMinute(config: GameConfig, state: GameState): Recor
         const building = getBuildingDef(config, survivor.assignment);
         const lv = currentLevelDef(config, state, survivor.assignment);
         if (!building || !lv?.production) continue;
-        const eff = survivorEfficiency(config, survivor, building) * mult;
+        const eff = survivorEfficiency(config, survivor, building) * workMultiplier(config, state, survivor.id, building.id) * mult;
         for (const id of RESOURCE_IDS) rates[id] += (lv.production[id] ?? 0) * eff;
     }
     // 营地地点：产量倍率 + 不需要工人的被动产出
@@ -185,7 +186,7 @@ export function advanceEconomy(config: GameConfig, state: GameState, minutes: nu
     const fedMinutes = minutes - starvingMinutes;
     for (const s of state.survivors) {
         if (s.mood < b.moodRecoveryMax) {
-            s.mood = Math.min(b.moodRecoveryMax, s.mood + b.moodRecoveryPerMinute * fedMinutes);
+            s.mood = Math.min(b.moodRecoveryMax, s.mood + b.moodRecoveryPerMinute * moodRecoveryMultiplier(config, state, s.id) * fedMinutes);
         }
         s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * starvingMinutes - b.coldMoodPenaltyPerMinute * freezingMinutes);
     }

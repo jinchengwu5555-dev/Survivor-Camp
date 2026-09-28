@@ -12,6 +12,7 @@ import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
 import {
     barricadeHp,
+    battleRegistry,
     currentRaid,
     DOG_FLAG,
     expeditionLoot,
@@ -25,7 +26,7 @@ import {
     squadOf,
     suggestSquad,
 } from '../core/combat';
-import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel } from '../core/economy';
+import { bedCount, economyRates, getBuildingDef, morale, safety, storageCap, survivorBattleLevel, survivorEfficiency, workerSlots } from '../core/economy';
 import { availableBounties, bountyProgress, getBounty, hunterRankName } from '../core/bounties';
 import { craftBlocker, itemCount, workshopLevel } from '../core/crafting';
 import { isUnlocked } from '../core/achievements';
@@ -48,6 +49,8 @@ import { activePickups, pickupKind } from '../core/pickups';
 import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
+import { combatMultiplier, talentsOf, workMultiplier } from '../core/talents';
+import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
 import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup } from '../core/badges';
@@ -120,6 +123,16 @@ const TABS: [Tab, string][] = [
     ['rank', '排行'],
 ];
 const TABS_PER_ROW = 4;
+const SPECIALTY_NAMES: Record<string, string> = {
+    leader: '领袖',
+    cook: '厨师',
+    medic: '医生',
+    mechanic: '机械师',
+    scavenger: '拾荒者',
+    fighter: '战士',
+    farmer: '农夫',
+};
+
 /** 营地页上打开的面板：建筑详情、营地地点 */
 type Sheet = 'building' | 'sites' | 'trader' | 'props' | null;
 
@@ -166,6 +179,8 @@ export class GameRoot extends Component {
     private tab: Tab = 'camp';
     /** 营地页选中的建筑（下方显示详情） */
     private selectedBuilding: string | null = null;
+    /** 幸存者页选中的人（显示个人档案） */
+    private selectedSurvivor: string | null = null;
     /** 探索页选中的地点 */
     private selectedLocation: string | null = null;
     /** 当前的新手引导 */
@@ -594,6 +609,7 @@ export class GameRoot extends Component {
                 if (event) return;
                 this.tab = tab;
                 this.sheet = null;
+                this.selectedSurvivor = null;
                 this.resetScroll();
                 if (tab === 'rank') this.loadRanking();
                 this.render();
@@ -1277,10 +1293,16 @@ export class GameRoot extends Component {
         }
     }
 
+    /** 幸存者页：名单（卡片），点一个人看他的档案、安排他去哪里干活 */
     private renderSurvivors(camp: CampGame, now: number): void {
         const { config, state } = camp;
-        this.text(`—— 幸存者（点名字切换工作；伤员点击用药品治疗）战斗等级 ${survivorBattleLevel(config, state)} ——`, 22, DIM);
-        const jobs: (string | null)[] = [null, ...config.buildings.filter((b) => b.levels.some((l) => l.workerSlots)).map((b) => b.id)];
+        const picked = this.selectedSurvivor ? state.survivors.find((s) => s.id === this.selectedSurvivor) : undefined;
+        if (picked) {
+            this.renderSurvivorDetail(camp, picked.id, now);
+            return;
+        }
+        this.selectedSurvivor = null;
+        this.text(`—— 幸存者 ${state.survivors.length}/${bedCount(config, state)}（点人物看档案、安排工作）——`, 22, DIM);
         // 新手引导“安排人手”：高亮“一键安排工作”
         const idle = idleSurvivors(state).length;
         this.button(`${this.isGuided('assign') ? '👉 ' : ''}一键安排工作（闲着 ${idle} 人）`, WIDTH, () => {
@@ -1290,37 +1312,146 @@ export class GameRoot extends Component {
             this.render();
         }, LEFT, idle === 0 ? 'disabled' : this.isGuided('assign') ? 'highlight' : 'normal', 24, 56);
         this.gap(10);
-        const colWidth = (WIDTH - 10) / 2;
-        let rowTop = this.cursorY;
+        const cardW = (WIDTH - 10) / 2;
+        const cardH = 118;
         state.survivors.forEach((s, i) => {
             const col = i % 2;
-            if (col === 0) rowTop = this.cursorY;
-            else this.cursorY = rowTop;
-            const def = survivorInfo(config, state, s.id);
-            const recover = s.recoverAt !== null ? formatTime(realSeconds(config, s.recoverAt - now)) : '';
-            const job = s.injured
-                ? `🩹${recover}`
-                : isOnExpedition(state, s.id)
-                  ? '探索中'
-                  : s.assignment
-                    ? getBuildingDef(config, s.assignment)?.name
-                    : '空闲';
-            this.button(`${def?.name ?? s.id} 😊${Math.round(s.mood)} ${job}`, colWidth, () => {
-                if (s.injured) {
-                    const res = camp.treat(s.id, camp.now);
-                    this.showToast(res.ok ? `${def?.name}的伤治好了` : res.reason);
-                    this.render();
-                    return;
-                }
-                const start = jobs.indexOf(s.assignment);
-                for (let step = 1; step <= jobs.length; step++) {
-                    if (camp.assign(s.id, jobs[(start + step) % jobs.length], camp.now).ok) break;
-                }
+            const row = Math.floor(i / 2);
+            const top = this.cursorY - row * (cardH + 10);
+            const info = survivorInfo(config, state, s.id);
+            const node = makeNode('SurvivorCard', this.content!, cardW, cardH);
+            node.setPosition(LEFT + col * (cardW + 10) + cardW / 2, top - cardH / 2);
+            drawPanel(node.addComponent(Graphics), cardW, cardH, COLORS.panelLight, 12, s.injured ? LOSE : undefined, 2);
+            this.drawPortrait(node, camp, s.id, -cardW / 2 + 48, 8, 36);
+            const textX = 40;
+            const textW = cardW - 100;
+            addLabel(node, `${info?.name ?? s.id}`, 24, TEXT, { width: textW, align: 'left' }).node.setPosition(textX, 38);
+            addLabel(node, `${info?.title ?? ''} · ${SPECIALTY_NAMES[info?.specialty ?? ''] ?? ''}`, 16, DIM, { width: textW, align: 'left' }).node.setPosition(textX, 14);
+            addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }).node.setPosition(textX, -12);
+            const talents = talentsOf(config, state, s.id).map((t) => t.icon + t.name).join(' ');
+            addLabel(node, `😊${Math.round(s.mood)}  ${talents}`, 16, TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
+            node.on(Node.EventType.TOUCH_END, () => {
+                if (this.dragDistance > DRAG_THRESHOLD) return;
+                punch(node);
+                this.selectedSurvivor = s.id;
+                this.resetScroll();
                 this.render();
-            }, col === 0 ? LEFT : LEFT + colWidth + 10, 'normal', 22, 50);
-            if (col === 1 || i === state.survivors.length - 1) this.gap(8);
+            });
         });
-        this.gap(6);
+        this.cursorY -= Math.ceil(state.survivors.length / 2) * (cardH + 10) + 6;
+    }
+
+    /** 一个人现在在干什么 */
+    private survivorStatus(camp: CampGame, id: string, now: number): string {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        if (s.injured) return `🩹 养伤 ${s.recoverAt !== null ? formatTime(realSeconds(config, s.recoverAt - now)) : ''}`;
+        if (state.expeditions.some((e) => e.squad.includes(id))) return '🚶 外出探索';
+        if ((state.scouts ?? []).some((x) => x.survivor === id)) return '🔭 外出侦察';
+        if (s.assignment) return `👷 ${getBuildingDef(config, s.assignment)?.name ?? ''}`;
+        return '💤 空闲';
+    }
+
+    /** 头像：有图用图（sprites/portraits/portrait_<id>），没图画角色颜色的圆 + 名字首字 */
+    private drawPortrait(parent: Node, camp: CampGame, id: string, x: number, y: number, r: number): void {
+        const p = portraitOf(camp.config, camp.state, id);
+        const node = makeNode('Portrait', parent, r * 2, r * 2);
+        node.setPosition(x, y);
+        const g = node.addComponent(Graphics);
+        g.fillColor = hexColor(p?.color ?? '#6a6a6a');
+        g.circle(0, 0, r);
+        g.fill();
+        g.lineWidth = 3;
+        g.strokeColor = TEXT;
+        g.circle(0, 0, r);
+        g.stroke();
+        const face = p ? getSprite(SPRITE_DIRS.portraits + p.sprite) : null;
+        if (face) {
+            const size = fitSize(face, r * 2.4, r * 2.4);
+            addSprite(node, face, size.width, size.height).setPosition(0, r * 0.15);
+        } else {
+            addLabel(node, (p?.name ?? '?').slice(0, 1), Math.round(r * 0.9), TEXT, { width: r * 2 });
+        }
+    }
+
+    /** 个人档案：介绍、性格、天赋、战斗能力，以及安排工作 */
+    private renderSurvivorDetail(camp: CampGame, id: string, now: number): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        const info = survivorInfo(config, state, id);
+        this.button('← 返回名单', 200, () => {
+            this.selectedSurvivor = null;
+            this.resetScroll();
+            this.render();
+        }, LEFT, 'normal', 22, 44);
+        this.gap(10);
+
+        // 头部：大头像 + 名字、身份、专长
+        const headH = 150;
+        const head = makeNode('Head', this.content!, WIDTH, headH);
+        head.setPosition(0, this.cursorY - headH / 2);
+        drawPanel(head.addComponent(Graphics), WIDTH, headH, COLORS.panel, 14, ACCENT, 2);
+        this.drawPortrait(head, camp, id, -WIDTH / 2 + 80, 0, 58);
+        const hx = 70;
+        const hw = WIDTH - 180;
+        addLabel(head, `${info?.name ?? id}${info?.isHero ? ' ⭐' : ''}`, 34, ACCENT, { width: hw, align: 'left' }).node.setPosition(hx, 42);
+        addLabel(head, `${info?.title ?? ''}   专长：${SPECIALTY_NAMES[info?.specialty ?? ''] ?? '—'}`, 20, TEXT, { width: hw, align: 'left' }).node.setPosition(hx, 6);
+        addLabel(head, `${this.survivorStatus(camp, id, now)}   😊 心情 ${Math.round(s.mood)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
+        const unitId = info?.battleUnit;
+        if (unitId && battleRegistry(config).hasUnit(unitId)) {
+            const base = statsAtLevel(battleRegistry(config).unit(unitId), survivorBattleLevel(config, state));
+            const m = combatMultiplier(config, state, id);
+            addLabel(head, `⚔️ 战斗 Lv${survivorBattleLevel(config, state)}  生命 ${Math.round(base.maxHp * m.hp)}  攻击 ${Math.round(base.atk * m.atk)}`, 18, DIM, { width: hw, align: 'left' }).node.setPosition(hx, -58);
+        }
+        this.cursorY -= headH + 12;
+
+        // 性格、天赋、介绍
+        this.text(`🧠 性格：${(info?.traits ?? []).join('、') || '—'}`, 22);
+        const talents = talentsOf(config, state, id);
+        this.text('✨ 天赋', 22, ACCENT);
+        if (talents.length === 0) this.text('（没有）', 20, DIM);
+        for (const t of talents) this.text(`${t.icon} ${t.name}：${t.description}`, 20);
+        this.gap(4);
+        this.text(`📖 ${info?.bio ?? ''}`, 20, DIM);
+        this.gap(10);
+
+        // 伤员：可以用药品治疗
+        if (s.injured) {
+            this.button(`💊 在医务室用药品治疗（${formatCost(config, config.balance.healCost)}）`, WIDTH, () => {
+                const res = camp.treat(id, camp.now);
+                if (res.ok) this.effect(`💊 ${info?.name}的伤治好了`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, 'normal', 22, 52);
+            this.gap(10);
+        }
+
+        // 安排工作：每个有岗位的建筑一个按钮，写清楚他在这里的产量倍率
+        const away = isOnExpedition(state, id);
+        this.text(away ? '—— 安排工作（人在外面，回来后才能安排）——' : '—— 安排工作（产量倍率 = 专长 × 天赋）——', 22, DIM);
+        for (const def of config.buildings) {
+            const slots = workerSlots(config, state, def.id);
+            if (slots <= 0) continue;
+            const workers = workersIn(state, def.id).length;
+            const here = s.assignment === def.id;
+            const mult = survivorEfficiency(config, { ...s, injured: false }, def) * workMultiplier(config, state, id, def.id);
+            const perks: string[] = [];
+            if (survivorEfficiency(config, { ...s, injured: false }, def) > 1) perks.push('专长对口');
+            for (const t of talents) if (t.effects.work && (!t.effects.work.building || t.effects.work.building === def.id)) perks.push(t.name);
+            const label = `${here ? '✅ ' : ''}${def.icon ?? ''} ${def.name}  ${workers}/${slots}  产量 ×${mult.toFixed(2)}${perks.length ? `（${perks.join('、')}）` : ''}`;
+            const blocked = s.injured || away || (!here && workers >= slots);
+            this.button(label, WIDTH, () => {
+                const res = camp.assign(id, def.id, camp.now);
+                if (res.ok) this.effect(`👷 ${info?.name}去${def.name}干活了`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, here ? 'highlight' : blocked ? 'disabled' : 'normal', 22, 50);
+            this.gap(8);
+        }
+        this.button(`${!s.assignment ? '✅ ' : ''}💤 休息（不干活，可以出去探索、侦察）`, WIDTH, () => {
+            camp.assign(id, null, camp.now);
+            this.render();
+        }, LEFT, !s.assignment ? 'highlight' : 'normal', 22, 50);
     }
 
     /** 探索页：枫谷镇地图（迷雾、道路、地点、在路上的小队、侦察点）+ 下方选中地点的详情 */

@@ -16,6 +16,7 @@ import { addWanderer, killRandom, resolveFallen, survivorInfo, survivorName } fr
 import { siteRaidLevel } from './siteMods';
 import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
 import { formatProps, rollDrops } from './props';
+import { combatMultiplier } from './talents';
 import {
     ActionResult,
     BattleReport,
@@ -65,13 +66,18 @@ function battleUnitOf(config: GameConfig, state: GameState, survivorId: string):
 export interface SquadMember {
     id: string;
     unit: string;
+    /** 天赋带来的攻击 / 生命倍率（没有就是 1） */
+    atkMult?: number;
+    hpMult?: number;
 }
 
 /** 把幸存者 id 列表转成上阵成员（没有战斗角色的人会被跳过） */
 export function squadOf(config: GameConfig, state: GameState, ids: string[]): SquadMember[] {
     return ids.flatMap((id) => {
         const unit = battleUnitOf(config, state, id);
-        return unit ? [{ id, unit }] : [];
+        if (!unit) return [];
+        const { atk, hp } = combatMultiplier(config, state, id);
+        return [{ id, unit, atkMult: atk, hpMult: hp }];
     });
 }
 
@@ -100,7 +106,12 @@ export function suggestSquad(config: GameConfig, state: GameState, size = config
 }
 
 function squadSetups(squad: SquadMember[], level: number): UnitSetup[] {
-    return squad.map((m) => ({ unit: m.unit, level, tag: m.id }));
+    return squad.map((m) => {
+        const setup: UnitSetup = { unit: m.unit, level, tag: m.id };
+        if (m.atkMult && m.atkMult !== 1) setup.atkMult = m.atkMult;
+        if (m.hpMult && m.hpMult !== 1) setup.hpMult = m.hpMult;
+        return setup;
+    });
 }
 
 /** 所有敌人等级 +bonus */

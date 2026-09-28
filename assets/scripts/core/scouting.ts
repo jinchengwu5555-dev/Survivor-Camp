@@ -10,6 +10,7 @@ import { nextRandom, pickWeighted } from './rng';
 import { injureSurvivor, survivorName } from './roster';
 import { addLog, addStat } from './state';
 import { revealers } from './townMap';
+import { scoutMultiplier } from './talents';
 import { ActionResult, GameConfig, GameState, RESOURCE_IDS, ResourceBag, ScoutKindDef, ScoutSpotState } from './types';
 
 const MAP_HALF = 320;
@@ -77,7 +78,8 @@ export function sendScout(config: GameConfig, state: GameState, spotId: number, 
     s.assignment = null;
     state.scoutSpots = (state.scoutSpots ?? []).filter((x) => x !== spot);
     state.scouts = state.scouts ?? [];
-    state.scouts.push({ id: state.nextId++, kind: kind.id, survivor: who, x: spot.x, y: spot.y, startedAt: now, returnsAt: now + kind.travelMinutes * 60_000 });
+    const travel = kind.travelMinutes * scoutMultiplier(config, state, who) * 60_000;
+    state.scouts.push({ id: state.nextId++, kind: kind.id, survivor: who, x: spot.x, y: spot.y, startedAt: now, returnsAt: now + travel });
     addLog(state, now, `${survivorName(config, state, who)}出发去侦察${kind.icon}${kind.name}。`);
     return { ok: true, message: survivorName(config, state, who) };
 }

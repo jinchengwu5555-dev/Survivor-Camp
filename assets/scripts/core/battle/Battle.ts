@@ -26,6 +26,9 @@ export interface UnitSetup {
     tag?: string;
     /** 额外携带的技能（比如工坊做的燃烧瓶、急救包） */
     extraSkills?: string[];
+    /** 攻击 / 生命倍率（营地里的天赋） */
+    atkMult?: number;
+    hpMult?: number;
 }
 
 export interface BattleSetup {
@@ -235,6 +238,8 @@ export class Battle implements BattleContext {
             this.pending.splice(i, 1);
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
+            if (p.setup.hpMult) unit.stats.maxHp = unit.hp = Math.round(unit.stats.maxHp * p.setup.hpMult);
+            if (p.setup.atkMult) unit.stats.atk = unit.stats.atk * p.setup.atkMult;
             unit.tag = p.setup.tag;
             for (const id of p.setup.extraSkills ?? []) {
                 const skill = this.registry.skill(id);

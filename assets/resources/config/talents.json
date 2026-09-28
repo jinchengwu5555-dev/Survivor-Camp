@@ -1,0 +1,16 @@
+[
+    { "id": "leadership", "name": "天生的领袖", "icon": "⭐", "wanderer": false, "description": "有他在，大家干活更有劲、打起来更不怕。", "effects": { "work": { "mult": 1.1 }, "combat": { "atk": 1.1 } } },
+    { "id": "chef", "name": "巧手大厨", "icon": "🍳", "description": "在厨房干活时，产量 +30%。", "effects": { "work": { "building": "kitchen", "mult": 1.3 } } },
+    { "id": "tinkerer", "name": "修理天才", "icon": "🔧", "description": "在废料场干活时，产量 +30%。", "effects": { "work": { "building": "scrapyard", "mult": 1.3 } } },
+    { "id": "healer", "name": "妙手回春", "icon": "💊", "description": "在医务室干活时，产量 +30%。", "effects": { "work": { "building": "infirmary", "mult": 1.3 } } },
+    { "id": "hardworking", "name": "勤快", "icon": "💪", "description": "干什么活都卖力，产量 +15%。", "effects": { "work": { "mult": 1.15 } } },
+    { "id": "marksman", "name": "神枪手", "icon": "🎯", "description": "战斗时攻击 +20%。", "effects": { "combat": { "atk": 1.2 } } },
+    { "id": "tough", "name": "铁打的身子", "icon": "🛡️", "description": "战斗时生命 +25%。", "effects": { "combat": { "hp": 1.25 } } },
+    { "id": "brawler", "name": "街头硬汉", "icon": "👊", "description": "战斗时攻击、生命各 +10%。", "effects": { "combat": { "atk": 1.1, "hp": 1.1 } } },
+    { "id": "alert", "name": "警觉", "icon": "👀", "description": "睡觉都睁着一只眼。战斗时生命 +15%。", "effects": { "combat": { "hp": 1.15 } } },
+    { "id": "quick_healer", "name": "恢复力强", "icon": "🩹", "description": "受伤后好得快一倍。", "effects": { "recovery": 0.5 } },
+    { "id": "swift", "name": "飞毛腿", "icon": "👟", "description": "去侦察时来回快 40%。", "effects": { "scout": 0.6 } },
+    { "id": "pathfinder", "name": "认路", "icon": "🧭", "description": "熟悉镇上的每条小路。侦察快 20%，干活产量 +5%。", "effects": { "scout": 0.8, "work": { "mult": 1.05 } } },
+    { "id": "optimist", "name": "乐天派", "icon": "🌞", "description": "心情恢复得快一倍。", "effects": { "moodRecovery": 2 } },
+    { "id": "veteran", "name": "老兵", "icon": "🎖️", "wanderer": false, "description": "见过真正的战场。战斗时攻击 +25%。", "effects": { "combat": { "atk": 1.25 } } }
+]

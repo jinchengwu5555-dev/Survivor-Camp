@@ -21,7 +21,11 @@ export function portraitOf(config: GameConfig, state: GameState, id: string): Po
     if (!info) return null;
     const reg = battleRegistry(config);
     const unit = info.battleUnit && reg.hasUnit(info.battleUnit) ? reg.unit(info.battleUnit) : null;
-    return { id, name: info.name, title: info.title, color: unit?.appearance.color ?? '#6a6a6a', sprite: `portrait_${id}` };
+    // 流浪者没有专属立绘：按 id 轮流用 4 张通用的流浪者头像
+    const isWanderer = !config.survivors.some((d) => d.id === id);
+    const n = Number(id.replace(/\D/g, '')) || 0;
+    const sprite = isWanderer ? `portrait_wanderer_${(n % 4) + 1}` : `portrait_${id}`;
+    return { id, name: info.name, title: info.title, color: unit?.appearance.color ?? '#6a6a6a', sprite };
 }
 
 /**

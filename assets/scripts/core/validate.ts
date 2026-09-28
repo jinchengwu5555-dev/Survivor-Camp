@@ -228,6 +228,14 @@ export function validateConfig(config: GameConfig): string[] {
         for (const id of t.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
 
+    checkUnique('天赋', config.talents.map((x) => x.id));
+    const talentIds = new Set(config.talents.map((t) => t.id));
+    for (const s of config.survivors) for (const t of s.talents ?? []) if (!talentIds.has(t)) errors.push(`幸存者 ${s.id}：未知天赋 ${t}`);
+    for (const t of config.talents) {
+        if (t.effects.work?.building && !buildingIds.has(t.effects.work.building)) errors.push(`天赋 ${t.id}：未知建筑 ${t.effects.work.building}`);
+    }
+    if (!config.talents.some((t) => t.wanderer !== false)) errors.push('talents.json：至少要有一个流浪者能抽到的天赋');
+
     checkUnique('侦察点', config.scouting.kinds.map((x) => x.id));
     for (const k of config.scouting.kinds) {
         const where = `侦察点 ${k.id}`;

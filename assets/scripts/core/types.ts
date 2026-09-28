@@ -181,6 +181,8 @@ export interface SurvivorDef {
     title: string;
     specialty: Specialty;
     traits: string[];
+    /** 天赋（talents.json 的 id） */
+    talents?: string[];
     /** 核心角色不会因为随机事件离开或死亡 */
     isHero: boolean;
     /** 战斗中使用的角色（units.json 的 id） */
@@ -442,6 +444,7 @@ export interface GameConfig {
     daily: DailyConfig;
     trader: TraderConfig;
     props: PropDef[];
+    talents: TalentDef[];
     scouting: ScoutingConfig;
     units: UnitDef[];
     skills: SkillDef[];
@@ -496,6 +499,23 @@ export interface PropDef {
     minutes?: number;
     amount?: number;
     contents?: { weight: number; prop?: string; amount?: number; resources?: ResourceBag }[];
+}
+
+/** 天赋（talents.json），见 core/talents.ts */
+export interface TalentDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** false = 流浪者抽不到（比如“天生的领袖”只属于伊森） */
+    wanderer?: boolean;
+    effects: {
+        work?: { building?: string; mult: number };
+        combat?: { atk?: number; hp?: number };
+        recovery?: number;
+        scout?: number;
+        moodRecovery?: number;
+    };
 }
 
 /** 侦察点（scouting.json）：镇地图上冒出来的小地点，派一个人去一趟，带回东西或触发事件 */
@@ -590,6 +610,7 @@ export interface SurvivorProfile {
     title: string;
     specialty: Specialty;
     traits: string[];
+    talents?: string[];
     battleUnit?: string;
 }
 

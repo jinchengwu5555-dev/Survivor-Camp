@@ -4,6 +4,7 @@ import { bedCount } from './economy';
 import { nextRandom, pickOne } from './rng';
 import { siteDeathChance, siteInjuryRecovery } from './siteMods';
 import { addLog, addStat, currentDay, newSurvivorState, setFlag } from './state';
+import { recoveryMultiplier, wandererTalentPool } from './talents';
 import { GameConfig, GameState, Specialty, SurvivorState } from './types';
 
 /** Fisher-Yates 洗牌（用存档里的随机数，结果可复现） */
@@ -22,6 +23,7 @@ export interface SurvivorInfo {
     title: string;
     specialty: Specialty;
     traits: string[];
+    talents?: string[];
     battleUnit?: string;
     isHero: boolean;
     bio: string;
@@ -46,12 +48,14 @@ export function generateWanderer(config: GameConfig, state: GameState, specialty
     const names = w.names.filter((n) => !used.has(n));
     const spec = specialty ?? pickOne(state, w.specialties)!;
     const traits = shuffle(state, w.traits).slice(0, 2);
+    const talent = pickOne(state, wandererTalentPool(config));
     const survivor = newSurvivorState(config, `w${state.nextId++}`);
     survivor.profile = {
         name: pickOne(state, names.length ? names : w.names)!,
         title: pickOne(state, w.titles[spec] ?? ['流浪者'])!,
         specialty: spec,
         traits,
+        talents: talent ? [talent.id] : [],
         battleUnit: w.battleUnit,
     };
     return survivor;
@@ -86,7 +90,7 @@ export function deathChance(config: GameConfig, state: GameState, now: number): 
 export function injureSurvivor(config: GameConfig, state: GameState, s: SurvivorState, now: number): void {
     s.injured = true;
     s.assignment = null;
-    s.recoverAt = now + config.balance.injuryRecoveryMinutes * siteInjuryRecovery(config, state) * 60_000;
+    s.recoverAt = now + config.balance.injuryRecoveryMinutes * siteInjuryRecovery(config, state) * recoveryMultiplier(config, state, s.id) * 60_000;
 }
 
 /** 有人死了：从营地、探索小队里移除，记下剧情标记 dead_<id> */
