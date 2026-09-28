@@ -1,0 +1,86 @@
+[
+    {
+        "id": "ethan", "name": "伊森", "faction": "survivor",
+        "appearance": { "sprite": "unit_ethan", "color": "#4a6fa5", "scale": 1 },
+        "stats": { "maxHp": 420, "atk": 38, "def": 20, "moveSpeed": 1.2, "attackRange": 4, "attackInterval": 1.2, "critRate": 0.15, "critDamage": 1.6 },
+        "growth": { "maxHp": 40, "atk": 4, "def": 2 },
+        "skills": ["cover_fire", "leader_call"]
+    },
+    {
+        "id": "martha", "name": "玛莎", "faction": "survivor",
+        "appearance": { "sprite": "unit_martha", "color": "#c47a5a", "scale": 1 },
+        "stats": { "maxHp": 520, "atk": 24, "def": 30, "moveSpeed": 0.9, "attackRange": 0.9, "attackInterval": 1.4, "critRate": 0.05, "critDamage": 1.5 },
+        "growth": { "maxHp": 55, "atk": 2, "def": 3 },
+        "skills": ["hot_soup", "pan_smash"]
+    },
+    {
+        "id": "derek", "name": "德里克", "faction": "survivor",
+        "appearance": { "sprite": "unit_derek", "color": "#8a5a3a", "scale": 1.05 },
+        "stats": { "maxHp": 480, "atk": 34, "def": 25, "moveSpeed": 1.1, "attackRange": 1, "attackInterval": 1.1, "critRate": 0.1, "critDamage": 1.5 },
+        "growth": { "maxHp": 50, "atk": 3.5, "def": 2.5 },
+        "skills": ["molotov"]
+    },
+    {
+        "id": "sophie", "name": "苏菲", "faction": "survivor",
+        "appearance": { "sprite": "unit_sophie", "color": "#e8a0b0", "scale": 0.95 },
+        "stats": { "maxHp": 300, "atk": 30, "def": 12, "moveSpeed": 1.0, "attackRange": 3.5, "attackInterval": 1.5, "critRate": 0.05, "critDamage": 1.5 },
+        "growth": { "maxHp": 30, "atk": 3, "def": 1 },
+        "skills": ["first_aid", "adrenaline"]
+    },
+    {
+        "id": "toby", "name": "托比", "faction": "survivor",
+        "appearance": { "sprite": "unit_toby", "color": "#e0c050", "scale": 0.95 },
+        "stats": { "maxHp": 340, "atk": 30, "def": 14, "moveSpeed": 1.6, "attackRange": 1, "attackInterval": 0.8, "critRate": 0.2, "critDamage": 1.5 },
+        "growth": { "maxHp": 32, "atk": 3, "def": 1.5 },
+        "skills": ["tripwire"]
+    },
+    {
+        "id": "hank", "name": "汉克", "faction": "survivor",
+        "appearance": { "sprite": "unit_hank", "color": "#5a6a4a", "scale": 1 },
+        "stats": { "maxHp": 380, "atk": 44, "def": 16, "moveSpeed": 1.0, "attackRange": 5, "attackInterval": 1.8, "critRate": 0.25, "critDamage": 1.8 },
+        "growth": { "maxHp": 35, "atk": 4.5, "def": 1.5 },
+        "skills": ["headshot"]
+    },
+    {
+        "id": "militia", "name": "幸存者", "faction": "survivor",
+        "appearance": { "sprite": "unit_militia", "color": "#7a8a7a", "scale": 1 },
+        "stats": { "maxHp": 320, "atk": 26, "def": 14, "moveSpeed": 1.1, "attackRange": 1, "attackInterval": 1.2, "critRate": 0.05, "critDamage": 1.5 },
+        "growth": { "maxHp": 30, "atk": 2.5, "def": 1.5 },
+        "skills": []
+    },
+    {
+        "id": "walker", "name": "行尸", "faction": "zombie",
+        "appearance": { "sprite": "zombie_walker", "color": "#6a8a5a", "scale": 1 },
+        "stats": { "maxHp": 160, "atk": 16, "def": 5, "moveSpeed": 0.6, "attackRange": 0.8, "attackInterval": 1.6, "critRate": 0, "critDamage": 1.5 },
+        "growth": { "maxHp": 20, "atk": 2, "def": 1 },
+        "skills": ["zombie_bite"]
+    },
+    {
+        "id": "runner", "name": "奔跑者", "faction": "zombie",
+        "appearance": { "sprite": "zombie_runner", "color": "#9aaa6a", "scale": 0.9 },
+        "stats": { "maxHp": 110, "atk": 14, "def": 3, "moveSpeed": 1.8, "attackRange": 0.8, "attackInterval": 0.9, "critRate": 0.05, "critDamage": 1.5 },
+        "growth": { "maxHp": 14, "atk": 1.8, "def": 0.5 },
+        "skills": ["zombie_bite"]
+    },
+    {
+        "id": "fatty", "name": "胖子", "faction": "zombie",
+        "appearance": { "sprite": "zombie_fatty", "color": "#7a9a4a", "scale": 1.3 },
+        "stats": { "maxHp": 420, "atk": 18, "def": 8, "moveSpeed": 0.4, "attackRange": 0.9, "attackInterval": 2, "critRate": 0, "critDamage": 1.5 },
+        "growth": { "maxHp": 50, "atk": 2, "def": 1 },
+        "skills": ["toxic_burst"]
+    },
+    {
+        "id": "armored", "name": "铁甲尸", "faction": "zombie",
+        "appearance": { "sprite": "zombie_armored", "color": "#5a6a7a", "scale": 1.1 },
+        "stats": { "maxHp": 300, "atk": 20, "def": 60, "moveSpeed": 0.5, "attackRange": 0.8, "attackInterval": 1.6, "critRate": 0, "critDamage": 1.5 },
+        "growth": { "maxHp": 30, "atk": 2, "def": 5 },
+        "skills": ["zombie_bite"]
+    },
+    {
+        "id": "brute", "name": "尸群首领", "faction": "zombie",
+        "appearance": { "sprite": "zombie_brute", "color": "#8a3a3a", "scale": 1.5 },
+        "stats": { "maxHp": 1400, "atk": 40, "def": 25, "moveSpeed": 0.7, "attackRange": 1.1, "attackInterval": 1.8, "critRate": 0.1, "critDamage": 1.5 },
+        "growth": { "maxHp": 150, "atk": 4, "def": 2 },
+        "skills": ["pounce", "frenzy"]
+    }
+]

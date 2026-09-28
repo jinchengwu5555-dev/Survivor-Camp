@@ -4,12 +4,15 @@ import buildings from '../assets/resources/config/buildings.json';
 import survivors from '../assets/resources/config/survivors.json';
 import events from '../assets/resources/config/events.json';
 import episodes from '../assets/resources/config/episodes.json';
+import units from '../assets/resources/config/units.json';
+import skills from '../assets/resources/config/skills.json';
+import statuses from '../assets/resources/config/statuses.json';
 import { GameConfig } from '../assets/scripts/core/types';
 import { KeyValueStorage } from '../assets/scripts/core/save';
 
 /** 每次返回一份深拷贝，测试之间互不影响 */
 export function loadConfig(): GameConfig {
-    return JSON.parse(JSON.stringify({ balance, resources, buildings, survivors, events, episodes })) as GameConfig;
+    return JSON.parse(JSON.stringify({ balance, resources, buildings, survivors, events, episodes, units, skills, statuses })) as GameConfig;
 }
 
 export const T0 = 1_700_000_000_000;

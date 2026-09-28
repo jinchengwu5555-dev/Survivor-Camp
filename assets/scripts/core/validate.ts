@@ -1,6 +1,7 @@
 // 配置表检查：改完 JSON 后跑 `npm test`，写错的 id、引用不存在的事件等都会被报出来。
 
 import { Effect, GameConfig, RESOURCE_IDS, ResourceBag } from './types';
+import { BattleRegistry } from './battle/registry';
 
 export function validateConfig(config: GameConfig): string[] {
     const errors: string[] = [];
@@ -98,6 +99,12 @@ export function validateConfig(config: GameConfig): string[] {
             if (o.type === 'buildingLevel' && !buildingIds.has(o.building)) errors.push(`${where}：未知建筑 ${o.building}`);
             if (o.type === 'resource' && !resourceIds.has(o.resource)) errors.push(`${where}：未知资源 ${o.resource}`);
         }
+    }
+
+    const battle = new BattleRegistry(config);
+    errors.push(...battle.validate());
+    for (const s of config.survivors) {
+        if (s.battleUnit && !battle.hasUnit(s.battleUnit)) errors.push(`幸存者 ${s.id}：未知战斗角色 ${s.battleUnit}`);
     }
 
     return errors;

@@ -1,0 +1,93 @@
+[
+    {
+        "id": "cover_fire", "name": "掩护射击", "description": "伊森指挥全队集火，重创目标并打碎它的护甲。",
+        "trigger": { "type": "active" }, "cooldown": 12,
+        "targeting": { "rule": "nearestEnemy" },
+        "effects": [ { "type": "damage", "ratio": 3.0 }, { "type": "status", "status": "armor_break", "duration": 5 } ],
+        "tags": ["hero", "burst"]
+    },
+    {
+        "id": "leader_call", "name": "领袖号令", "description": "开战时鼓舞全队。",
+        "trigger": { "type": "battleStart" }, "cooldown": 0,
+        "targeting": { "rule": "allAllies" },
+        "effects": [ { "type": "status", "status": "inspired", "duration": 8 } ],
+        "tags": ["hero", "buff"]
+    },
+    {
+        "id": "hot_soup", "name": "热汤", "description": "玛莎给全队递上热汤，所有队友恢复生命。",
+        "trigger": { "type": "active" }, "cooldown": 15,
+        "targeting": { "rule": "allAllies" },
+        "effects": [ { "type": "heal", "ratio": 2.5 } ],
+        "tags": ["hero", "heal"]
+    },
+    {
+        "id": "pan_smash", "name": "平底锅", "description": "当头一锅，把敌人砸晕。",
+        "trigger": { "type": "onAttack", "chance": 0.2 }, "cooldown": 4,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "status", "status": "stun", "duration": 1.2 } ],
+        "tags": ["control"]
+    },
+    {
+        "id": "molotov", "name": "燃烧瓶", "description": "德里克扔出燃烧瓶，点燃一片敌人。",
+        "trigger": { "type": "active" }, "cooldown": 15,
+        "targeting": { "rule": "nearestEnemy", "radius": 2 },
+        "effects": [ { "type": "damage", "ratio": 1.2, "damageType": "fire" }, { "type": "status", "status": "burn", "duration": 4, "power": 0.3 } ],
+        "tags": ["hero", "aoe"]
+    },
+    {
+        "id": "first_aid", "name": "急救包扎", "description": "苏菲自动为血量最低的队友包扎。",
+        "trigger": { "type": "auto" }, "cooldown": 6,
+        "targeting": { "rule": "lowestHpAlly" },
+        "effects": [ { "type": "heal", "ratio": 2.0 } ],
+        "tags": ["heal"]
+    },
+    {
+        "id": "adrenaline", "name": "肾上腺素", "description": "苏菲生命低于 30% 时，给自己套上护盾。",
+        "trigger": { "type": "hpBelow", "ratio": 0.3 }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "status", "status": "shield", "duration": 6, "power": 4 } ],
+        "tags": ["defense"]
+    },
+    {
+        "id": "tripwire", "name": "绊索", "description": "托比在敌人脚下布置绊索，让它动弹不得。",
+        "trigger": { "type": "active" }, "cooldown": 10,
+        "targeting": { "rule": "nearestEnemy", "radius": 1.5 },
+        "effects": [ { "type": "status", "status": "root", "duration": 3 }, { "type": "status", "status": "slow", "duration": 5 } ],
+        "tags": ["hero", "control"]
+    },
+    {
+        "id": "headshot", "name": "爆头", "description": "普攻时有概率打出一记爆头。",
+        "trigger": { "type": "onAttack", "chance": 0.25 }, "cooldown": 0,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "damage", "ratio": 2.0 } ],
+        "tags": ["burst"]
+    },
+    {
+        "id": "zombie_bite", "name": "撕咬", "description": "行尸的撕咬会让伤口中毒，可以叠加。",
+        "trigger": { "type": "onAttack", "chance": 0.3 }, "cooldown": 0,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "status", "status": "poison", "duration": 5, "power": 0.2 } ],
+        "tags": ["zombie"]
+    },
+    {
+        "id": "pounce", "name": "猛扑", "description": "扑倒目标，造成伤害并眩晕。",
+        "trigger": { "type": "auto" }, "cooldown": 8, "initialCooldown": 3, "range": 1.5,
+        "targeting": { "rule": "currentTarget" },
+        "effects": [ { "type": "damage", "ratio": 1.5 }, { "type": "status", "status": "stun", "duration": 1 } ],
+        "tags": ["zombie", "control"]
+    },
+    {
+        "id": "toxic_burst", "name": "毒气爆裂", "description": "胖子死后炸开，周围的人全部中毒。",
+        "trigger": { "type": "onDeath" }, "cooldown": 0,
+        "targeting": { "rule": "nearestEnemy", "radius": 2.5 },
+        "effects": [ { "type": "status", "status": "poison", "duration": 6, "power": 0.4 } ],
+        "tags": ["zombie", "aoe"]
+    },
+    {
+        "id": "frenzy", "name": "狂暴", "description": "生命低于一半时陷入狂暴。",
+        "trigger": { "type": "hpBelow", "ratio": 0.5 }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "status", "status": "rage", "duration": 10 } ],
+        "tags": ["zombie", "buff"]
+    }
+]

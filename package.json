@@ -7,6 +7,7 @@
     },
     "scripts": {
         "test": "vitest run",
+        "battle": "vitest run tests/battle-demo.test.ts --mode battle --silent=false",
         "typecheck": "tsc -p tsconfig.core.json"
     },
     "devDependencies": {

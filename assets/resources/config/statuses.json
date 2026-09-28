@@ -1,0 +1,11 @@
+[
+    { "id": "stun", "name": "眩晕", "debuff": true, "stacking": "refresh", "control": { "stun": true } },
+    { "id": "root", "name": "定身", "debuff": true, "stacking": "refresh", "control": { "root": true } },
+    { "id": "slow", "name": "减速", "debuff": true, "stacking": "refresh", "modifiers": { "moveSpeed": -0.5, "attackSpeed": -0.2 } },
+    { "id": "burn", "name": "燃烧", "debuff": true, "stacking": "refresh", "dot": { "damageType": "fire", "interval": 1 } },
+    { "id": "poison", "name": "中毒", "debuff": true, "stacking": "stack", "maxStacks": 5, "dot": { "damageType": "poison", "interval": 1 } },
+    { "id": "armor_break", "name": "破甲", "debuff": true, "stacking": "refresh", "modifiers": { "def": -0.5, "damageTaken": 0.2 } },
+    { "id": "rage", "name": "狂怒", "debuff": false, "stacking": "refresh", "modifiers": { "atk": 0.3, "attackSpeed": 0.2 } },
+    { "id": "inspired", "name": "鼓舞", "debuff": false, "stacking": "refresh", "modifiers": { "atk": 0.15, "damageTaken": -0.1 } },
+    { "id": "shield", "name": "护盾", "debuff": false, "stacking": "refresh", "shield": true }
+]

@@ -17,8 +17,12 @@ assets/
     survivors.json        幸存者
     events.json           随机事件和剧情事件
     episodes.json         剧情“季 / 集”和每集目标
+    units.json            战斗角色：属性、外观、成长、技能
+    skills.json           技能：触发条件、冷却、目标、效果
+    statuses.json         状态：眩晕、中毒、护盾、增益……
   scripts/
     core/               ← 游戏逻辑，不依赖 Cocos，有单元测试
+      battle/           ← 战斗系统（见下方“战斗系统”）
     platform/           ← 微信平台适配：存档、激励视频广告
     ui/GameRoot.ts      ← 原型阶段的调试界面（纯文字 + 按钮）
 tests/                  ← 单元测试
@@ -95,3 +99,48 @@ npm test
   - `flag`：记下一个剧情标记
   - `triggerEvent`：接着触发另一个事件
 - 可用的条件（`conditions`）：`minDay`、`minSurvivors`、`flags`、`notFlags`、`hasSurvivors`。
+
+## 战斗系统
+
+战斗是自动进行的横版对战，玩家可以手动释放每个角色的 1 个主动技能。代码在 `assets/scripts/core/battle/`，分成 5 个模块：
+
+| 模块 | 文件 | 配置表 | 负责什么 |
+|---|---|---|---|
+| 1. 角色配置 | `units.ts` | `units.json` | 基础属性、外观、等级成长，生成战斗角色 |
+| 2. 技能系统 | `skills.ts` | `skills.json` | 触发条件、目标选择、冷却、效果执行 |
+| 3. 技能编排登记表 | `registry.ts` | — | 统一登记角色 / 技能 / 状态，检查配置错误，生成技能说明，调试时临时改数值 |
+| 4. 伤害结算管线 | `damage.ts` | — | 增伤 → 暴击 → 防御减免 → 易伤 → 取整 → 护盾 → 扣血 |
+| 5. 控制和状态 | `status.ts` + `Battle.ts` | `statuses.json` | 眩晕 / 定身 / 沉默、增减益、持续伤害、护盾；移动、索敌、普攻、刷怪、胜负判定 |
+
+### 查看一场战斗的战报
+
+```bash
+npm run battle
+```
+
+会打印一场“五人小队 vs 尸群”的完整中文战报，改完数值后用它看效果。
+
+### 技能写法
+
+```json
+{
+    "id": "molotov",
+    "name": "燃烧瓶",
+    "description": "德里克扔出燃烧瓶，点燃一片敌人。",
+    "trigger": { "type": "active" },
+    "cooldown": 15,
+    "targeting": { "rule": "nearestEnemy", "radius": 2 },
+    "effects": [
+        { "type": "damage", "ratio": 1.2, "damageType": "fire" },
+        { "type": "status", "status": "burn", "duration": 4, "power": 0.3 }
+    ]
+}
+```
+
+- **触发方式 `trigger.type`**：`active` 手动释放、`auto` 冷却好了自动释放、`onAttack` 普攻时按 `chance` 概率触发、`battleStart` 开战时触发、`hpBelow` 生命低于 `ratio` 时触发一次、`onDeath` 死亡时触发。每个角色最多 1 个 `active` 技能。
+- **目标 `targeting.rule`**：`self`、`currentTarget`、`nearestEnemy`、`randomEnemy`、`lowestHpAlly`、`allAllies`、`allEnemies`；加上 `radius` 就变成范围技能（主目标周围 N 格内的同阵营单位都会被命中）。
+- **效果 `effects`**：
+  - `damage`：伤害 = `ratio` × 攻击力，`damageType` 可选 `physical` / `fire` / `poison` / `true`
+  - `heal`：治疗 = `ratio` × 攻击力
+  - `status`：施加状态，持续 `duration` 秒；持续伤害和护盾的强度 = `power` × 攻击力
+- **伤害类型**：物理受全额防御减免，火焰受一半，毒素和真实伤害无视防御。防御公式：减伤 = 防御 / (防御 + 100)。

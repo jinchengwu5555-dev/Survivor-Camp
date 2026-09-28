@@ -1,12 +1,12 @@
 [
-    { "id": "ethan", "name": "伊森", "title": "副警长", "specialty": "leader", "traits": ["正直", "坚毅"], "isHero": true, "bio": "枫谷镇副警长。尸潮爆发那天，女儿莉莉在镇外的夏令营，从此下落不明。" },
-    { "id": "martha", "name": "玛莎", "title": "超市老板娘", "specialty": "cook", "traits": ["热心肠", "嘴硬"], "isHero": true, "bio": "六十岁，超市是她一辈子的心血，死也不肯离开。" },
-    { "id": "derek", "name": "德里克", "title": "汽修工", "specialty": "mechanic", "traits": ["暴躁", "讲义气"], "isHero": true, "bio": "他的弟弟在第一夜被咬了，他一直没告诉大家……" },
-    { "id": "sophie", "name": "苏菲", "title": "护理系学生", "specialty": "medic", "traits": ["胆小", "善良"], "isHero": true, "bio": "以前连血都不敢看，现在是营地唯一懂医术的人。" },
-    { "id": "toby", "name": "托比", "title": "加油站店员", "specialty": "scavenger", "traits": ["乐观", "机灵"], "isHero": true, "bio": "二十出头，骑一辆破自行车，熟悉镇上每一条小路。" },
-    { "id": "leo", "name": "里奥", "title": "高中生", "specialty": "scavenger", "traits": ["冲动", "勇敢"], "isHero": false, "bio": "第一夜在超市门外呼救的年轻人。" },
-    { "id": "hank", "name": "汉克", "title": "退伍老兵", "specialty": "fighter", "traits": ["沉默", "多疑"], "isHero": false, "bio": "独自在林子里生活了很多年，枪法很准。" },
-    { "id": "rosa", "name": "罗莎", "title": "花店店主", "specialty": "farmer", "traits": ["温柔", "固执"], "isHero": false, "bio": "逃难时只带了一包种子。" },
-    { "id": "nora", "name": "诺拉", "title": "兽医", "specialty": "medic", "traits": ["冷静", "毒舌"], "isHero": false, "bio": "给动物看了二十年病，现在给人看。" },
-    { "id": "joe", "name": "老乔", "title": "卡车司机", "specialty": "mechanic", "traits": ["话多", "乐观"], "isHero": false, "bio": "开着一辆掉了漆的皮卡，车斗里全是工具。" }
+    { "id": "ethan", "name": "伊森", "title": "副警长", "specialty": "leader", "traits": ["正直", "坚毅"], "isHero": true, "battleUnit": "ethan", "bio": "枫谷镇副警长。尸潮爆发那天，女儿莉莉在镇外的夏令营，从此下落不明。" },
+    { "id": "martha", "name": "玛莎", "title": "超市老板娘", "specialty": "cook", "traits": ["热心肠", "嘴硬"], "isHero": true, "battleUnit": "martha", "bio": "六十岁，超市是她一辈子的心血，死也不肯离开。" },
+    { "id": "derek", "name": "德里克", "title": "汽修工", "specialty": "mechanic", "traits": ["暴躁", "讲义气"], "isHero": true, "battleUnit": "derek", "bio": "他的弟弟在第一夜被咬了，他一直没告诉大家……" },
+    { "id": "sophie", "name": "苏菲", "title": "护理系学生", "specialty": "medic", "traits": ["胆小", "善良"], "isHero": true, "battleUnit": "sophie", "bio": "以前连血都不敢看，现在是营地唯一懂医术的人。" },
+    { "id": "toby", "name": "托比", "title": "加油站店员", "specialty": "scavenger", "traits": ["乐观", "机灵"], "isHero": true, "battleUnit": "toby", "bio": "二十出头，骑一辆破自行车，熟悉镇上每一条小路。" },
+    { "id": "leo", "name": "里奥", "title": "高中生", "specialty": "scavenger", "traits": ["冲动", "勇敢"], "isHero": false, "battleUnit": "militia", "bio": "第一夜在超市门外呼救的年轻人。" },
+    { "id": "hank", "name": "汉克", "title": "退伍老兵", "specialty": "fighter", "traits": ["沉默", "多疑"], "isHero": false, "battleUnit": "hank", "bio": "独自在林子里生活了很多年，枪法很准。" },
+    { "id": "rosa", "name": "罗莎", "title": "花店店主", "specialty": "farmer", "traits": ["温柔", "固执"], "isHero": false, "battleUnit": "militia", "bio": "逃难时只带了一包种子。" },
+    { "id": "nora", "name": "诺拉", "title": "兽医", "specialty": "medic", "traits": ["冷静", "毒舌"], "isHero": false, "battleUnit": "militia", "bio": "给动物看了二十年病，现在给人看。" },
+    { "id": "joe", "name": "老乔", "title": "卡车司机", "specialty": "mechanic", "traits": ["话多", "乐观"], "isHero": false, "battleUnit": "militia", "bio": "开着一辆掉了漆的皮卡，车斗里全是工具。" }
 ]

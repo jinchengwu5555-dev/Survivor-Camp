@@ -1,6 +1,8 @@
 // 游戏核心类型定义。
 // core/ 目录下的代码不依赖 Cocos（不 import 'cc'），可以直接在 Node 里跑单元测试。
 
+import type { SkillDef, StatusDef, UnitDef } from './battle/types';
+
 export type ResourceId = 'food' | 'wood' | 'parts' | 'medicine' | 'cans';
 export const RESOURCE_IDS: ResourceId[] = ['food', 'wood', 'parts', 'medicine', 'cans'];
 
@@ -80,6 +82,8 @@ export interface SurvivorDef {
     traits: string[];
     /** 核心角色不会因为随机事件离开或死亡 */
     isHero: boolean;
+    /** 战斗中使用的角色（units.json 的 id） */
+    battleUnit?: string;
     bio: string;
 }
 
@@ -157,6 +161,9 @@ export interface GameConfig {
     survivors: SurvivorDef[];
     events: GameEventDef[];
     episodes: EpisodeDef[];
+    units: UnitDef[];
+    skills: SkillDef[];
+    statuses: StatusDef[];
 }
 
 // ---------- 存档状态 ----------
