@@ -11,6 +11,7 @@ import {
     SurvivorState,
 } from './types';
 import { seasonAt } from './seasons';
+import { siteBattleLevel, siteBeds, sitePassive, siteProduction, siteSafety, siteSpoil } from './siteMods';
 
 export function getBuildingDef(config: GameConfig, id: string): BuildingDef | undefined {
     return config.buildings.find((b) => b.id === id);
@@ -44,16 +45,17 @@ export function storageCap(config: GameConfig, state: GameState, resource: Resou
 }
 
 export function bedCount(config: GameConfig, state: GameState): number {
-    return sumOverBuildings(config, state, (lv) => lv.beds);
+    return sumOverBuildings(config, state, (lv) => lv.beds) + siteBeds(config, state);
 }
 
+/** 安全值 = 建筑提供的安全值 × 营地地点倍率 */
 export function safety(config: GameConfig, state: GameState): number {
-    return sumOverBuildings(config, state, (lv) => lv.safety);
+    return Math.round(sumOverBuildings(config, state, (lv) => lv.safety) * siteSafety(config, state));
 }
 
-/** 幸存者的战斗等级 = 1 + 训练场等建筑提供的加成 */
+/** 幸存者的战斗等级 = 1 + 训练场等建筑提供的加成 + 营地地点加成 */
 export function survivorBattleLevel(config: GameConfig, state: GameState): number {
-    return 1 + sumOverBuildings(config, state, (lv) => lv.battleLevel);
+    return 1 + sumOverBuildings(config, state, (lv) => lv.battleLevel) + siteBattleLevel(config, state);
 }
 
 export function workerSlots(config: GameConfig, state: GameState, buildingId: string): number {
@@ -73,8 +75,9 @@ export function moraleMultiplier(state: GameState): number {
 
 export function survivorEfficiency(config: GameConfig, survivor: SurvivorState, building: BuildingDef): number {
     if (survivor.injured) return 0;
-    const def = config.survivors.find((d) => d.id === survivor.id);
-    return def && building.specialty && def.specialty === building.specialty ? config.balance.specialtyBonus : 1;
+    // 流浪者的专长在存档的 profile 里，有名有姓的角色在 survivors.json 里
+    const specialty = survivor.profile?.specialty ?? config.survivors.find((d) => d.id === survivor.id)?.specialty;
+    return building.specialty && specialty === building.specialty ? config.balance.specialtyBonus : 1;
 }
 
 /** 每分钟产量（不含消耗） */
@@ -89,6 +92,8 @@ export function productionPerMinute(config: GameConfig, state: GameState): Recor
         const eff = survivorEfficiency(config, survivor, building) * mult;
         for (const id of RESOURCE_IDS) rates[id] += (lv.production[id] ?? 0) * eff;
     }
+    // 营地地点：产量倍率 + 不需要工人的被动产出
+    for (const id of RESOURCE_IDS) rates[id] = rates[id] * siteProduction(config, state, id) + sitePassive(config, state, id);
     return rates;
 }
 
@@ -149,7 +154,8 @@ export function economyRates(config: GameConfig, state: GameState, now: number):
     const { season } = seasonAt(config, state, now);
     const net = productionPerMinute(config, state);
     net.food *= season.foodProduction;
-    const spoil = state.resources.food * config.balance.foodSpoilPerMinute * season.spoilMultiplier * (1 - spoilReduction(config, state));
+    const spoil =
+        state.resources.food * config.balance.foodSpoilPerMinute * season.spoilMultiplier * siteSpoil(config, state) * (1 - spoilReduction(config, state));
     const heating = state.survivors.length * season.heatingWoodPerSurvivorPerMinute;
     net.food -= foodConsumptionPerMinute(config, state) + spoil;
     net.wood -= heating;
@@ -165,9 +171,10 @@ function minutesWithout(amount: number, rate: number, minutes: number): number {
 /**
  * 推进 minutes 分钟的生产、吃饭、腐烂、取暖和心情变化（按 now 所在的季节计算）。
  * 如果中途食物吃光 / 木材烧光，只有耗尽之后的那段时间算挨饿 / 受冻。
+ * 返回这段时间里挨饿或挨冻的分钟数（取较大的那个），0 表示吃饱穿暖。
  */
-export function advanceEconomy(config: GameConfig, state: GameState, minutes: number, now: number): void {
-    if (minutes <= 0) return;
+export function advanceEconomy(config: GameConfig, state: GameState, minutes: number, now: number): number {
+    if (minutes <= 0) return 0;
     const b = config.balance;
     const { net, heating } = economyRates(config, state, now);
 
@@ -182,6 +189,7 @@ export function advanceEconomy(config: GameConfig, state: GameState, minutes: nu
         }
         s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * starvingMinutes - b.coldMoodPenaltyPerMinute * freezingMinutes);
     }
+    return Math.max(starvingMinutes, freezingMinutes);
 }
 
 export function clampMood(mood: number): number {

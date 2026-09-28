@@ -92,7 +92,7 @@ function onlineSession(game: CampGame, start: number): void {
 it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const game = CampGame.newGame(loadConfig(), T0, 3);
     const { config, state } = game;
-    const lines = ['真实天  游戏天  季节  指挥部  其余建筑平均  食物   木材   零件  药品  士气  人数  守夜胜/负  尸潮加成(喘息)  成就'];
+    const lines = ['真实天  游戏天  季节  指挥部  其余建筑平均  食物   木材   零件  药品  士气  人数  守夜胜/负  尸潮加成(喘息)  死亡  成就'];
     const r = (n: number, w = 5) => String(Math.round(n)).padStart(w);
     let starvedSessions = 0;
     let sessions = 0;
@@ -101,16 +101,21 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
         for (const h of SESSION_HOURS) {
             const now = T0 + (day * 24 + h) * HOUR;
             game.tick(now);
+            if (state.gameOver) break;
             onlineSession(game, now);
             sessions++;
             if (state.resources.food < 1) starvedSessions++;
+        }
+        if (state.gameOver) {
+            lines.push(`营地在第 ${state.gameOver.day} 天（真实第 ${day + 1} 天）覆灭：${state.gameOver.cause}`);
+            break;
         }
         if (day >= 14 && (day + 1) % 3 !== 0) continue;
         const now = T0 + (day * 24 + 23) * HOUR;
         const others = config.buildings.filter((b) => b.id !== 'hq');
         const avg = others.reduce((sum, b) => sum + state.buildings[b.id].level, 0) / others.length;
         lines.push(
-            `${r(day + 1, 4)}  ${r(currentDay(config, state, now), 6)}   ${seasonAt(config, state, now).season.icon}   ${r(hqLevel(state), 5)}  ${avg.toFixed(1).padStart(10)}   ${r(state.resources.food)}  ${r(state.resources.wood)}  ${r(state.resources.parts)}  ${r(state.resources.medicine, 4)}  ${r(morale(state), 4)}  ${r(state.survivors.length, 4)}   ${r(state.stats.raids_won ?? 0, 4)}/${state.stats.raids_lost ?? 0}   ${r(raidEnemyBonus(config, state, now), 6)}(${state.raidRelief})   ${r(state.achievements.length, 4)}`,
+            `${r(day + 1, 4)}  ${r(currentDay(config, state, now), 6)}   ${seasonAt(config, state, now).season.icon}   ${r(hqLevel(state), 5)}  ${avg.toFixed(1).padStart(10)}   ${r(state.resources.food)}  ${r(state.resources.wood)}  ${r(state.resources.parts)}  ${r(state.resources.medicine, 4)}  ${r(morale(state), 4)}  ${r(state.survivors.length, 4)}   ${r(state.stats.raids_won ?? 0, 4)}/${state.stats.raids_lost ?? 0}   ${r(raidEnemyBonus(config, state, now), 6)}(${state.raidRelief})   ${r(state.stats.deaths ?? 0, 4)}  ${r(state.achievements.length, 4)}`,
         );
     }
     lines.push('', `上线时食物为 0 的次数：${starvedSessions}/${sessions}`);

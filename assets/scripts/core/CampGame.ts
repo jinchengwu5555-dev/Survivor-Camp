@@ -11,6 +11,8 @@ import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
 import { checkSeasonChange } from './seasons';
 import { createNewState } from './state';
+import { applyHardship } from './roster';
+import { relocate } from './sites';
 
 export class CampGame {
     /** 新解锁、还没在界面上提示过的成就；界面取走后自己清空 */
@@ -30,7 +32,7 @@ export class CampGame {
      */
     tick(now: number): void {
         const s = this.state;
-        if (now <= s.lastTickAt) return;
+        if (now <= s.lastTickAt || s.gameOver) return;
         const capMs = this.config.balance.offlineCapHours * 3_600_000;
         let t = Math.max(s.lastTickAt, now - capMs);
 
@@ -39,7 +41,8 @@ export class CampGame {
             .filter((at): at is number => at !== null && at > t && at <= now)
             .sort((a, b) => a - b);
         for (const at of [...finishTimes, now]) {
-            advanceEconomy(this.config, s, (at - t) / 60_000, t);
+            const hardship = advanceEconomy(this.config, s, (at - t) / 60_000, t);
+            applyHardship(this.config, s, hardship, at);
             completeUpgrades(this.config, s, at);
             t = at;
         }
@@ -59,8 +62,9 @@ export class CampGame {
         this.newAchievements.push(...checkAchievements(this.config, this.state, now));
     }
 
-    private act<T>(now: number, action: () => T): T {
+    private act<T extends ActionResult | ChoiceResult>(now: number, action: () => T): T {
         this.tick(now);
+        if (this.state.gameOver) return { ok: false, reason: '营地已经覆灭了' } as T;
         const result = action();
         this.settle(now);
         return result;
@@ -105,6 +109,11 @@ export class CampGame {
 
     abandonBounty(bountyId: string, now: number): ActionResult {
         return this.act(now, () => abandonBounty(this.state, bountyId));
+    }
+
+    /** 举营搬迁到已发现的营地地点 */
+    relocate(siteId: string, now: number): ActionResult {
+        return this.act(now, () => relocate(this.config, this.state, siteId, now));
     }
 
     claimBounty(bountyId: string, now: number): ActionResult {

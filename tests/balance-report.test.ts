@@ -15,8 +15,9 @@ const RUNS = 50;
 it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
     const config = loadConfig();
     const reg = battleRegistry(config);
-    const squad = ['derek', 'ethan', 'martha', 'toby'];
-    const defenders = [...squad, 'sophie'];
+    const member = (id: string) => ({ id, unit: config.survivors.find((d) => d.id === id)!.battleUnit! });
+    const squad = ['derek', 'ethan', 'martha', 'toby'].map(member);
+    const defenders = [...squad, member('sophie')];
     const building = (id: string) => config.buildings.find((b) => b.id === id)!;
     const trainingLevels = [0, 1, 2, 3, 5, 10];
     const wallHp = (level: number) => building('wall').levels[level - 1].safety! * config.balance.barricadeHpPerSafety;

@@ -77,6 +77,12 @@ export function validateConfig(config: GameConfig): string[] {
             case 'flag':
             case 'stat':
                 break;
+            case 'addWanderer':
+                if (e.specialty && !config.wanderers.specialties.includes(e.specialty)) errors.push(`${where}：流浪者没有专长 ${e.specialty}`);
+                break;
+            case 'discoverSite':
+                if (!config.sites.some((s) => s.id === e.site)) errors.push(`${where}：未知营地地点 ${e.site}`);
+                break;
             default:
                 errors.push(`${where}：未知效果类型 ${(e as { type: string }).type}`);
         }
@@ -126,6 +132,8 @@ export function validateConfig(config: GameConfig): string[] {
         checkBag(where, loc.loot);
         if (loc.durationMinutes <= 0) errors.push(`${where}：durationMinutes 必须大于 0`);
         if (loc.firstClearEvent) checkEvent(where, loc.firstClearEvent);
+        if (loc.discoversSite && !config.sites.some((s) => s.id === loc.discoversSite)) errors.push(`${where}：未知营地地点 ${loc.discoversSite}`);
+        if (loc.recruitChance !== undefined && (loc.recruitChance < 0 || loc.recruitChance > 1)) errors.push(`${where}：recruitChance 要在 0～1 之间`);
         for (const id of loc.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
     for (const raid of config.raids) {
@@ -162,6 +170,21 @@ export function validateConfig(config: GameConfig): string[] {
         if (b.goal.amount <= 0) errors.push(`${where}：goal.amount 必须大于 0`);
         for (const id of b.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
+
+    checkUnique('营地地点', config.sites.map((x) => x.id));
+    if (!config.sites.some((s) => s.id === config.balance.startingSite)) errors.push(`balance.startingSite：未知营地地点 ${config.balance.startingSite}`);
+    for (const site of config.sites) {
+        const where = `营地地点 ${site.id}`;
+        checkEnemies(where, site.journey.enemies);
+        checkBag(where, site.modifiers.production);
+        checkBag(where, site.modifiers.passive);
+        if (site.arrivalEvent) checkEvent(where, site.arrivalEvent);
+        if (site.wallRetention < 0 || site.wallRetention > 1) errors.push(`${where}：wallRetention 要在 0～1 之间`);
+    }
+    const w = config.wanderers;
+    if (w.names.length === 0) errors.push('wanderers.json：names 不能为空');
+    if (!battle.hasUnit(w.battleUnit)) errors.push(`wanderers.json：未知战斗角色 ${w.battleUnit}`);
+    for (const sp of w.specialties) if (!w.titles[sp]?.length) errors.push(`wanderers.json：专长 ${sp} 没有职业名`);
 
     checkUnique('成就', config.achievements.map((x) => x.id));
     for (const a of config.achievements) {

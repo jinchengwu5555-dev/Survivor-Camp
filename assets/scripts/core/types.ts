@@ -72,6 +72,20 @@ export interface BalanceDef {
     raidScaling: { startDay: number; daysPerLevel: number; rewardGrowth: number; reliefPerLoss: number; reliefRecoverPerWin: number };
     /** 探索随指挥部成长：指挥部每高一级，敌人 +enemyLevelPerHq 级（向下取整），战利品 ×lootGrowth */
     expeditionScaling: { enemyLevelPerHq: number; lootGrowth: number };
+    /** 战斗中倒下后死亡的概率（否则只是重伤） */
+    deathChanceOnFall: number;
+    /** 医务室每一级让死亡概率降低多少（比例），最多降 70% */
+    deathReductionPerInfirmaryLevel: number;
+    /** 新手保护：前几天不会死人 */
+    deathGraceDays: number;
+    /** 守夜失败、尸群冲进营地时被咬死的人数 */
+    raidBreachDeaths: number;
+    /** 连续挨饿 / 挨冻累计多少分钟会死一个人 */
+    hardshipDeathMinutes: number;
+    /** 开局的营地 */
+    startingSite: string;
+    /** 搬迁：只能带走 carryRatio 的物资，每人路上吃 foodPerSurvivor 食物，搬完后 cooldownDays 天内不能再搬 */
+    relocation: { carryRatio: number; foodPerSurvivor: number; cooldownDays: number };
 }
 
 export interface ResourceDef {
@@ -157,6 +171,10 @@ export type Effect =
     | { type: 'resource'; resource: ResourceId; amount: number }
     | { type: 'mood'; amount: number; target?: SurvivorTarget }
     | { type: 'addSurvivor'; survivor: string }
+    /** 随机生成一个流浪者加入（可以指定专长） */
+    | { type: 'addWanderer'; specialty?: Specialty }
+    /** 发现一个新的营地地点 */
+    | { type: 'discoverSite'; site: string }
     | { type: 'removeSurvivor'; survivor: string | 'random' }
     | { type: 'injure'; survivor: string | 'random' }
     | { type: 'heal'; survivor: string | 'all' }
@@ -241,6 +259,10 @@ export interface LocationDef {
     firstClearFlag?: string;
     /** 第一次打赢时触发的事件 */
     firstClearEvent?: string;
+    /** 第一次打赢时发现的营地地点 */
+    discoversSite?: string;
+    /** 打赢后救回一个流浪者的概率 */
+    recruitChance?: number;
 }
 
 export interface RaidDef {
@@ -307,6 +329,57 @@ export interface AchievementDef {
     reward: ResourceBag;
 }
 
+/** 营地地点的效果。倍率不写就是 1，加减不写就是 0 */
+export interface SiteModifiers {
+    /** 产量倍率，比如 { "food": 1.5 } */
+    production?: ResourceBag;
+    /** 不需要工人的被动产出（每分钟），比如水坝的鱼 */
+    passive?: ResourceBag;
+    /** 安全值倍率（影响路障生命） */
+    safety?: number;
+    /** 额外床位 */
+    beds?: number;
+    /** 食物腐烂倍率 */
+    spoil?: number;
+    /** 养伤时间倍率（越小好得越快） */
+    injuryRecovery?: number;
+    /** 战斗倒下后的死亡概率倍率 */
+    deathChance?: number;
+    /** 尸潮等级加减 */
+    raidLevel?: number;
+    /** 所有人的战斗等级加成 */
+    battleLevel?: number;
+}
+
+export interface SiteDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** 一句话优点 / 缺点，界面上显示 */
+    pros: string;
+    cons: string;
+    modifiers: SiteModifiers;
+    /** 搬过来时路障保留原来等级的比例 */
+    wallRetention: number;
+    /** 这里自带的路障等级（比如警局本来就有铁门） */
+    minWallLevel: number;
+    /** 路上的伏击战 */
+    journey: { enemies: UnitSetup[]; timeLimit: number };
+    /** 到达时触发的事件 */
+    arrivalEvent?: string;
+}
+
+/** 随机流浪者的生成素材 */
+export interface WandererDef {
+    names: string[];
+    titles: Record<Specialty, string[]>;
+    traits: string[];
+    specialties: Specialty[];
+    /** 流浪者战斗时用的角色 */
+    battleUnit: string;
+}
+
 export interface GameConfig {
     balance: BalanceDef;
     resources: ResourceDef[];
@@ -320,6 +393,8 @@ export interface GameConfig {
     items: ItemDef[];
     bounties: BountyDef[];
     achievements: AchievementDef[];
+    sites: SiteDef[];
+    wanderers: WandererDef;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -334,8 +409,19 @@ export interface BuildingState {
     upgradeEndsAt: number | null;
 }
 
+/** 随机生成的流浪者的资料（有名有姓的角色资料在 survivors.json 里） */
+export interface SurvivorProfile {
+    name: string;
+    title: string;
+    specialty: Specialty;
+    traits: string[];
+    battleUnit?: string;
+}
+
 export interface SurvivorState {
     id: string;
+    /** 只有流浪者有：他们不在 survivors.json 里 */
+    profile?: SurvivorProfile;
     /** 0～100 */
     mood: number;
     injured: boolean;
@@ -362,7 +448,7 @@ export interface ExpeditionState {
 /** 战报：保存了完整的战斗参数，界面可以用同一个种子重放整场战斗 */
 export interface BattleReport {
     id: number;
-    kind: 'expedition' | 'raid';
+    kind: 'expedition' | 'raid' | 'journey';
     title: string;
     at: number;
     result: BattleResult;
@@ -370,6 +456,8 @@ export interface BattleReport {
     loot: ResourceBag;
     lost: ResourceBag;
     injured: string[];
+    /** 战死的人（名字，死后资料可能已经删掉） */
+    dead?: string[];
     summary: string;
 }
 
@@ -407,6 +495,22 @@ export interface GameState {
     seasonId: string;
     /** 喘息值：守夜失败后尸潮减弱的等级数 */
     raidRelief: number;
+    /** 当前所在的营地地点 */
+    siteId: string;
+    /** 已经发现的营地地点 */
+    discoveredSites: string[];
+    lastRelocationAt: number | null;
+    /** 连续挨饿 / 挨冻的累计分钟数，吃饱穿暖后清零 */
+    hardshipMinutes: number;
+    /** 营地覆灭（所有人都死了）；覆灭后游戏停止 */
+    gameOver: GameOverInfo | null;
+}
+
+export interface GameOverInfo {
+    at: number;
+    /** 存活到第几天 */
+    day: number;
+    cause: string;
 }
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; reason: string };

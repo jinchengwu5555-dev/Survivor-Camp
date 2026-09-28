@@ -15,6 +15,10 @@ import { currentDay } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
 import { GameConfig, RESOURCE_IDS, ResourceBag } from '../core/types';
 import { validateConfig } from '../core/validate';
+import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
+import { survivorInfo } from '../core/roster';
+import { currentSite } from '../core/siteMods';
+import { relocationBlocker, relocationFoodCost, relocationTargets } from '../core/sites';
 import { expandConfig } from '../core/configExpand';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
@@ -48,6 +52,10 @@ const TABS_PER_ROW = 4;
 export class GameRoot extends Component {
     private camp: CampGame | null = null;
     private readonly storage = new CocosStorage();
+    private records: MetaRecords = loadRecords(this.storage);
+    /** 这一局的覆灭是否已经记进跨局记录（避免重复记录） */
+    private runRecorded = false;
+    private newBest = false;
     private readonly ads = createAdService();
     private content: Node | null = null;
     private cursorY = TOP;
@@ -101,7 +109,9 @@ export class GameRoot extends Component {
             }
             const now = Date.now();
             const saved = loadGame(this.storage, config);
-            this.camp = saved ? new CampGame(config, saved) : CampGame.newGame(config, now);
+            this.camp = saved ? new CampGame(config, saved) : this.newRun(config, now);
+            // 读到的是已经覆灭的存档：说明上次覆灭时已经记录过了
+            this.runRecorded = !!saved?.gameOver;
             this.camp.tick(now);
             this.render();
         });
@@ -109,6 +119,46 @@ export class GameRoot extends Component {
 
     private save(): void {
         if (this.camp) saveGame(this.storage, this.camp.state);
+    }
+
+    /** 开新的一局：已经解锁的成就带过去 */
+    private newRun(config: GameConfig, now: number): CampGame {
+        const camp = CampGame.newGame(config, now);
+        carryOverAchievements(this.records, camp.state, now);
+        return camp;
+    }
+
+    /** 营地刚覆灭：记进跨局记录（只记一次） */
+    private recordGameOver(camp: CampGame): void {
+        if (this.runRecorded || !camp.state.gameOver) return;
+        this.newBest = recordRun(camp.config, this.records, camp.state);
+        saveRecords(this.storage, this.records);
+        this.runRecorded = true;
+        this.save();
+    }
+
+    private renderGameOver(camp: CampGame): void {
+        const over = camp.state.gameOver!;
+        const r = this.records;
+        this.text('营地覆灭了', 40, LOSE);
+        this.text(`你们在末日里坚持了 ${over.day} 天`, 32, ACCENT);
+        if (this.newBest) this.text('🏆 新纪录！', 28, WIN);
+        this.text(over.cause, 22, DIM);
+        this.gap(12);
+        const stats = camp.state.stats;
+        this.text(`消灭丧尸 ${stats.zombies_killed ?? 0}   守住的最高尸潮 +${stats.best_raid_level ?? 0}   牺牲 ${stats.deaths ?? 0} 人   搬迁 ${stats.relocations ?? 0} 次`, 22);
+        this.gap(12);
+        this.text(`最长纪录 ${r.bestDays} 天 · 第 ${r.runs} 个营地 · 累计坚持 ${r.totalDays} 天`, 24, ACCENT);
+        for (const h of r.history.slice(0, 5)) this.text(`第 ${h.days} 天 · ${h.site} · ${h.cause}`, 20, DIM);
+        this.gap(20);
+        this.button('重新开始：建立新的营地', WIDTH, () => {
+            this.camp = this.newRun(camp.config, Date.now());
+            this.runRecorded = false;
+            this.newBest = false;
+            this.tab = 'camp';
+            this.save();
+            this.render();
+        });
     }
 
     // ---------- 界面 ----------
@@ -121,11 +171,16 @@ export class GameRoot extends Component {
         const now = Date.now();
         const { config, state } = camp;
 
+        if (state.gameOver) {
+            this.recordGameOver(camp);
+            this.renderGameOver(camp);
+            return;
+        }
         this.showNewAchievements(camp);
         const { season, dayInSeason } = seasonAt(config, state, now);
         this.text(`《末日营地》 第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天`, 34, ACCENT);
         this.text(
-            `士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}`,
+            `${currentSite(config, state)?.icon ?? ''}${currentSite(config, state)?.name ?? ''}   士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}   纪录 ${this.records.bestDays} 天`,
             22,
             DIM,
         );
@@ -157,6 +212,7 @@ export class GameRoot extends Component {
             this.renderTabs();
             if (this.tab === 'camp') {
                 this.renderBuildings(camp, now);
+                this.renderSites(camp, now);
                 this.renderLog(camp);
             } else if (this.tab === 'survivors') {
                 this.renderSurvivors(camp, now);
@@ -203,6 +259,25 @@ export class GameRoot extends Component {
             });
             this.gap(8);
         });
+    }
+
+    /** 当前营地地点 + 可以搬去的地点 */
+    private renderSites(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const here = currentSite(config, state);
+        if (here) this.text(`—— 当前营地：${here.icon}${here.name}　👍${here.pros}　👎${here.cons} ——`, 20, DIM);
+        for (const site of relocationTargets(config, state)) {
+            this.text(`${site.icon}${site.name}：${site.description}`, 20);
+            this.text(`👍 ${site.pros}　👎 ${site.cons}`, 20, DIM);
+            const blocker = relocationBlocker(config, state, site.id, now);
+            const label = `举营搬迁（路上 ${relocationFoodCost(config, state)} 食物，只能带走一半物资，路障要重建）`;
+            this.button(blocker ? `${label}（${blocker}）` : label, WIDTH, () => {
+                const res = camp.relocate(site.id, Date.now());
+                this.showToast(res.ok ? `搬到了${site.name}` : res.reason);
+                this.render();
+            }, LEFT, blocker !== null);
+            this.gap(8);
+        }
     }
 
     private renderBuildings(camp: CampGame, now: number): void {
@@ -324,7 +399,7 @@ export class GameRoot extends Component {
             const col = i % 2;
             if (col === 0) rowTop = this.cursorY;
             else this.cursorY = rowTop;
-            const def = config.survivors.find((d) => d.id === s.id);
+            const def = survivorInfo(config, state, s.id);
             const recover = s.recoverAt !== null ? formatTime(Math.max(0, Math.ceil((s.recoverAt - now) / 1000))) : '';
             const job = s.injured
                 ? `🩹${recover}`
@@ -354,7 +429,7 @@ export class GameRoot extends Component {
     private renderExplore(camp: CampGame, now: number): void {
         const { config, state } = camp;
         const squad = suggestSquad(config, state);
-        const names = squad.map((id) => config.survivors.find((d) => d.id === id)?.name ?? id);
+        const names = squad.map((id) => survivorInfo(config, state, id)?.name ?? id);
         this.text(`—— 探索（自动编队：${names.join('、') || '没有能出发的人'}）——`, 22, DIM);
         for (const loc of availableLocations(config, state, now)) {
             this.text(`${loc.name}  ⏱${loc.durationMinutes}分钟  战利品 ${formatBag(config, expeditionLoot(config, state, loc))}`, 24);

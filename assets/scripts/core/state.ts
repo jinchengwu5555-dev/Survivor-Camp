@@ -3,7 +3,7 @@
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const MAX_LOG = 50;
 
 export function createNewState(config: GameConfig, now: number, seed: number): GameState {
@@ -31,6 +31,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         nextId: 1,
         ...emptyV3Fields(config),
         raidRelief: 0,
+        ...emptyV5Fields(config),
     };
     syncBuildings(config, state);
     return state;
@@ -38,13 +39,6 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
 
 export function newSurvivorState(config: GameConfig, id: string): SurvivorState {
     return { id, mood: config.balance.newSurvivorMood, injured: false, recoverAt: null, assignment: null };
-}
-
-/** 受伤：离开岗位，一段时间后自然痊愈 */
-export function injureSurvivor(config: GameConfig, s: SurvivorState, now: number): void {
-    s.injured = true;
-    s.assignment = null;
-    s.recoverAt = now + config.balance.injuryRecoveryMinutes * 60_000;
 }
 
 export function healSurvivorState(s: SurvivorState): void {
@@ -72,6 +66,10 @@ export function migrateState(config: GameConfig, state: GameState, now: number):
         state.raidRelief = 0;
         state.version = 4;
     }
+    if (state.version === 4) {
+        Object.assign(state, emptyV5Fields(config));
+        state.version = 5;
+    }
     return state.version === SAVE_VERSION;
 }
 
@@ -85,6 +83,17 @@ function emptyV3Fields(config: GameConfig) {
         hunterXp: 0,
         raidCount: 0,
         seasonId: config.seasons[0]?.id ?? '',
+    };
+}
+
+/** 第 5 版存档新增的字段：营地地点、搬迁、饥寒计时、营地覆灭 */
+function emptyV5Fields(config: GameConfig) {
+    return {
+        siteId: config.balance.startingSite,
+        discoveredSites: [config.balance.startingSite],
+        lastRelocationAt: null,
+        hardshipMinutes: 0,
+        gameOver: null,
     };
 }
 

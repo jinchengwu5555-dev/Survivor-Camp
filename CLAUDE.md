@@ -8,6 +8,7 @@
 - 营地生活系统：`seasons.ts`（季节、过冬）、`crafting.ts`（工坊物品，战斗中用掉才扣）、`bounties.ts`（悬赏、猎人等级）、`achievements.ts`（成就）。成就和悬赏都读 `state.stats`，新增可统计的行为时用 `addStat` 记录，并在 README 的统计表里补上。
 - 建筑等级由 `core/configExpand.ts` 按 `scaling` 公式展开，**加载配置后必须先调用 `expandConfig()`**（GameRoot 和 tests/helpers 已经这样做）。`validate.ts` 会检查“仓库存满也不够升级”的死局。
 - 经济是无限流：改任何经济数值后跑 `npm run economy`（60 天模拟）和 `npm run balance`（含无尽尸潮表），对照 README “无限流经济”里的目标曲线。测试里的时间、数值要从配置读（`tests/helpers.ts` 的 `DAY`、`RAID`、`dayStart`），不要写死。
+- 生存竞赛：人会死（`roster.ts`），全死光就覆灭（`state.gameOver`，时间停止）；跨局记录在 `records.ts`（单独存档）。**查幸存者资料一律用 `survivorInfo()` / `survivorName()`**，流浪者不在 `survivors.json` 里。营地地点效果只从 `siteMods.ts` 读，搬迁在 `sites.ts`。
 - `CampGame` 的每个操作都会经过 `act()`，结束后统一检查剧情目标和成就；新增操作也要走 `act()`。
 - `platform/` 放微信 / Cocos 平台相关代码，`ui/` 放界面。
 - 提交前运行 `npm test` 和 `npm run typecheck`。

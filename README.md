@@ -24,6 +24,8 @@ assets/
     items.json            工坊物品：配方、需要的工坊等级、战斗中的技能
     bounties.json         悬赏：目标、需要的猎人等级、奖励
     achievements.json     成就：条件、奖励
+    sites.json            营地地点：效果、搬迁路上的伏击、到达事件
+    wanderers.json        随机流浪者的名字、职业、性格
     units.json            战斗角色：属性、外观、成长、技能
     skills.json           技能：触发条件、冷却、目标、效果
     statuses.json         状态：眩晕、中毒、护盾、增益……
@@ -35,6 +37,10 @@ assets/
       crafting.ts       ← 工坊合成、战斗物品
       bounties.ts       ← 悬赏板、猎人等级
       achievements.ts   ← 成就
+      roster.ts         ← 人员：幸存者资料、流浪者、死亡、营地覆灭
+      siteMods.ts       ← 当前营地地点的效果
+      sites.ts          ← 发现营地、举营搬迁
+      records.ts        ← 跨局记录（最长存活天数、成就）
     platform/           ← 微信平台适配：存档、激励视频广告
     ui/GameRoot.ts      ← 原型阶段的调试界面（纯文字 + 按钮）
 tests/                  ← 单元测试
@@ -111,6 +117,8 @@ npm test
   - `injure` / `heal`：受伤 / 治疗
   - `flag`：记下一个剧情标记
   - `triggerEvent`：接着触发另一个事件
+  - `addWanderer`：随机生成一个流浪者加入（可以写 `specialty` 指定专长）
+  - `discoverSite`：发现一个新的营地地点（`site` 写 sites.json 里的 id）
   - `stat`：累计一项统计数据（`amount` 默认 1），成就和悬赏都读统计。现有的：`diary_pages`（日记残页）、`quiet_moments`（宁静时刻）、`laughs`（欢笑）
 - 可用的条件（`conditions`）：`minDay`、`minSurvivors`、`flags`、`notFlags`、`hasSurvivors`。
 
@@ -232,6 +240,7 @@ npm run economy
 | `raids_won` / `raids_lost`、`blood_moons_won` | 守夜结果 |
 | `items_crafted`、`craft_<物品 id>`、`use_<物品 id>` | 制作 / 使用物品 |
 | `bounties_completed`、`treated`、`recruited`、`events_resolved`、`winters_survived` | 其他 |
+| `deaths`、`wanderers_joined`、`relocations`、`sites_discovered` | 人员和营地 |
 
 ## 无限流经济
 
@@ -279,4 +288,49 @@ npm run economy
 - 30 天里从不断粮。
 - 第 40 天左右开始守夜失败，喘息机制把尸潮稳定在玩家能勉强应付的水平。
 - 营地等级大约能扛住 2 倍于自身等级的尸潮加成（见 `npm run balance` 的“无尽尸潮”表）。
+
+## 生存竞赛：死亡、覆灭与换营地
+
+**游戏比的是存活天数。** 人会死，营地会覆灭，也可以举营搬迁。
+
+### 死亡
+
+| 怎么死 | 说明 | 配置 |
+|---|---|---|
+| 战斗中倒下 | 30% 概率牺牲，否则重伤。医务室每级降低 3%（最多 70%），卫生所营地再减半 | `deathChanceOnFall`、`deathReductionPerInfirmaryLevel` |
+| 守夜失败 | 尸群冲进营地，1 人被咬死（优先不是核心角色的人） | `raidBreachDeaths` |
+| 饥寒 | 连续挨饿或挨冻累计 8 小时死 1 人，吃饱穿暖后重新计时 | `hardshipDeathMinutes` |
+| 事件 | `removeSurvivor` 让人离开营地 | — |
+
+- 前 6 个游戏日（第一个真实日）是**新手保护期**，不会死人（`deathGraceDays`）。
+- 核心角色也会死。死者会记下剧情标记 `dead_<id>`，事件可以用 `notFlags` 避开已经死去的人。
+- **流浪者**会通过事件投奔，探索打赢时也有概率救回一个（地点的 `recruitChance`）。他们的名字、职业、性格随机生成（`wanderers.json`），用“幸存者”角色战斗，专长对口同样有加成。
+- 代码里查幸存者资料一律用 `survivorInfo()`（流浪者不在 `survivors.json` 里）。
+
+### 营地覆灭
+
+所有人都死了就是覆灭，时间停止，界面显示本局战绩和历史纪录，然后可以建立新的营地。**跨局保留**（单独存档 `doomsday-camp-records`）：最长存活天数、局数、累计天数、最近 10 局的战绩、已解锁的成就（新的一局不会重复发成就奖励）。
+
+### 换营地
+
+| 营地 | 怎么发现 | 优点 | 缺点 |
+|---|---|---|---|
+| 🏪 枫谷超市 | 开局 | 什么都有一点 | 没什么特别 |
+| ⛽ 镇口加油站 | 打下加油站便利店 | 零件 +40%，每分钟自产零件 | 安全值 -40% |
+| 🌾 河谷农场 | 打下五金店 | 食物 +60%，每分钟自产食物 | 安全值 -25%，食物坏得快 |
+| 🏥 镇卫生所 | 打下镇卫生所 | 药品翻倍，伤好得快一倍，战死概率减半 | 尸潮 +2 级 |
+| 🚓 警长办公室 | 打下警长办公室 | 安全值 +40%，战斗等级 +2 | 食物 -20% |
+| 🏞️ 北岭水坝 | 日记第 4 页 | 安全值翻倍，尸潮 -3 级，床位 +6，每分钟自产食物 | 木材 -30%，路上最危险 |
+
+搬迁的代价：
+- 每人路上吃 20 食物。
+- 所有能战斗的人都要打一场伏击战，倒下的人可能牺牲。
+- 只能带走一半物资（罐头、工坊物品全部带走）。
+- 路障等级按新地点的 `wallRetention` 保留，但不低于新地点自带的 `minWallLevel`。其他建筑保留。
+- 搬完 3 天内不能再搬。
+- 到达北岭水坝时，如果伊森还活着，会触发和莉莉的重逢。
+
+### 普通玩家能活多久（`npm run economy`）
+
+最低投入的模拟玩家：前 20 天没有人死亡；从第 21 天起守夜开始出现败仗，陆续有人牺牲；第 50 天后压力急剧上升，大约第 60～65 天覆灭。看广告加速、做物品、选对营地的玩家能活得更久。
 

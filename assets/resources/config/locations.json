@@ -6,7 +6,9 @@
         "durationMinutes": 3,
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
         "timeLimit": 60,
-        "loot": { "food": 50, "wood": 10 }
+        "loot": { "food": 50, "wood": 10 },
+        "discoversSite": "garage",
+        "recruitChance": 0.1
     },
     {
         "id": "hardware_store",
@@ -19,7 +21,9 @@
             { "unit": "armored", "spawnAt": 8 }, { "unit": "walker", "spawnAt": 8 }
         ],
         "timeLimit": 90,
-        "loot": { "wood": 60, "parts": 25 }
+        "loot": { "wood": 60, "parts": 25 },
+        "discoversSite": "farm",
+        "recruitChance": 0.15
     },
     {
         "id": "clinic",
@@ -32,7 +36,9 @@
             { "unit": "runner", "level": 3, "spawnAt": 10 }, { "unit": "frenzied", "level": 2, "spawnAt": 10 }, { "unit": "fatty", "level": 3, "spawnAt": 10 }
         ],
         "timeLimit": 90,
-        "loot": { "medicine": 20, "food": 20 }
+        "loot": { "medicine": 20, "food": 20 },
+        "discoversSite": "clinic",
+        "recruitChance": 0.2
     },
     {
         "id": "sheriff_office",
@@ -46,6 +52,8 @@
         ],
         "timeLimit": 120,
         "loot": { "parts": 40, "cans": 10 },
-        "firstClearEvent": "sheriff_photo"
+        "firstClearEvent": "sheriff_photo",
+        "discoversSite": "police",
+        "recruitChance": 0.25
     }
 ]

@@ -247,8 +247,11 @@ describe('老存档升级', () => {
         const storage = new MemoryStorage();
         storage.setItem('doomsday-camp-save', JSON.stringify(old));
         const loaded = loadGame(storage, game.config, T0)!;
-        expect(loaded.version).toBe(4);
+        expect(loaded.version).toBe(5);
         expect(loaded.raidRelief).toBe(0);
+        expect(loaded.siteId).toBe('supermarket');
+        expect(loaded.discoveredSites).toEqual(['supermarket']);
+        expect(loaded.gameOver).toBeNull();
         expect(loaded.expeditions).toEqual([]);
         expect(loaded.stats).toEqual({});
         expect(loaded.bounties).toEqual({ active: [], completed: [] });

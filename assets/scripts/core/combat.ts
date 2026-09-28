@@ -9,9 +9,11 @@ import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
 import { addResource, canAfford, currentLevelDef, grantResources, hqLevel, pay, safety, survivorBattleLevel } from './economy';
-import { conditionMet, queueEvent } from './events';
+import { conditionMet, discoverSite, queueEvent } from './events';
 import { nextRandom } from './rng';
-import { addLog, addStat, currentDay, hasFlag, healSurvivorState, injureSurvivor, setFlag } from './state';
+import { addLog, addStat, currentDay, hasFlag, healSurvivorState, setFlag } from './state';
+import { addWanderer, killRandom, resolveFallen, survivorInfo, survivorName } from './roster';
+import { siteRaidLevel } from './siteMods';
 import { consumeUsedItems, equipItems } from './crafting';
 import {
     ActionResult,
@@ -52,13 +54,27 @@ export function isOnExpedition(state: GameState, survivorId: string): boolean {
     return state.expeditions.some((e) => e.squad.includes(survivorId));
 }
 
-function battleUnitOf(config: GameConfig, survivorId: string): string | undefined {
-    return config.survivors.find((d) => d.id === survivorId)?.battleUnit;
+function battleUnitOf(config: GameConfig, state: GameState, survivorId: string): string | undefined {
+    return survivorInfo(config, state, survivorId)?.battleUnit;
+}
+
+/** 上阵成员：幸存者 id + 战斗角色 */
+export interface SquadMember {
+    id: string;
+    unit: string;
+}
+
+/** 把幸存者 id 列表转成上阵成员（没有战斗角色的人会被跳过） */
+export function squadOf(config: GameConfig, state: GameState, ids: string[]): SquadMember[] {
+    return ids.flatMap((id) => {
+        const unit = battleUnitOf(config, state, id);
+        return unit ? [{ id, unit }] : [];
+    });
 }
 
 /** 战斗力估算（生命 × 攻击），用来自动编队 */
-export function survivorPower(config: GameConfig, survivorId: string): number {
-    const unitId = battleUnitOf(config, survivorId);
+export function survivorPower(config: GameConfig, state: GameState, survivorId: string): number {
+    const unitId = battleUnitOf(config, state, survivorId);
     if (!unitId) return 0;
     const stats = statsAtLevel(battleRegistry(config).unit(unitId), 1);
     return Math.round((stats.maxHp * stats.atk) / 100);
@@ -66,7 +82,7 @@ export function survivorPower(config: GameConfig, survivorId: string): number {
 
 /** 能上阵的人：没受伤、不在外面探索、有战斗角色 */
 export function availableFighters(config: GameConfig, state: GameState): SurvivorState[] {
-    return state.survivors.filter((s) => !s.injured && !isOnExpedition(state, s.id) && !!battleUnitOf(config, s.id));
+    return state.survivors.filter((s) => !s.injured && !isOnExpedition(state, s.id) && !!battleUnitOf(config, state, s.id));
 }
 
 /**
@@ -75,13 +91,13 @@ export function availableFighters(config: GameConfig, state: GameState): Survivo
  */
 export function suggestSquad(config: GameConfig, state: GameState, size = config.balance.maxSquadSize): string[] {
     return availableFighters(config, state)
-        .sort((a, b) => Number(!!a.assignment) - Number(!!b.assignment) || survivorPower(config, b.id) - survivorPower(config, a.id))
+        .sort((a, b) => Number(!!a.assignment) - Number(!!b.assignment) || survivorPower(config, state, b.id) - survivorPower(config, state, a.id))
         .map((s) => s.id)
         .slice(0, size);
 }
 
-function squadSetups(config: GameConfig, squad: string[], level: number): UnitSetup[] {
-    return squad.map((id) => ({ unit: battleUnitOf(config, id)!, level, tag: id }));
+function squadSetups(squad: SquadMember[], level: number): UnitSetup[] {
+    return squad.map((m) => ({ unit: m.unit, level, tag: m.id }));
 }
 
 /** 所有敌人等级 +bonus */
@@ -111,22 +127,22 @@ export function raidDayBonus(config: GameConfig, state: GameState, now: number):
     return Math.max(0, Math.floor((currentDay(config, state, now) - startDay) / daysPerLevel) + 1);
 }
 
-/** 无尽尸潮：实际的等级加成 = 天数加成 - 喘息值 */
+/** 无尽尸潮：实际的等级加成 = 天数加成 - 喘息值 + 营地地点的加减 */
 export function raidEnemyBonus(config: GameConfig, state: GameState, now: number): number {
-    return Math.max(0, raidDayBonus(config, state, now) - state.raidRelief);
+    return Math.max(0, raidDayBonus(config, state, now) - state.raidRelief + siteRaidLevel(config, state));
 }
 
 /** 探索战斗的参数。单独拆出来，数值平衡报告也用它，保证模拟的和游戏里打的一样 */
 export function expeditionSetup(
     config: GameConfig,
     loc: LocationDef,
-    squad: string[],
+    squad: SquadMember[],
     level: number,
     seed: number,
     enemyBonus = 0,
 ): BattleSetup {
     return {
-        allies: squadSetups(config, squad, level),
+        allies: squadSetups(squad, level),
         enemies: levelUpEnemies(loc.enemies, enemyBonus),
         timeLimit: loc.timeLimit,
         timeoutResult: 'lose',
@@ -154,7 +170,7 @@ export function bloodMoonEnemies(enemies: UnitSetup[]): UnitSetup[] {
 export function raidSetup(
     config: GameConfig,
     raid: RaidDef,
-    defenders: string[],
+    defenders: SquadMember[],
     wallHp: number,
     level: number,
     seed: number,
@@ -162,7 +178,7 @@ export function raidSetup(
 ): BattleSetup {
     const dog: UnitSetup[] = options.dog ? [{ unit: DOG_UNIT, level, tag: DOG_UNIT }] : [];
     return {
-        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(config, defenders, level), ...dog],
+        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(defenders, level), ...dog],
         enemies: levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0),
         timeLimit: raid.timeLimit,
         timeoutResult: 'win',
@@ -277,7 +293,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const squad = ex.squad.filter((id) => state.survivors.some((s) => s.id === id));
     if (!loc || squad.length === 0) return;
 
-    const setup = expeditionSetup(config, loc, squad, survivorBattleLevel(config, state), ex.seed, expeditionEnemyBonus(config, state));
+    const setup = expeditionSetup(config, loc, squadOf(config, state, squad), survivorBattleLevel(config, state), ex.seed, expeditionEnemyBonus(config, state));
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     let loot: ResourceBag = {};
 
@@ -289,20 +305,25 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
             setFlag(state, clearedFlag(loc.id));
             if (loc.firstClearFlag) setFlag(state, loc.firstClearFlag);
             if (loc.firstClearEvent) queueEvent(state, loc.firstClearEvent);
+            if (loc.discoversSite) discoverSite(config, state, loc.discoversSite, at);
         }
     } else {
         addStat(state, 'expeditions_lost');
         for (const s of state.survivors) if (squad.includes(s.id)) s.mood = Math.max(0, s.mood - 5);
     }
-    injureFallen(config, state, fallen, at);
+    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${loc.name}牺牲了`);
+    let rescued = '';
+    if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) {
+        const w = addWanderer(config, state, at);
+        if (w) rescued = `还救回了流浪者${w.profile!.name}。`;
+    }
 
-    const names = fallen.map((id) => survivorName(config, id));
     const summary =
-        result === 'win'
-            ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}` + (names.length ? `，${names.join('、')}受了伤。` : '。')
-            : `探索${loc.name}失败，小队狼狈撤回` + (names.length ? `，${names.join('、')}受了伤。` : '。');
-    const fullSummary = summary + usedText(itemsUsed);
-    addReport(state, { kind: 'expedition', title: loc.name, at, result, setup, loot, lost: {}, injured: fallen, summary: fullSummary });
+        (result === 'win' ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。` : `探索${loc.name}失败，小队狼狈撤回。`) +
+        casualtyText(config, state, injured, dead) +
+        rescued +
+        usedText(itemsUsed);
+    addReport(state, { kind: 'expedition', title: loc.name, at, result, setup, loot, lost: {}, injured, dead, summary });
 }
 
 // ---------- 尸潮夜袭 ----------
@@ -331,7 +352,7 @@ export function maybeRunRaid(config: GameConfig, state: GameState, now: number):
 }
 
 export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): BattleReport {
-    const defenders = raidDefenders(config, state);
+    const defenders = squadOf(config, state, raidDefenders(config, state));
     const level = survivorBattleLevel(config, state);
     const bloodMoon = nextRaidIsBloodMoon(config, state);
     state.raidCount += 1;
@@ -340,7 +361,7 @@ export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at:
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state), options);
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     const survivorIds = new Set(state.survivors.map((s) => s.id));
-    const injured = fallen.filter((t) => survivorIds.has(t));
+    const fallenSurvivors = fallen.filter((t) => survivorIds.has(t));
     const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
     let loot: ResourceBag = {};
     const lost: ResourceBag = {};
@@ -368,21 +389,31 @@ export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at:
         }
         for (const s of state.survivors) s.mood = Math.max(0, s.mood - 10);
     }
-    injureFallen(config, state, injured, at);
+    const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了');
+    // 路障被冲破：尸群冲进营地，有人被咬死
+    if (result === 'lose') {
+        for (let i = 0; i < config.balance.raidBreachDeaths && state.survivors.length > 0; i++) {
+            const name = killRandom(config, state, at, '被冲进营地的尸群咬死了');
+            if (name) dead.push(name);
+        }
+    }
 
-    const names = injured.map((id) => survivorName(config, id));
-    const hurt = names.length ? `${names.join('、')}受了伤。` : '';
     const summary =
-        result === 'win'
-            ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}${hurt}`
-            : `【${title}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。${hurt}`;
-    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost, injured, summary: summary + usedText(itemsUsed) });
+        (result === 'win'
+            ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}`
+            : `【${title}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。`) +
+        casualtyText(config, state, injured, dead) +
+        usedText(itemsUsed);
+    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost, injured, dead, summary });
 }
 
 // ---------- 伤员 ----------
 
-function injureFallen(config: GameConfig, state: GameState, ids: string[], at: number): void {
-    for (const s of state.survivors) if (ids.includes(s.id)) injureSurvivor(config, s, at);
+/** 战报里的伤亡描述，比如“德里克受了伤。☠ 汉克牺牲了。” */
+export function casualtyText(config: GameConfig, state: GameState, injured: string[], dead: string[]): string {
+    const hurt = injured.length ? `${injured.map((id) => survivorName(config, state, id)).join('、')}受了伤。` : '';
+    const killed = dead.length ? `☠ ${dead.join('、')}牺牲了。` : '';
+    return hurt + killed;
 }
 
 /** 到时间的伤员自然痊愈 */
@@ -390,7 +421,7 @@ export function recoverInjuries(config: GameConfig, state: GameState, now: numbe
     for (const s of state.survivors) {
         if (s.injured && s.recoverAt !== null && s.recoverAt <= now) {
             healSurvivorState(s);
-            addLog(state, now, `${survivorName(config, s.id)}的伤好了。`);
+            addLog(state, now, `${survivorName(config, state, s.id)}的伤好了。`);
         }
     }
 }
@@ -405,7 +436,7 @@ export function treatSurvivor(config: GameConfig, state: GameState, survivorId: 
     pay(state, config.balance.healCost);
     healSurvivorState(s);
     addStat(state, 'treated');
-    addLog(state, now, `${survivorName(config, s.id)}在医务室接受了治疗。`);
+    addLog(state, now, `${survivorName(config, state, s.id)}在医务室接受了治疗。`);
     return { ok: true };
 }
 
@@ -417,10 +448,6 @@ function addReport(state: GameState, data: Omit<BattleReport, 'id'>): BattleRepo
     if (state.reports.length > MAX_REPORTS) state.reports.splice(0, state.reports.length - MAX_REPORTS);
     addLog(state, data.at, data.summary);
     return report;
-}
-
-function survivorName(config: GameConfig, id: string): string {
-    return config.survivors.find((s) => s.id === id)?.name ?? id;
 }
 
 export function formatBag(config: GameConfig, bag: ResourceBag): string {

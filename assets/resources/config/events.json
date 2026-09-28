@@ -269,7 +269,7 @@
         "once": true,
         "conditions": {"flags": ["diary_page_3", "cleared_sheriff_office"]},
         "choices": [
-            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "北岭水坝。伊森在地图上画了一个圈。", "effects": [ { "type": "flag", "flag": "diary_page_4" }, { "type": "mood", "target": "all", "amount": 5 }, { "type": "stat", "stat": "diary_pages" } ] } ] }
+            { "text": "交给伊森", "outcomes": [ { "weight": 1, "text": "北岭水坝。伊森在地图上画了一个圈。", "effects": [ { "type": "flag", "flag": "diary_page_4" }, { "type": "mood", "target": "all", "amount": 5 }, { "type": "stat", "stat": "diary_pages" }, { "type": "discoverSite", "site": "dam" } ] } ] }
         ]
     },
     {
@@ -363,6 +363,41 @@
         "choices": [
             { "text": "收养它（5 食物）", "cost": { "food": 5 }, "outcomes": [ { "weight": 1, "text": "托比给它起名叫“罐头”。当天夜里，它冲着黑暗叫了整整一刻钟——半小时后，尸群来了。", "effects": [ { "type": "flag", "flag": "has_dog" }, { "type": "mood", "target": "all", "amount": 8 } ] } ] },
             { "text": "我们自己都吃不饱", "outcomes": [ { "weight": 1, "text": "狗在外面蹲了一整夜，天亮时不见了。", "effects": [ { "type": "mood", "target": "toby", "amount": -8 } ] } ] }
+        ]
+    },
+    {
+        "id": "wanderer_knock",
+        "title": "路障外的流浪者",
+        "text": "一个背着破背包的人站在路障外，举着双手：“我没被咬，我只想要一口吃的，我什么活都能干。”",
+        "weight": 5,
+        "conditions": { "minDay": 2 },
+        "choices": [
+            { "text": "收留他", "outcomes": [ { "weight": 4, "text": "新来的人很快就融入了营地。", "effects": [ { "type": "addWanderer" } ] }, { "weight": 1, "text": "新来的人夜里偷了一袋粮食跑了。", "effects": [ { "type": "resource", "resource": "food", "amount": -30 }, { "type": "mood", "target": "all", "amount": -5 } ] } ] },
+            { "text": "给点吃的，让他走（10 食物）", "cost": { "food": 10 }, "outcomes": [ { "weight": 1, "text": "流浪者千恩万谢地走了。", "effects": [ { "type": "mood", "target": "all", "amount": 2 } ] } ] },
+            { "text": "“滚开。”", "outcomes": [ { "weight": 1, "text": "流浪者看了你一眼，消失在路的尽头。", "effects": [ { "type": "mood", "target": "all", "amount": -3 } ] } ] }
+        ]
+    },
+    {
+        "id": "survivor_convoy",
+        "title": "逃难的车队",
+        "text": "一辆冒着黑烟的面包车停在路障外，车上挤着好几个人：“求求你们，我们的营地没了。”",
+        "weight": 2,
+        "conditions": { "minDay": 8 },
+        "choices": [
+            { "text": "都收留下来（30 食物）", "cost": { "food": 30 }, "outcomes": [ { "weight": 1, "text": "营地一下子热闹了起来。", "effects": [ { "type": "addWanderer" }, { "type": "addWanderer" } ] } ] },
+            { "text": "只收一个能干活的", "outcomes": [ { "weight": 1, "text": "车队带着剩下的人开走了，车窗里的孩子一直盯着你。", "effects": [ { "type": "addWanderer" }, { "type": "mood", "target": "all", "amount": -5 } ] } ] },
+            { "text": "我们养不起", "outcomes": [ { "weight": 1, "text": "面包车调头离开了。", "effects": [ { "type": "mood", "target": "all", "amount": -8 } ] } ] }
+        ]
+    },
+    {
+        "id": "dam_arrival",
+        "title": "水坝上的对讲机",
+        "text": "水坝的铁门缓缓打开。人群里，一个戴着黄帽子的女孩愣了一秒，然后扔下对讲机，拼命地跑了过来——\n“爸爸！”",
+        "weight": 0,
+        "once": true,
+        "conditions": { "hasSurvivors": ["ethan"], "notFlags": ["lily_found"] },
+        "choices": [
+            { "text": "伊森跪下来，紧紧抱住她", "outcomes": [ { "weight": 1, "text": "那天晚上八点，莉莉第一次没有打开对讲机。（第二季 · 北岭水坝）", "effects": [ { "type": "addSurvivor", "survivor": "lily" }, { "type": "flag", "flag": "lily_found" }, { "type": "mood", "target": "all", "amount": 30 } ] } ] }
         ]
     }
 ]

@@ -1,0 +1,57 @@
+[
+    {
+        "id": "supermarket", "name": "枫谷超市", "icon": "🏪",
+        "description": "玛莎的超市。货架当路障，仓库当宿舍，一切从这里开始。",
+        "pros": "什么都有一点", "cons": "没什么特别",
+        "modifiers": {},
+        "wallRetention": 1, "minWallLevel": 1,
+        "journey": { "enemies": [ { "unit": "walker" }, { "unit": "walker" } ], "timeLimit": 60 }
+    },
+    {
+        "id": "garage", "name": "镇口加油站", "icon": "⛽",
+        "description": "托比以前上班的地方。油罐、汽修间、一整面墙的工具。",
+        "pros": "零件产量 +40%，汽修间每分钟自产零件", "cons": "只有一圈铁丝网，安全值 -40%",
+        "modifiers": { "production": { "parts": 1.4 }, "passive": { "parts": 0.2 }, "safety": 0.6 },
+        "wallRetention": 0.5, "minWallLevel": 1,
+        "journey": { "enemies": [ { "unit": "walker" }, { "unit": "runner" }, { "unit": "walker" } ], "timeLimit": 60 }
+    },
+    {
+        "id": "farm", "name": "河谷农场", "icon": "🌾",
+        "description": "镇外河谷里的一座农场。谷仓、果园、一口永远不会干的井。",
+        "pros": "食物产量 +60%，果园每分钟自产食物", "cons": "四面开阔，安全值 -25%；食物坏得更快",
+        "modifiers": { "production": { "food": 1.6 }, "passive": { "food": 0.5 }, "safety": 0.75, "spoil": 1.2 },
+        "wallRetention": 0.5, "minWallLevel": 2,
+        "journey": { "enemies": [ { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "runner", "level": 2 }, { "unit": "fatty" } ], "timeLimit": 75 }
+    },
+    {
+        "id": "clinic", "name": "镇卫生所", "icon": "🏥",
+        "description": "清理干净的卫生所。病床、药柜、手术灯，只是门外的感染者从来没少过。",
+        "pros": "药品产量翻倍，伤好得快一倍，战斗中倒下的死亡概率减半", "cons": "周围感染者多，尸潮 +2 级",
+        "modifiers": { "production": { "medicine": 2 }, "injuryRecovery": 0.5, "deathChance": 0.5, "raidLevel": 2 },
+        "wallRetention": 0.6, "minWallLevel": 2,
+        "journey": { "enemies": [ { "unit": "walker", "level": 3 }, { "unit": "fatty", "level": 2 }, { "unit": "runner", "level": 2 }, { "unit": "frenzied" } ], "timeLimit": 75 }
+    },
+    {
+        "id": "police", "name": "警长办公室", "icon": "🚓",
+        "description": "伊森工作了十五年的地方。铁门、高墙，还有一间军械库。",
+        "pros": "安全值 +40%，军械库让所有人战斗等级 +2", "cons": "没有地可种，食物产量 -20%",
+        "modifiers": { "safety": 1.4, "battleLevel": 2, "production": { "food": 0.8 } },
+        "wallRetention": 0.7, "minWallLevel": 4,
+        "journey": { "enemies": [ { "unit": "armored", "level": 2 }, { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "frenzied", "level": 2 } ], "timeLimit": 90 }
+    },
+    {
+        "id": "dam", "name": "北岭水坝", "icon": "🏞️",
+        "description": "辅导员日记里写的地方。几十米高的坝墙，水库里有鱼，已经有一群人住在这里。",
+        "pros": "坝墙让安全值翻倍，尸潮 -3 级，床位 +6，水库每分钟自产食物", "cons": "远离森林，木材产量 -30%；路上最危险",
+        "modifiers": { "safety": 2, "raidLevel": -3, "beds": 6, "passive": { "food": 1 }, "production": { "wood": 0.7 } },
+        "wallRetention": 0.8, "minWallLevel": 5,
+        "journey": {
+            "enemies": [
+                { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "runner", "level": 3 }, { "unit": "frenzied", "level": 2 },
+                { "unit": "armored", "level": 2, "spawnAt": 10 }, { "unit": "brute", "spawnAt": 20 }
+            ],
+            "timeLimit": 120
+        },
+        "arrivalEvent": "dam_arrival"
+    }
+]

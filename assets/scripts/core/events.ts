@@ -2,8 +2,10 @@
 
 import { Condition, Effect, GameConfig, GameEventDef, GameState } from './types';
 import { addResource, bedCount, canAfford, clampMood, pay } from './economy';
-import { addLog, addStat, currentDay, hasFlag, healSurvivorState, injureSurvivor, newSurvivorState, setFlag } from './state';
+import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
+import { addWanderer, checkGameOver, injureSurvivor, survivorInfo, survivorName as rosterName } from './roster';
+import { getSite } from './siteMods';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
     return config.events.find((e) => e.id === id);
@@ -69,18 +71,19 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
     return { ok: true, outcomeText: outcome.text };
 }
 
-function survivorName(config: GameConfig, id: string): string {
-    return config.survivors.find((s) => s.id === id)?.name ?? id;
-}
-
-function isHero(config: GameConfig, id: string): boolean {
-    return config.survivors.find((s) => s.id === id)?.isHero ?? false;
+/** 发现一个新的营地地点（探索、剧情事件都会用到） */
+export function discoverSite(config: GameConfig, state: GameState, siteId: string, now: number): void {
+    const site = getSite(config, siteId);
+    if (!site || state.discoveredSites.includes(siteId)) return;
+    state.discoveredSites.push(siteId);
+    addStat(state, 'sites_discovered');
+    addLog(state, now, `🗺 发现了新的营地地点：${site.icon}${site.name}。可以在“营地”页考虑搬过去。`);
 }
 
 /** 'random' 从非核心角色里随机挑一个 */
 function resolveSurvivor(config: GameConfig, state: GameState, target: string): string | null {
     if (target !== 'random') return state.survivors.some((s) => s.id === target) ? target : null;
-    const pool = state.survivors.filter((s) => !isHero(config, s.id));
+    const pool = state.survivors.filter((s) => !survivorInfo(config, state, s.id)?.isHero);
     return pickOne(state, pool)?.id ?? null;
 }
 
@@ -98,29 +101,38 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
         }
         case 'addSurvivor': {
             if (state.survivors.some((s) => s.id === effect.survivor)) break;
+            const name = config.survivors.find((d) => d.id === effect.survivor)?.name ?? effect.survivor;
             if (state.survivors.length >= bedCount(config, state)) {
-                addLog(state, now, `营地没有空床位了，${survivorName(config, effect.survivor)}只能离开。`);
+                addLog(state, now, `营地没有空床位了，${name}只能离开。`);
                 break;
             }
             state.survivors.push(newSurvivorState(config, effect.survivor));
             addStat(state, 'recruited');
-            addLog(state, now, `${survivorName(config, effect.survivor)}加入了营地。`);
+            addLog(state, now, `${name}加入了营地。`);
             break;
         }
+        case 'addWanderer':
+            addWanderer(config, state, now, effect.specialty);
+            break;
+        case 'discoverSite':
+            discoverSite(config, state, effect.site, now);
+            break;
         case 'removeSurvivor': {
             const id = resolveSurvivor(config, state, effect.survivor);
             if (!id) break;
+            const name = rosterName(config, state, id);
             state.survivors = state.survivors.filter((s) => s.id !== id);
             for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
-            addLog(state, now, `${survivorName(config, id)}离开了营地。`);
+            addLog(state, now, `${name}离开了营地。`);
+            checkGameOver(config, state, now, `${name}离开后，营地里一个人也不剩了`);
             break;
         }
         case 'injure': {
             const id = resolveSurvivor(config, state, effect.survivor);
             const s = state.survivors.find((x) => x.id === id);
             if (!s) break;
-            injureSurvivor(config, s, now);
-            addLog(state, now, `${survivorName(config, s.id)}受了重伤。`);
+            injureSurvivor(config, state, s, now);
+            addLog(state, now, `${rosterName(config, state, s.id)}受了重伤。`);
             break;
         }
         case 'heal':

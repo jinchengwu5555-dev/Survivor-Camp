@@ -27,6 +27,13 @@
     "adSpeedUp": { "minMinutes": 30, "fraction": 0.25 },
     "raidScaling": { "startDay": 24, "daysPerLevel": 6, "rewardGrowth": 1.15, "reliefPerLoss": 2, "reliefRecoverPerWin": 1 },
     "expeditionScaling": { "enemyLevelPerHq": 0.5, "lootGrowth": 1.25 },
+    "deathChanceOnFall": 0.3,
+    "deathReductionPerInfirmaryLevel": 0.03,
+    "deathGraceDays": 6,
+    "raidBreachDeaths": 1,
+    "hardshipDeathMinutes": 480,
+    "startingSite": "supermarket",
+    "relocation": { "carryRatio": 0.5, "foodPerSurvivor": 20, "cooldownDays": 3 },
     "hunterRanks": [
         { "name": "见习猎人", "xp": 0 },
         { "name": "猎人", "xp": 60 },
