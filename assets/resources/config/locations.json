@@ -135,5 +135,409 @@
         "loot": { "parts": 60, "cans": 12 },
         "drops": [ { "prop": "toolbox", "chance": 0.4 }, { "prop": "mystery_box", "chance": 0.4 }, { "prop": "walkie", "chance": 0.3 } ],
         "recruitChance": 0.2
+    },
+    {
+        "id": "church",
+        "name": "老教堂",
+        "icon": "⛪",
+        "map": {
+            "x": 95,
+            "y": -275
+        },
+        "description": "镇南的老教堂，钟楼还立着。逃难的人曾在这里避难，长椅被推倒堵住了门，里面也许还有他们留下的东西。",
+        "durationMinutes": 8,
+        "conditions": {
+            "minDay": 2,
+            "flags": [
+                "cleared_park"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "walker"
+            },
+            {
+                "unit": "walker"
+            },
+            {
+                "unit": "walker",
+                "level": 2
+            },
+            {
+                "unit": "walker",
+                "level": 2,
+                "spawnAt": 5
+            },
+            {
+                "unit": "runner",
+                "spawnAt": 10
+            }
+        ],
+        "timeLimit": 80,
+        "loot": {
+            "food": 45,
+            "medicine": 8
+        },
+        "drops": [
+            {
+                "prop": "chocolate",
+                "chance": 0.4
+            },
+            {
+                "prop": "coffee",
+                "chance": 0.3
+            },
+            {
+                "prop": "med_box",
+                "chance": 0.3
+            }
+        ],
+        "recruitChance": 0.25
+    },
+    {
+        "id": "river_dock",
+        "name": "河边码头",
+        "icon": "🎣",
+        "map": {
+            "x": -45,
+            "y": 125
+        },
+        "description": "小河上的木码头，拴着几条小船。河里有鱼，船屋里有渔具——还有几具泡得发胀的东西在水边晃。",
+        "durationMinutes": 9,
+        "conditions": {
+            "flags": [
+                "cleared_hardware_store"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "walker",
+                "level": 2
+            },
+            {
+                "unit": "walker",
+                "level": 2
+            },
+            {
+                "unit": "fatty",
+                "level": 2
+            },
+            {
+                "unit": "fatty",
+                "level": 2,
+                "spawnAt": 8
+            },
+            {
+                "unit": "walker",
+                "level": 2,
+                "spawnAt": 8
+            }
+        ],
+        "timeLimit": 90,
+        "loot": {
+            "food": 80,
+            "wood": 25
+        },
+        "drops": [
+            {
+                "prop": "ration_s",
+                "chance": 0.6
+            },
+            {
+                "prop": "lumber_s",
+                "chance": 0.3
+            }
+        ],
+        "recruitChance": 0.1
+    },
+    {
+        "id": "lumber_mill",
+        "name": "伐木场",
+        "icon": "🪓",
+        "map": {
+            "x": -300,
+            "y": -65
+        },
+        "description": "镇西的伐木场，堆满了还没运走的原木。电锯还挂在墙上，就是不知道那些穿着工作服的家伙还认不认得你。",
+        "durationMinutes": 16,
+        "conditions": {
+            "flags": [
+                "cleared_motel"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "walker",
+                "level": 3
+            },
+            {
+                "unit": "walker",
+                "level": 3
+            },
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "armored",
+                "level": 3,
+                "spawnAt": 8
+            },
+            {
+                "unit": "walker",
+                "level": 4,
+                "spawnAt": 8
+            },
+            {
+                "unit": "runner",
+                "level": 3,
+                "spawnAt": 12
+            },
+            {
+                "unit": "brute",
+                "spawnAt": 20
+            }
+        ],
+        "timeLimit": 100,
+        "loot": {
+            "wood": 160,
+            "parts": 20
+        },
+        "drops": [
+            {
+                "prop": "lumber_l",
+                "chance": 0.5
+            },
+            {
+                "prop": "wrench",
+                "chance": 0.4
+            }
+        ],
+        "recruitChance": 0.15
+    },
+    {
+        "id": "warehouse",
+        "name": "物流仓库",
+        "icon": "🏭",
+        "map": {
+            "x": 300,
+            "y": 55
+        },
+        "description": "镇东的物流仓库，一排排货架直通天花板。尸潮那天，一整个车队的司机都躲进了这里……然后就再也没出来。",
+        "durationMinutes": 22,
+        "conditions": {
+            "flags": [
+                "cleared_school"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "walker",
+                "level": 3
+            },
+            {
+                "unit": "walker",
+                "level": 3
+            },
+            {
+                "unit": "walker",
+                "level": 3
+            },
+            {
+                "unit": "runner",
+                "level": 3
+            },
+            {
+                "unit": "fatty",
+                "level": 3,
+                "spawnAt": 10
+            },
+            {
+                "unit": "walker",
+                "level": 3,
+                "spawnAt": 10
+            },
+            {
+                "unit": "brute",
+                "spawnAt": 22
+            }
+        ],
+        "timeLimit": 110,
+        "loot": {
+            "food": 100,
+            "parts": 45,
+            "cans": 6
+        },
+        "drops": [
+            {
+                "prop": "ration_l",
+                "chance": 0.5
+            },
+            {
+                "prop": "parts_l",
+                "chance": 0.4
+            },
+            {
+                "prop": "mystery_box",
+                "chance": 0.2
+            }
+        ],
+        "recruitChance": 0.2
+    },
+    {
+        "id": "highway_pileup",
+        "name": "高速连环车祸",
+        "icon": "🚗",
+        "map": {
+            "x": -150,
+            "y": -315
+        },
+        "description": "出镇的高速路上，几十辆车撞成一团，堵死了逃生的路。每辆车的后备箱都是一个小宝库，但车缝里也藏着东西。",
+        "durationMinutes": 18,
+        "conditions": {
+            "minDay": 5,
+            "flags": [
+                "cleared_motel"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "runner",
+                "level": 4
+            },
+            {
+                "unit": "runner",
+                "level": 4
+            },
+            {
+                "unit": "frenzied",
+                "level": 2,
+                "spawnAt": 5
+            },
+            {
+                "unit": "runner",
+                "level": 4,
+                "spawnAt": 10
+            },
+            {
+                "unit": "frenzied",
+                "level": 2,
+                "spawnAt": 10
+            },
+            {
+                "unit": "frenzied",
+                "level": 3,
+                "spawnAt": 15
+            },
+            {
+                "unit": "armored",
+                "level": 3,
+                "spawnAt": 15
+            }
+        ],
+        "timeLimit": 90,
+        "loot": {
+            "parts": 70,
+            "wood": 30,
+            "cans": 4
+        },
+        "drops": [
+            {
+                "prop": "parts_l",
+                "chance": 0.4
+            },
+            {
+                "prop": "toolbox",
+                "chance": 0.2
+            },
+            {
+                "prop": "walkie",
+                "chance": 0.2
+            }
+        ],
+        "recruitChance": 0.2
+    },
+    {
+        "id": "military_checkpoint",
+        "name": "军方检查站",
+        "icon": "🪖",
+        "map": {
+            "x": 285,
+            "y": -285
+        },
+        "description": "镇东南出口的军方临时检查站。沙袋、铁丝网、翻倒的军车——当兵的早就不在了，可他们的物资和变成丧尸的同僚都还在。",
+        "durationMinutes": 40,
+        "conditions": {
+            "flags": [
+                "cleared_warehouse",
+                "cleared_radio_tower"
+            ]
+        },
+        "enemies": [
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "armored",
+                "level": 3
+            },
+            {
+                "unit": "walker",
+                "level": 4
+            },
+            {
+                "unit": "walker",
+                "level": 4
+            },
+            {
+                "unit": "frenzied",
+                "level": 2,
+                "spawnAt": 15
+            },
+            {
+                "unit": "brute",
+                "level": 2,
+                "spawnAt": 25
+            },
+            {
+                "unit": "brute",
+                "level": 2,
+                "spawnAt": 35
+            }
+        ],
+        "timeLimit": 130,
+        "loot": {
+            "medicine": 40,
+            "parts": 80,
+            "cans": 20
+        },
+        "drops": [
+            {
+                "prop": "field_kit",
+                "chance": 0.5
+            },
+            {
+                "prop": "toolbox",
+                "chance": 0.5
+            },
+            {
+                "prop": "mystery_box",
+                "chance": 0.5
+            }
+        ],
+        "recruitChance": 0.3
     }
 ]

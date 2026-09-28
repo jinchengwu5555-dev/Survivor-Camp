@@ -66,7 +66,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.0 小镇地图';
+const GAME_VERSION = 'v1.1 天赋+栅栏+事件';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -95,6 +95,17 @@ const NAV_BOTTOM = -640;
 const INFO_TOP = MAP_BOTTOM - 8;
 /** 打开的面板（人员、探索……）占据状态栏和导航之间的区域 */
 const SHEET_TOP = HUD_BOTTOM - 10;
+/** 小镇地图的迷雾：格子大小、浅雾宽度、深雾里“未知区域”字样的位置 */
+const FOG_CELL = 24;
+const FOG_EDGE = 44;
+const FOG_LABELS = [
+    { x: -250, y: 250 },
+    { x: 230, y: 300 },
+    { x: 270, y: -40 },
+    { x: -270, y: -160 },
+    { x: 180, y: -300 },
+    { x: -40, y: 300 },
+];
 /** 探索页的小镇地图：占面板上部，下面是选中地点的详情 */
 const TOWN_HEIGHT = 730;
 const TOWN_CENTER_Y = SHEET_TOP - TOWN_HEIGHT / 2;
@@ -1484,18 +1495,31 @@ export class GameRoot extends Component {
             dashedLine(roads, from, loc.map!, cleared ? new Color(210, 180, 120, 230) : new Color(200, 200, 190, 140), cleared ? 5 : 3, cleared ? 0 : 10);
         }
 
-        // 战争迷雾：没亮起来的格子盖上一层深色
+        // 战争迷雾：没探索的地方完全看不见（深雾），边缘一圈半透明（浅雾），深雾里写着“未知区域”
         const pts = revealers(config, state, now);
+        const edge = pts.map((p) => ({ ...p, r: p.r + FOG_EDGE }));
         const fogNode = makeNode('Fog', map, MAP_WIDTH, TOWN_HEIGHT);
         const fog = fogNode.addComponent(Graphics);
-        fog.fillColor = new Color(10, 12, 10, 215);
-        const cell = 30;
-        for (let x = -MAP_WIDTH / 2; x < MAP_WIDTH / 2; x += cell) {
-            for (let y = -TOWN_HEIGHT / 2; y < TOWN_HEIGHT / 2; y += cell) {
-                if (!isRevealed(pts, x + cell / 2, y + cell / 2)) fog.rect(x, y, cell, cell);
+        const deep: [number, number][] = [];
+        const soft: [number, number][] = [];
+        for (let x = -MAP_WIDTH / 2; x < MAP_WIDTH / 2; x += FOG_CELL) {
+            for (let y = -TOWN_HEIGHT / 2; y < TOWN_HEIGHT / 2; y += FOG_CELL) {
+                const cx = x + FOG_CELL / 2;
+                const cy = y + FOG_CELL / 2;
+                if (isRevealed(pts, cx, cy)) continue;
+                (isRevealed(edge, cx, cy) ? soft : deep).push([x, y]);
             }
         }
+        fog.fillColor = new Color(14, 16, 18, 150);
+        for (const [x, y] of soft) fog.rect(x, y, FOG_CELL, FOG_CELL);
         fog.fill();
+        fog.fillColor = new Color(8, 9, 11, 248);
+        for (const [x, y] of deep) fog.rect(x, y, FOG_CELL, FOG_CELL);
+        fog.fill();
+        // 深雾里零星写几个“未知区域”（位置固定，不会每秒乱跳）
+        for (const spot of FOG_LABELS) {
+            if (!isRevealed(edge, spot.x, spot.y)) addLabel(fogNode, '🌫️ 未知区域', 18, new Color(120, 125, 130), { width: 160 }).node.setPosition(spot.x, spot.y);
+        }
 
         // 已经发现的其他营地地点（可以搬过去）
         for (const site of config.sites) {
