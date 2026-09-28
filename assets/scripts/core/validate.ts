@@ -2,6 +2,8 @@
 
 import { Effect, GameConfig, RESOURCE_IDS, ResourceBag } from './types';
 import { BattleRegistry } from './battle/registry';
+import { UnitSetup } from './battle/Battle';
+import { BARRICADE_UNIT } from './combat';
 
 export function validateConfig(config: GameConfig): string[] {
     const errors: string[] = [];
@@ -105,6 +107,29 @@ export function validateConfig(config: GameConfig): string[] {
     errors.push(...battle.validate());
     for (const s of config.survivors) {
         if (s.battleUnit && !battle.hasUnit(s.battleUnit)) errors.push(`幸存者 ${s.id}：未知战斗角色 ${s.battleUnit}`);
+    }
+    if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的路障`);
+    checkBag('治疗花费', config.balance.healCost);
+
+    const checkEnemies = (where: string, enemies: UnitSetup[]) => {
+        if (enemies.length === 0) errors.push(`${where}：没有敌人`);
+        for (const e of enemies) if (!battle.hasUnit(e.unit)) errors.push(`${where}：未知战斗角色 ${e.unit}`);
+    };
+    checkUnique('地点', config.locations.map((l) => l.id));
+    checkUnique('尸潮', config.raids.map((r) => r.id));
+    for (const loc of config.locations) {
+        const where = `地点 ${loc.id}`;
+        checkEnemies(where, loc.enemies);
+        checkBag(where, loc.loot);
+        if (loc.durationMinutes <= 0) errors.push(`${where}：durationMinutes 必须大于 0`);
+        if (loc.firstClearEvent) checkEvent(where, loc.firstClearEvent);
+        for (const id of loc.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+    }
+    for (const raid of config.raids) {
+        const where = `尸潮 ${raid.id}`;
+        checkEnemies(where, raid.enemies);
+        checkBag(where, raid.reward);
+        for (const id of raid.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
 
     return errors;

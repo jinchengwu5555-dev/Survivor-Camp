@@ -5,6 +5,7 @@ import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, finishUpgradeNow, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
 import { checkEpisode, startStory } from './story';
+import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, startExpedition, suggestSquad, treatSurvivor } from './combat';
 import { createNewState } from './state';
 
 export class CampGame {
@@ -37,6 +38,9 @@ export class CampGame {
         }
 
         s.lastTickAt = now;
+        recoverInjuries(this.config, s, now);
+        resolveExpeditions(this.config, s, now);
+        maybeRunRaid(this.config, s, now);
         checkEpisode(this.config, s, now);
         maybeTriggerRandomEvent(this.config, s, now);
     }
@@ -57,6 +61,25 @@ export class CampGame {
     assign(survivorId: string, buildingId: string | null, now: number): ActionResult {
         this.tick(now);
         return assignSurvivor(this.config, this.state, survivorId, buildingId);
+    }
+
+    /** 派小队去探索；不指定成员时自动挑战斗力最高的人 */
+    explore(locationId: string, now: number, squad?: string[]): ActionResult {
+        this.tick(now);
+        return startExpedition(this.config, this.state, locationId, squad ?? suggestSquad(this.config, this.state), now);
+    }
+
+    /** 看完激励视频后调用：小队立即返回 */
+    speedUpExpedition(expeditionId: number, now: number): ActionResult {
+        this.tick(now);
+        const result = finishExpeditionNow(this.config, this.state, expeditionId, now);
+        if (result.ok) checkEpisode(this.config, this.state, now);
+        return result;
+    }
+
+    treat(survivorId: string, now: number): ActionResult {
+        this.tick(now);
+        return treatSurvivor(this.config, this.state, survivorId, now);
     }
 
     get currentEvent(): GameEventDef | undefined {

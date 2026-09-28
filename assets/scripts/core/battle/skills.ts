@@ -1,7 +1,7 @@
 // 【模块 2】技能系统：触发条件、目标选择、冷却、效果执行。
 //
 // 触发方式：
-//   active      玩家手动点击释放（只看冷却，不看距离）
+//   active      玩家手动点击释放（只看冷却，不看距离）；autoCastActive 打开时按 auto 处理
 //   auto        冷却好了、条件满足时自动释放
 //   onAttack    普攻命中时按概率触发
 //   battleStart 开战时触发一次
@@ -19,8 +19,9 @@ export function enemiesOf(ctx: BattleContext, unit: BattleUnit): BattleUnit[] {
     return ctx.units.filter((u) => u.alive && u.side !== unit.side);
 }
 
+/** 队友（不含路障这类建筑） */
 export function alliesOf(ctx: BattleContext, unit: BattleUnit): BattleUnit[] {
-    return ctx.units.filter((u) => u.alive && u.side === unit.side);
+    return ctx.units.filter((u) => u.alive && u.side === unit.side && u.def.faction !== 'structure');
 }
 
 export function nearest(from: BattleUnit, candidates: BattleUnit[]): BattleUnit | undefined {
@@ -136,7 +137,8 @@ export function updateSkills(ctx: BattleContext, unit: BattleUnit, dt: number): 
     for (const s of unit.skills) {
         if (!unit.alive) return;
         const trig = s.def.trigger;
-        if (trig.type === 'auto' && s.cooldown <= 0 && autoCastReady(ctx, unit, s.def)) {
+        const auto = trig.type === 'auto' || (trig.type === 'active' && ctx.autoCastActive);
+        if (auto && s.cooldown <= 0 && autoCastReady(ctx, unit, s.def)) {
             castSkill(ctx, unit, s);
         } else if (trig.type === 'hpBelow' && !s.fired && unit.hp < unit.stats.maxHp * trig.ratio) {
             s.fired = true;

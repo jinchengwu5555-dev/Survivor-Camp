@@ -41,7 +41,8 @@ export interface UnitAppearance {
 export interface UnitDef {
     id: string;
     name: string;
-    faction: 'survivor' | 'zombie';
+    /** structure = 路障这类建筑：会挨打，但不会被队友治疗或加增益 */
+    faction: 'survivor' | 'zombie' | 'structure';
     appearance: UnitAppearance;
     stats: UnitStats;
     /** 每升一级增加的数值 */
@@ -150,6 +151,8 @@ export interface StatusInstance {
 
 export interface BattleUnit {
     uid: number;
+    /** 来自 UnitSetup.tag */
+    tag?: string;
     def: UnitDef;
     side: Side;
     level: number;
@@ -196,4 +199,6 @@ export interface BattleContext extends RngHolder {
     getUnit(uid: number | null): BattleUnit | undefined;
     /** 单位受到伤害后调用：处理死亡、低血量触发 */
     afterDamaged(target: BattleUnit, source: BattleUnit | null): void;
+    /** 为 true 时手动技能按自动技能处理 */
+    readonly autoCastActive: boolean;
 }

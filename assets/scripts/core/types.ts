@@ -1,7 +1,8 @@
 // 游戏核心类型定义。
 // core/ 目录下的代码不依赖 Cocos（不 import 'cc'），可以直接在 Node 里跑单元测试。
 
-import type { SkillDef, StatusDef, UnitDef } from './battle/types';
+import type { BattleResult, SkillDef, StatusDef, UnitDef } from './battle/types';
+import type { BattleSetup, UnitSetup } from './battle/Battle';
 
 export type ResourceId = 'food' | 'wood' | 'parts' | 'medicine' | 'cans';
 export const RESOURCE_IDS: ResourceId[] = ['food', 'wood', 'parts', 'medicine', 'cans'];
@@ -36,6 +37,20 @@ export interface BalanceDef {
     startingSurvivors: string[];
     /** 资源基础上限；不写的资源没有上限 */
     baseStorage: ResourceBag;
+    /** 探索小队最多几个人 */
+    maxSquadSize: number;
+    /** 受伤后自然恢复需要的分钟数 */
+    injuryRecoveryMinutes: number;
+    /** 在医务室立即治好一个伤员的花费 */
+    healCost: ResourceBag;
+    /** 尸潮夜袭的间隔（分钟） */
+    raidIntervalMinutes: number;
+    /** 守夜时最多几个人上阵 */
+    maxDefenders: number;
+    /** 路障在战斗中的生命 = 安全值 × 这个数 */
+    barricadeHpPerSafety: number;
+    /** 守夜失败时损失的资源比例 */
+    raidLossRatio: number;
 }
 
 export interface ResourceDef {
@@ -60,6 +75,8 @@ export interface BuildingLevelDef {
     beds?: number;
     /** 提供的安全值 */
     safety?: number;
+    /** 所有幸存者的战斗等级 +N */
+    battleLevel?: number;
 }
 
 export interface BuildingDef {
@@ -154,6 +171,36 @@ export interface EpisodeDef {
     endEvent?: string;
 }
 
+export interface LocationDef {
+    id: string;
+    name: string;
+    description: string;
+    /** 往返需要的分钟数 */
+    durationMinutes: number;
+    /** 满足条件才会出现在地图上 */
+    conditions?: Condition;
+    enemies: UnitSetup[];
+    /** 战斗时间上限（秒） */
+    timeLimit: number;
+    /** 打赢后的战利品 */
+    loot: ResourceBag;
+    /** 第一次打赢时记下的剧情标记 */
+    firstClearFlag?: string;
+    /** 第一次打赢时触发的事件 */
+    firstClearEvent?: string;
+}
+
+export interface RaidDef {
+    id: string;
+    name: string;
+    /** 满足条件的尸潮里，取列表中最后一个（越往后越难） */
+    conditions?: Condition;
+    enemies: UnitSetup[];
+    /** 撑过多少秒就算守住 */
+    timeLimit: number;
+    reward: ResourceBag;
+}
+
 export interface GameConfig {
     balance: BalanceDef;
     resources: ResourceDef[];
@@ -161,6 +208,8 @@ export interface GameConfig {
     survivors: SurvivorDef[];
     events: GameEventDef[];
     episodes: EpisodeDef[];
+    locations: LocationDef[];
+    raids: RaidDef[];
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -180,6 +229,8 @@ export interface SurvivorState {
     /** 0～100 */
     mood: number;
     injured: boolean;
+    /** 受伤后自然痊愈的时间戳；没受伤为 null */
+    recoverAt: number | null;
     /** 分配到的建筑 id；null = 空闲 */
     assignment: string | null;
 }
@@ -187,6 +238,29 @@ export interface SurvivorState {
 export interface LogEntry {
     at: number;
     text: string;
+}
+
+export interface ExpeditionState {
+    id: number;
+    location: string;
+    squad: string[];
+    startedAt: number;
+    returnsAt: number;
+    seed: number;
+}
+
+/** 战报：保存了完整的战斗参数，界面可以用同一个种子重放整场战斗 */
+export interface BattleReport {
+    id: number;
+    kind: 'expedition' | 'raid';
+    title: string;
+    at: number;
+    result: BattleResult;
+    setup: BattleSetup;
+    loot: ResourceBag;
+    lost: ResourceBag;
+    injured: string[];
+    summary: string;
 }
 
 export interface GameState {
@@ -205,6 +279,11 @@ export interface GameState {
     episodeIndex: number;
     rngState: number;
     log: LogEntry[];
+    expeditions: ExpeditionState[];
+    nextRaidAt: number;
+    reports: BattleReport[];
+    /** 自增 id，给远征和战报用 */
+    nextId: number;
 }
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; reason: string };

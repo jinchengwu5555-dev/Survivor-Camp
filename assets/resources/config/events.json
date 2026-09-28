@@ -28,27 +28,18 @@
         "weight": 0,
         "once": true,
         "choices": [
-            { "text": "我们还活着。先把日子过下去。", "outcomes": [ { "weight": 1, "text": "大家松了一口气。", "effects": [ { "type": "mood", "target": "all", "amount": 10 } ] } ] }
+            { "text": "我们还活着。先把日子过下去。", "outcomes": [ { "weight": 1, "text": "大家松了一口气。但伊森知道，尸群还会再来——从今晚起，每隔一段时间就要守一次夜。", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "flag", "flag": "raids_started" } ] } ] }
         ]
     },
     {
         "id": "s1e2_start",
         "title": "空货架",
-        "text": "玛莎清点完仓库，脸色很难看：“照这样吃下去，撑不过一个星期。”\n托比说他知道镇口加油站的便利店还有存货。",
+        "text": "玛莎清点完仓库，脸色很难看：“照这样吃下去，撑不过一个星期。”\n托比说镇口加油站的便利店还有存货，只是门口有几只行尸。",
         "weight": 0,
         "once": true,
         "choices": [
-            {
-                "text": "让托比骑车去一趟加油站",
-                "outcomes": [
-                    { "weight": 3, "text": "托比满载而归，还顺手带回一箱瓶装水。", "effects": [ { "type": "resource", "resource": "food", "amount": 40 } ] },
-                    { "weight": 1, "text": "托比带回了一些食物，但被行尸追了两条街，摔伤了腿。", "effects": [ { "type": "resource", "resource": "food", "amount": 20 }, { "type": "injure", "survivor": "toby" } ] }
-                ]
-            },
-            {
-                "text": "太冒险了，大家先省着吃",
-                "outcomes": [ { "weight": 1, "text": "每人每天只分到半个罐头，营地里怨声载道。", "effects": [ { "type": "mood", "target": "all", "amount": -8 } ] } ]
-            }
+            { "text": "组织一支搜刮队（去“探索”派出小队）", "outcomes": [ { "weight": 1, "text": "托比兴奋地搓着手：“我带路！”", "effects": [ { "type": "mood", "target": "toby", "amount": 5 } ] } ] },
+            { "text": "先让大家省着吃", "outcomes": [ { "weight": 1, "text": "每人每天只分到半个罐头，营地里怨声载道。但总得有人出去。", "effects": [ { "type": "mood", "target": "all", "amount": -8 } ] } ] }
         ]
     },
     {
@@ -216,6 +207,16 @@
         "choices": [
             { "text": "成交", "outcomes": [ { "weight": 1, "text": "老乔搬进了营地，还带来一车斗零件。", "effects": [ { "type": "addSurvivor", "survivor": "joe" }, { "type": "resource", "resource": "parts", "amount": 20 } ] } ] },
             { "text": "只换东西，不收人（20 食物）", "cost": { "food": 20 }, "outcomes": [ { "weight": 1, "text": "老乔留下一箱零件，开车走了。", "effects": [ { "type": "resource", "resource": "parts", "amount": 15 } ] } ] }
+        ]
+    },
+    {
+        "id": "sheriff_photo",
+        "title": "桌上的照片",
+        "text": "警长办公室一片狼藉，但伊森的办公桌还在。相框里，莉莉戴着夏令营的帽子冲镜头做鬼脸。\n相框背后压着一张夏令营的宣传单，上面画着去松林营地的路线。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            { "text": "把照片和地图收好", "outcomes": [ { "weight": 1, "text": "伊森把照片贴身放好。他第一次清楚地知道，该往哪里走了。", "effects": [ { "type": "flag", "flag": "found_camp_map" }, { "type": "mood", "target": "ethan", "amount": 20 } ] } ] }
         ]
     }
 ]

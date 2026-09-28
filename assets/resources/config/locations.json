@@ -1,0 +1,51 @@
+[
+    {
+        "id": "gas_station",
+        "name": "加油站便利店",
+        "description": "镇口的加油站，托比以前上班的地方。货架上应该还有些吃的。",
+        "durationMinutes": 3,
+        "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
+        "timeLimit": 60,
+        "loot": { "food": 50, "wood": 10 }
+    },
+    {
+        "id": "hardware_store",
+        "name": "五金店",
+        "description": "主街上的五金店，木板、钉子、工具应有尽有，但门口晃着不少行尸。",
+        "durationMinutes": 10,
+        "conditions": { "flags": ["cleared_gas_station"] },
+        "enemies": [
+            { "unit": "walker" }, { "unit": "walker" }, { "unit": "walker" }, { "unit": "runner" },
+            { "unit": "armored", "spawnAt": 8 }, { "unit": "walker", "spawnAt": 8 }
+        ],
+        "timeLimit": 90,
+        "loot": { "wood": 60, "parts": 25 }
+    },
+    {
+        "id": "clinic",
+        "name": "镇卫生所",
+        "description": "爆发那天挤满了病人。现在，那些病人还在里面。",
+        "durationMinutes": 20,
+        "conditions": { "flags": ["cleared_hardware_store"] },
+        "enemies": [
+            { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "fatty", "level": 3 }, { "unit": "walker", "level": 3 },
+            { "unit": "runner", "level": 3, "spawnAt": 10 }, { "unit": "runner", "level": 3, "spawnAt": 10 }, { "unit": "fatty", "level": 3, "spawnAt": 10 }
+        ],
+        "timeLimit": 90,
+        "loot": { "medicine": 20, "food": 20 }
+    },
+    {
+        "id": "sheriff_office",
+        "name": "警长办公室",
+        "description": "伊森工作了十五年的地方。军械柜里也许还有东西……还有他桌上的那张照片。",
+        "durationMinutes": 30,
+        "conditions": { "minDay": 3, "flags": ["cleared_clinic"] },
+        "enemies": [
+            { "unit": "armored", "level": 2 }, { "unit": "armored", "level": 2 }, { "unit": "walker", "level": 3 },
+            { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "brute", "spawnAt": 25 }
+        ],
+        "timeLimit": 120,
+        "loot": { "parts": 40, "cans": 10 },
+        "firstClearEvent": "sheriff_photo"
+    }
+]

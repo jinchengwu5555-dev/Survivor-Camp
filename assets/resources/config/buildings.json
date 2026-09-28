@@ -67,5 +67,16 @@
             { "cost": { "wood": 80 }, "buildSeconds": 90, "beds": 9 },
             { "cost": { "wood": 180, "parts": 40 }, "buildSeconds": 400, "requiresHq": 2, "beds": 12 }
         ]
+    },
+    {
+        "id": "training",
+        "name": "训练场",
+        "description": "停车场里用轮胎和木桩搭的训练场。所有幸存者的战斗等级提升。",
+        "startLevel": 0,
+        "levels": [
+            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "battleLevel": 1 },
+            { "cost": { "wood": 160, "parts": 50 }, "buildSeconds": 600, "requiresHq": 2, "battleLevel": 2 },
+            { "cost": { "wood": 260, "parts": 90 }, "buildSeconds": 1800, "requiresHq": 3, "battleLevel": 3 }
+        ]
     }
 ]

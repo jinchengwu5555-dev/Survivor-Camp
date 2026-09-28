@@ -4,7 +4,8 @@
 import { _decorator, Color, Component, game, Game, Graphics, JsonAsset, Label, Layers, Node, resources, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { upgradeBlocker } from '../core/buildings';
-import { bedCount, getBuildingDef, morale, productionPerMinute, foodConsumptionPerMinute, safety, storageCap } from '../core/economy';
+import { availableLocations, currentRaid, formatBag, isOnExpedition, suggestSquad } from '../core/combat';
+import { bedCount, getBuildingDef, morale, productionPerMinute, foodConsumptionPerMinute, safety, storageCap, survivorBattleLevel } from '../core/economy';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay } from '../core/state';
 import { currentEpisode, objectiveDone } from '../core/story';
@@ -23,6 +24,16 @@ const DIM = new Color(160, 165, 150);
 const ACCENT = new Color(255, 200, 90);
 const BUTTON = new Color(70, 110, 80);
 const BUTTON_DISABLED = new Color(80, 80, 80);
+const WIN = new Color(140, 220, 140);
+const LOSE = new Color(240, 120, 110);
+
+type Tab = 'camp' | 'survivors' | 'explore' | 'reports';
+const TABS: [Tab, string][] = [
+    ['camp', '营地'],
+    ['survivors', '幸存者'],
+    ['explore', '探索'],
+    ['reports', '战报'],
+];
 
 @ccclass('GameRoot')
 export class GameRoot extends Component {
@@ -35,6 +46,7 @@ export class GameRoot extends Component {
     private saveTimer = 0;
     private toast = '';
     private toastUntil = 0;
+    private tab: Tab = 'camp';
 
     onLoad(): void {
         this.drawBackground();
@@ -106,6 +118,11 @@ export class GameRoot extends Component {
             DIM,
         );
         this.text(this.resourceLine(config, camp), 22);
+        const raid = currentRaid(config, state, now);
+        if (raid) {
+            const left = Math.max(0, Math.ceil((state.nextRaidAt - now) / 1000));
+            this.text(`🧟 ${formatTime(left)} 后${raid.name}来袭（路障生命取决于安全值）`, 22, LOSE);
+        }
         this.gap(8);
 
         const ep = currentEpisode(config, state);
@@ -120,9 +137,17 @@ export class GameRoot extends Component {
         if (camp.currentEvent) {
             this.renderEvent(camp);
         } else {
-            this.renderBuildings(camp, now);
-            this.renderSurvivors(camp);
-            this.renderLog(camp);
+            this.renderTabs();
+            if (this.tab === 'camp') {
+                this.renderBuildings(camp, now);
+                this.renderLog(camp);
+            } else if (this.tab === 'survivors') {
+                this.renderSurvivors(camp, now);
+            } else if (this.tab === 'explore') {
+                this.renderExplore(camp, now);
+            } else {
+                this.renderReports(camp);
+            }
         }
 
         if (this.toast && now < this.toastUntil) this.text(this.toast, 22, ACCENT);
@@ -184,9 +209,22 @@ export class GameRoot extends Component {
         this.gap(8);
     }
 
-    private renderSurvivors(camp: CampGame): void {
+    private renderTabs(): void {
+        const w = (WIDTH - 30) / 4;
+        const top = this.cursorY;
+        TABS.forEach(([tab, name], i) => {
+            this.cursorY = top;
+            this.button(this.tab === tab ? `【${name}】` : name, w, () => {
+                this.tab = tab;
+                this.render();
+            }, LEFT + i * (w + 10), this.tab !== tab);
+        });
+        this.gap(14);
+    }
+
+    private renderSurvivors(camp: CampGame, now: number): void {
         const { config, state } = camp;
-        this.text('—— 幸存者（点击切换工作） ——', 22, DIM);
+        this.text(`—— 幸存者（点击切换工作；伤员点击用药品治疗）战斗等级 ${survivorBattleLevel(config, state)} ——`, 22, DIM);
         const jobs: (string | null)[] = [null, ...config.buildings.filter((b) => b.levels.some((l) => l.workerSlots)).map((b) => b.id)];
         const colWidth = (WIDTH - 10) / 2;
         let rowTop = this.cursorY;
@@ -195,8 +233,21 @@ export class GameRoot extends Component {
             if (col === 0) rowTop = this.cursorY;
             else this.cursorY = rowTop;
             const def = config.survivors.find((d) => d.id === s.id);
-            const job = s.injured ? '受伤' : s.assignment ? getBuildingDef(config, s.assignment)?.name : '空闲';
+            const recover = s.recoverAt !== null ? formatTime(Math.max(0, Math.ceil((s.recoverAt - now) / 1000))) : '';
+            const job = s.injured
+                ? `🩹${recover}`
+                : isOnExpedition(state, s.id)
+                  ? '探索中'
+                  : s.assignment
+                    ? getBuildingDef(config, s.assignment)?.name
+                    : '空闲';
             this.button(`${def?.name ?? s.id} 😊${Math.round(s.mood)} ${job}`, colWidth, () => {
+                if (s.injured) {
+                    const res = camp.treat(s.id, Date.now());
+                    this.showToast(res.ok ? `${def?.name}的伤治好了` : res.reason);
+                    this.render();
+                    return;
+                }
                 const start = jobs.indexOf(s.assignment);
                 for (let step = 1; step <= jobs.length; step++) {
                     if (camp.assign(s.id, jobs[(start + step) % jobs.length], Date.now()).ok) break;
@@ -206,6 +257,40 @@ export class GameRoot extends Component {
             if (col === 1 || i === state.survivors.length - 1) this.gap(6);
         });
         this.gap(6);
+    }
+
+    private renderExplore(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const squad = suggestSquad(config, state);
+        const names = squad.map((id) => config.survivors.find((d) => d.id === id)?.name ?? id);
+        this.text(`—— 探索（自动编队：${names.join('、') || '没有能出发的人'}）——`, 22, DIM);
+        for (const loc of availableLocations(config, state, now)) {
+            this.text(`${loc.name}  ⏱${loc.durationMinutes}分钟  战利品 ${formatBag(config, loc.loot)}`, 24);
+            this.text(loc.description, 20, DIM);
+            const ex = state.expeditions.find((e) => e.location === loc.id);
+            if (ex) {
+                const left = Math.max(0, Math.ceil((ex.returnsAt - now) / 1000));
+                this.button(`小队在外面，${formatTime(left)} 后返回 · 看广告立即返回`, WIDTH, () => this.speedUpExpedition(ex.id));
+            } else {
+                this.button('派出小队', WIDTH, () => {
+                    const res = camp.explore(loc.id, Date.now());
+                    this.showToast(res.ok ? `小队出发前往${loc.name}` : res.reason);
+                    this.render();
+                }, LEFT, squad.length === 0);
+            }
+            this.gap(12);
+        }
+    }
+
+    private renderReports(camp: CampGame): void {
+        const { reports } = camp.state;
+        this.text('—— 战报 ——', 22, DIM);
+        if (reports.length === 0) this.text('还没有战斗。', 22, DIM);
+        for (const r of reports.slice(-6).reverse()) {
+            const icon = r.kind === 'raid' ? '🧟' : '🎒';
+            this.text(`${icon} ${r.result === 'win' ? '胜利' : '失败'}  ${r.summary}`, 22, r.result === 'win' ? WIN : LOSE);
+            this.gap(6);
+        }
     }
 
     private renderLog(camp: CampGame): void {
@@ -218,6 +303,19 @@ export class GameRoot extends Component {
             if (!this.camp) return;
             this.showToast(watched ? '加速完成！' : '需要看完广告才能加速');
             if (watched) this.camp.speedUpUpgrade(buildingId, Date.now());
+            this.render();
+        });
+    }
+
+    private speedUpExpedition(expeditionId: number): void {
+        this.ads.showRewarded().then((watched) => {
+            if (!this.camp) return;
+            if (watched) {
+                this.camp.speedUpExpedition(expeditionId, Date.now());
+                this.tab = 'reports';
+            } else {
+                this.showToast('需要看完广告才能加速');
+            }
             this.render();
         });
     }
@@ -301,9 +399,11 @@ export class GameRoot extends Component {
 }
 
 function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    const mmss = `${m.toString().padStart(h > 0 ? 2 : 1, '0')}:${s.toString().padStart(2, '0')}`;
+    return h > 0 ? `${h}:${mmss}` : mmss;
 }
 
 function formatCost(config: GameConfig, cost: ResourceBag): string {

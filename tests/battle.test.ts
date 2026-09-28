@@ -35,7 +35,7 @@ describe('模块 1：角色配置', () => {
 
     it('生成的角色满血，技能带上初始冷却', () => {
         const u = createBattleUnit(registry(), 1, 'brute', 'enemy', 1, 10);
-        expect(u.hp).toBe(1400);
+        expect(u.hp).toBe(registry().unit('brute').stats.maxHp);
         expect(u.skills.map((s) => [s.def.id, s.cooldown])).toEqual([
             ['pounce', 3],
             ['frenzy', 0],
@@ -121,7 +121,7 @@ describe('模块 4：伤害结算管线', () => {
         applyStatus(b, enemy, 'shield', 5, 30, null);
         const r = b.damage.deal(b, { source: null, target: enemy, base: 50, damageType: 'true', canCrit: false });
         expect(r.absorbed).toBe(30);
-        expect(enemy.hp).toBe(160 - 20);
+        expect(enemy.hp).toBe(enemy.stats.maxHp - 20);
         expect(enemy.statuses).toHaveLength(0);
         expect(b.damage.compute(b, { source: ally, target: enemy, base: 0.2, damageType: 'true', canCrit: false }).amount).toBe(1);
     });
@@ -130,7 +130,7 @@ describe('模块 4：伤害结算管线', () => {
         const { b, ally, enemy } = duel('ethan', 'walker');
         b.damage.insertBefore('crit', { name: 'dodge', run: (c) => (c.cancelled = true) });
         b.damage.deal(b, { source: ally, target: enemy, base: 100, damageType: 'true', canCrit: false });
-        expect(enemy.hp).toBe(160);
+        expect(enemy.hp).toBe(enemy.stats.maxHp);
         expect(b.damage.stages.map((s) => s.name)).toEqual(['outgoing', 'dodge', 'crit', 'defense', 'incoming', 'round']);
     });
 
@@ -174,7 +174,7 @@ describe('模块 5：控制和状态', () => {
         for (let i = 0; i < 7; i++) applyStatus(b, enemy, 'poison', 5, 10, null);
         expect(enemy.statuses[0].stacks).toBe(5);
         for (let i = 0; i < 10; i++) b.step();
-        expect(enemy.hp).toBe(420 - 50);
+        expect(enemy.hp).toBe(enemy.stats.maxHp - 50);
     });
 
     it('生命、存活状态：血量归零即倒下，倒下后状态清空', () => {

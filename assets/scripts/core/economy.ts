@@ -50,6 +50,11 @@ export function safety(config: GameConfig, state: GameState): number {
     return sumOverBuildings(config, state, (lv) => lv.safety);
 }
 
+/** 幸存者的战斗等级 = 1 + 训练场等建筑提供的加成 */
+export function survivorBattleLevel(config: GameConfig, state: GameState): number {
+    return 1 + sumOverBuildings(config, state, (lv) => lv.battleLevel);
+}
+
 export function workerSlots(config: GameConfig, state: GameState, buildingId: string): number {
     return currentLevelDef(config, state, buildingId)?.workerSlots ?? 0;
 }

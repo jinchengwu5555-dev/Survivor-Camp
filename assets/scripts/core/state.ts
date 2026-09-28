@@ -3,7 +3,7 @@
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const MAX_LOG = 50;
 
 export function createNewState(config: GameConfig, now: number, seed: number): GameState {
@@ -25,13 +25,44 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         episodeIndex: 0,
         rngState: seed | 0,
         log: [],
+        expeditions: [],
+        nextRaidAt: now + b.raidIntervalMinutes * 60_000,
+        reports: [],
+        nextId: 1,
     };
     syncBuildings(config, state);
     return state;
 }
 
 export function newSurvivorState(config: GameConfig, id: string): SurvivorState {
-    return { id, mood: config.balance.newSurvivorMood, injured: false, assignment: null };
+    return { id, mood: config.balance.newSurvivorMood, injured: false, recoverAt: null, assignment: null };
+}
+
+/** 受伤：离开岗位，一段时间后自然痊愈 */
+export function injureSurvivor(config: GameConfig, s: SurvivorState, now: number): void {
+    s.injured = true;
+    s.assignment = null;
+    s.recoverAt = now + config.balance.injuryRecoveryMinutes * 60_000;
+}
+
+export function healSurvivorState(s: SurvivorState): void {
+    s.injured = false;
+    s.recoverAt = null;
+}
+
+/** 把老版本存档升级到当前版本；无法识别的版本返回 false */
+export function migrateState(config: GameConfig, state: GameState, now: number): boolean {
+    if (state.version === 1) {
+        state.expeditions = [];
+        state.nextRaidAt = now + config.balance.raidIntervalMinutes * 60_000;
+        state.reports = [];
+        state.nextId = 1;
+        for (const s of state.survivors) {
+            s.recoverAt = s.injured ? now + config.balance.injuryRecoveryMinutes * 60_000 : null;
+        }
+        state.version = 2;
+    }
+    return state.version === SAVE_VERSION;
 }
 
 /** 配置里新增的建筑补进老存档，已删除的建筑从存档移除 */

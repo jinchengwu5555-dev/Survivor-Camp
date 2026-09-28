@@ -11,5 +11,12 @@
     "buildQueueSize": 1,
     "startingResources": { "food": 60, "wood": 50, "parts": 10, "medicine": 5, "cans": 10 },
     "startingSurvivors": ["ethan", "martha", "derek", "sophie", "toby"],
-    "baseStorage": { "food": 200, "wood": 200, "parts": 100, "medicine": 50 }
+    "baseStorage": { "food": 200, "wood": 200, "parts": 100, "medicine": 50 },
+    "maxSquadSize": 4,
+    "injuryRecoveryMinutes": 30,
+    "healCost": { "medicine": 5 },
+    "raidIntervalMinutes": 120,
+    "maxDefenders": 5,
+    "barricadeHpPerSafety": 30,
+    "raidLossRatio": 0.2
 }

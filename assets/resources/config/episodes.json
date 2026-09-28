@@ -19,7 +19,7 @@
         "startEvent": "s1e2_start",
         "objectives": [
             { "type": "buildingLevel", "building": "kitchen", "level": 2, "text": "把厨房升到 2 级" },
-            { "type": "resource", "resource": "food", "amount": 100, "text": "储备 100 食物" }
+            { "type": "flag", "flag": "cleared_gas_station", "text": "搜刮加油站便利店" }
         ],
         "rewards": { "wood": 50 }
     },

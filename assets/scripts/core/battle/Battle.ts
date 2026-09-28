@@ -20,6 +20,10 @@ export interface UnitSetup {
     x?: number;
     /** 第几秒出场（用于尸潮分波） */
     spawnAt?: number;
+    /** 覆盖最大生命（比如路障的生命由营地安全值决定） */
+    maxHp?: number;
+    /** 调用方自定义标记，会原样放到 BattleUnit.tag 上（营地用它记录幸存者 id） */
+    tag?: string;
 }
 
 export interface BattleSetup {
@@ -30,6 +34,12 @@ export interface BattleSetup {
     /** 时间到了算赢还是输：探索战斗一般算输，守夜（撑过尸潮）算赢 */
     timeoutResult: 'win' | 'lose';
     seed: number;
+    /** 手动技能也自动释放（营地里自动结算的战斗没人点按钮） */
+    autoCastActive?: boolean;
+    /** 这些 tag 的我方单位倒下就算输（守夜时路障被拆 = 尸群冲进营地） */
+    mustSurvive?: string[];
+    /** 我方最远只能走到这个位置（守夜时大家守在路障后面） */
+    allyHoldLine?: number;
 }
 
 /** 我方从 x=0 往左排，敌方从 x=ENEMY_START 往右排 */
@@ -42,6 +52,7 @@ export class Battle implements BattleContext {
     units: BattleUnit[] = [];
     result: BattleResult = 'ongoing';
     readonly events: BattleEvent[] = [];
+    readonly autoCastActive: boolean;
     readonly damage: DamagePipeline;
 
     private nextUid = 1;
@@ -51,6 +62,7 @@ export class Battle implements BattleContext {
 
     constructor(readonly registry: BattleRegistry, readonly setup: BattleSetup, damage = new DamagePipeline()) {
         this.rngState = setup.seed | 0;
+        this.autoCastActive = setup.autoCastActive ?? false;
         this.damage = damage;
         setup.allies.forEach((s, i) => this.pending.push({ setup: s, side: 'ally', x: s.x ?? -i * SPACING }));
         setup.enemies.forEach((s, i) => this.pending.push({ setup: s, side: 'enemy', x: s.x ?? ENEMY_START + i * SPACING }));
@@ -135,7 +147,10 @@ export class Battle implements BattleContext {
         if (dist > range) {
             if (!canMove(u)) return;
             const dir = Math.sign(target.x - u.x);
-            u.x += dir * Math.min(effectiveMoveSpeed(u) * STEP, dist - range);
+            let x = u.x + dir * Math.min(effectiveMoveSpeed(u) * STEP, dist - range);
+            const line = this.setup.allyHoldLine;
+            if (u.side === 'ally' && line !== undefined) x = Math.min(x, Math.max(u.x, line));
+            u.x = x;
             return;
         }
         if (u.attackCooldown > 0) return;
@@ -170,6 +185,8 @@ export class Battle implements BattleContext {
             }
             this.pending.splice(i, 1);
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
+            if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
+            unit.tag = p.setup.tag;
             this.units.push(unit);
             this.emit({ t: this.time, type: 'spawn', unit: unit.uid });
             if (this.started) fireBattleStart(this, unit);
@@ -183,8 +200,9 @@ export class Battle implements BattleContext {
     private checkResult(): void {
         const alliesAlive = this.units.some((u) => u.alive && u.side === 'ally');
         const enemiesLeft = this.units.some((u) => u.alive && u.side === 'enemy') || this.pending.some((p) => p.side === 'enemy');
+        const keyLost = (this.setup.mustSurvive ?? []).some((tag) => this.units.some((u) => u.tag === tag && !u.alive));
         let result: BattleResult = 'ongoing';
-        if (!alliesAlive) result = 'lose';
+        if (!alliesAlive || keyLost) result = 'lose';
         else if (!enemiesLeft) result = 'win';
         else if (this.time >= this.setup.timeLimit - 1e-9) result = this.setup.timeoutResult;
         if (result !== 'ongoing') {

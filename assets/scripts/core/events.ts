@@ -2,7 +2,7 @@
 
 import { Condition, Effect, GameConfig, GameEventDef, GameState } from './types';
 import { addResource, bedCount, canAfford, clampMood, pay } from './economy';
-import { addLog, currentDay, hasFlag, newSurvivorState, setFlag } from './state';
+import { addLog, currentDay, hasFlag, healSurvivorState, injureSurvivor, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
@@ -109,6 +109,7 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             const id = resolveSurvivor(config, state, effect.survivor);
             if (!id) break;
             state.survivors = state.survivors.filter((s) => s.id !== id);
+            for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
             addLog(state, now, `${survivorName(config, id)}离开了营地。`);
             break;
         }
@@ -116,14 +117,13 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             const id = resolveSurvivor(config, state, effect.survivor);
             const s = state.survivors.find((x) => x.id === id);
             if (!s) break;
-            s.injured = true;
-            s.assignment = null;
+            injureSurvivor(config, s, now);
             addLog(state, now, `${survivorName(config, s.id)}受了重伤。`);
             break;
         }
         case 'heal':
             for (const s of state.survivors) {
-                if (effect.survivor === 'all' || s.id === effect.survivor) s.injured = false;
+                if (effect.survivor === 'all' || s.id === effect.survivor) healSurvivorState(s);
             }
             break;
         case 'flag':
