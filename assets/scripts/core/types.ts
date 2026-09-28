@@ -56,6 +56,10 @@ export interface BalanceDef {
     healCost: ResourceBag;
     /** 尸潮夜袭的间隔（分钟） */
     raidIntervalMinutes: number;
+    /** 第 1 集结束后，第一次尸潮多少分钟后就来（新手尽早体验守夜） */
+    firstRaidMinutes: number;
+    /** 守夜时花木材修补路障：每次回 hpRatio 的路障生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
+    raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
     /** 守夜时最多几个人上阵 */
     maxDefenders: number;
     /** 路障在战斗中的生命 = 安全值 × 这个数 */
@@ -519,6 +523,23 @@ export interface GameState {
     hardshipMinutes: number;
     /** 营地覆灭（所有人都死了）；覆灭后游戏停止 */
     gameOver: GameOverInfo | null;
+    /** 等玩家亲手守夜的尸潮；没有时为 null / 不存在（老存档） */
+    pendingRaid?: PendingRaid | null;
+}
+
+/** 已经来了、等玩家亲手守夜的尸潮（界面关掉再打开会从头再打一次） */
+export interface PendingRaid {
+    raid: string;
+    /** 尸潮来袭的时间（游戏时间） */
+    at: number;
+    title: string;
+    bloodMoon: boolean;
+    enemyBonus: number;
+    setup: BattleSetup;
+    /** 谁带了什么物品（物品 id） */
+    carried: { tag: string; item: string }[];
+    /** 这场战斗里修补了几次路障 */
+    repairs: number;
 }
 
 export interface GameOverInfo {

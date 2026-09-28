@@ -14,11 +14,12 @@ import { nextRandom } from './rng';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, setFlag } from './state';
 import { addWanderer, killRandom, resolveFallen, survivorInfo, survivorName } from './roster';
 import { siteRaidLevel } from './siteMods';
-import { consumeUsedItems, equipItems } from './crafting';
+import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
 import {
     ActionResult,
     BattleReport,
     ExpeditionState,
+    PendingRaid,
     GameConfig,
     GameState,
     LocationDef,
@@ -201,7 +202,13 @@ interface Outcome {
 function fight(config: GameConfig, state: GameState, setup: BattleSetup): Outcome {
     const carried = equipItems(config, state, setup.allies);
     const battle = new Battle(battleRegistry(config), setup);
-    const result = battle.runToEnd();
+    battle.runToEnd();
+    return battleOutcome(config, state, battle, carried);
+}
+
+/** 战斗结束后：记录击杀统计、扣掉用掉的物品，返回结果和倒下的人 */
+function battleOutcome(config: GameConfig, state: GameState, battle: Battle, carried: CarriedItem[]): Outcome {
+    const result = battle.result;
     for (const u of battle.side('enemy')) {
         if (u.alive) continue;
         addStat(state, `kill_${u.def.id}`);
@@ -352,16 +359,40 @@ export function barricadeHp(config: GameConfig, state: GameState): number {
     return Math.max(1, safety(config, state) * config.balance.barricadeHpPerSafety);
 }
 
-/** 到时间就结算一次尸潮。离线期间最多结算一次，避免回来发现营地被连打好几轮 */
-export function maybeRunRaid(config: GameConfig, state: GameState, now: number): void {
-    if (now < state.nextRaidAt) return;
+/**
+ * 到时间就来一次尸潮。live = true 时（玩家在看界面）不自动结算，而是放进 state.pendingRaid，
+ * 由界面用 LiveRaid 让玩家亲手守夜；否则（测试、模拟）直接自动结算。
+ */
+export function maybeRunRaid(config: GameConfig, state: GameState, now: number, live = false): void {
+    if (state.pendingRaid || now < state.nextRaidAt) return;
     const at = state.nextRaidAt;
     state.nextRaidAt = now + config.balance.raidIntervalMinutes * 60_000;
     const raid = currentRaid(config, state, now);
-    if (raid) runRaid(config, state, raid, at);
+    if (!raid) return;
+    if (live) state.pendingRaid = prepareRaid(config, state, raid, at);
+    else runRaid(config, state, raid, at);
 }
 
+/**
+ * 第一次尸潮提前：第 1 集结束（raids_started）后很快就来一次，让新玩家早点体验守夜。
+ * 之后按正常间隔。
+ */
+export function scheduleFirstRaid(config: GameConfig, state: GameState, now: number): void {
+    if (state.raidCount > 0 || state.pendingRaid || !hasFlag(state, 'raids_started') || hasFlag(state, 'first_raid_scheduled')) return;
+    setFlag(state, 'first_raid_scheduled');
+    state.nextRaidAt = Math.min(state.nextRaidAt, now + config.balance.firstRaidMinutes * 60_000);
+}
+
+/** 自动结算一次尸潮（测试、数值模拟、离开界面时用） */
 export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): BattleReport {
+    const pending = prepareRaid(config, state, raid, at);
+    const battle = new Battle(battleRegistry(config), pending.setup);
+    battle.runToEnd();
+    return finishRaid(config, state, pending, battle);
+}
+
+/** 准备一次尸潮：选人、带物品、算加成、生成战斗参数。之后可以自动结算，也可以交给玩家亲手打 */
+export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): PendingRaid {
     const defenders = squadOf(config, state, raidDefenders(config, state));
     const level = survivorBattleLevel(config, state);
     const bloodMoon = nextRaidIsBloodMoon(config, state);
@@ -369,10 +400,23 @@ export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at:
     const enemyBonus = raidEnemyBonus(config, state, at);
     const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state), options);
-    const { result, fallen, itemsUsed } = fight(config, state, setup);
+    const carried = equipItems(config, state, setup.allies).map((c) => ({ tag: c.tag, item: c.item.id }));
+    const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
+    return { raid: raid.id, at, title, bloodMoon, enemyBonus, setup, carried, repairs: 0 };
+}
+
+/** 守夜结束：发奖励或扣物资、处理伤亡、写战报。battle 必须已经分出胜负 */
+export function finishRaid(config: GameConfig, state: GameState, pending: PendingRaid, battle: Battle): BattleReport {
+    const raid = config.raids.find((r) => r.id === pending.raid) ?? config.raids[0];
+    const { at, title, bloodMoon, enemyBonus } = pending;
+    const carried: CarriedItem[] = pending.carried.flatMap((c) => {
+        const item = config.items.find((x) => x.id === c.item);
+        return item ? [{ tag: c.tag, item }] : [];
+    });
+    const { result, fallen, itemsUsed } = battleOutcome(config, state, battle, carried);
+    const setup: BattleSetup = { ...pending.setup, inputs: [...battle.inputs] };
     const survivorIds = new Set(state.survivors.map((s) => s.id));
     const fallenSurvivors = fallen.filter((t) => survivorIds.has(t));
-    const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
     let loot: ResourceBag = {};
     const lost: ResourceBag = {};
 

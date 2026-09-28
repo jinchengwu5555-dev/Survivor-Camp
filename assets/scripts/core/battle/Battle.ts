@@ -42,7 +42,17 @@ export interface BattleSetup {
     mustSurvive?: string[];
     /** 我方最远只能走到这个位置（守夜时大家守在路障后面） */
     allyHoldLine?: number;
+    /** 玩家的操作记录：重放战报时按时间点原样执行（手动守夜的战报靠它完整重放） */
+    inputs?: BattleInput[];
 }
+
+/**
+ * 玩家在战斗中的一次操作，t 是操作时的战斗时间（在下一帧开始前执行）。
+ *   cast：让 uid 这个单位放手动技能
+ *   auto：切换“手动技能自动释放”
+ *   heal：给 tag 这个单位回 amount 点血（比如花木材修补路障）
+ */
+export type BattleInput = { t: number; cast: number } | { t: number; auto: boolean } | { t: number; heal: string; amount: number };
 
 /** 我方从 x=0 往左排，敌方从 x=ENEMY_START 往右排 */
 const ENEMY_START = 10;
@@ -54,18 +64,23 @@ export class Battle implements BattleContext {
     units: BattleUnit[] = [];
     result: BattleResult = 'ongoing';
     readonly events: BattleEvent[] = [];
-    readonly autoCastActive: boolean;
+    autoCastActive: boolean;
+    /** 这场战斗里玩家的操作（成功的才记录），存进战报后可以完整重放 */
+    readonly inputs: BattleInput[] = [];
     readonly damage: DamagePipeline;
 
     private nextUid = 1;
     private started = false;
     private accumulator = 0;
     private readonly pending: { setup: UnitSetup; side: Side; x: number }[] = [];
+    /** 重放用：还没执行的操作 */
+    private readonly scripted: BattleInput[];
 
     constructor(readonly registry: BattleRegistry, readonly setup: BattleSetup, damage = new DamagePipeline()) {
         this.rngState = setup.seed | 0;
         this.autoCastActive = setup.autoCastActive ?? false;
         this.damage = damage;
+        this.scripted = [...(setup.inputs ?? [])].sort((a, b) => a.t - b.t);
         setup.allies.forEach((s, i) => this.pending.push({ setup: s, side: 'ally', x: s.x ?? -i * SPACING }));
         setup.enemies.forEach((s, i) => this.pending.push({ setup: s, side: 'enemy', x: s.x ?? ENEMY_START + i * SPACING }));
         this.spawnDue();
@@ -111,7 +126,29 @@ export class Battle implements BattleContext {
         if (this.result !== 'ongoing') return '战斗已结束';
         const unit = this.getUnit(uid);
         if (!unit || unit.side !== 'ally') return '找不到这个角色';
-        return castActive(this, unit);
+        const error = castActive(this, unit);
+        if (error === null) this.inputs.push({ t: this.time, cast: uid });
+        return error;
+    }
+
+    /** 切换“手动技能自动释放” */
+    setAutoCast(on: boolean): void {
+        if (this.autoCastActive === on || this.result !== 'ongoing') return;
+        this.autoCastActive = on;
+        this.inputs.push({ t: this.time, auto: on });
+    }
+
+    /** 给 tag 这个我方单位回血（修补路障）；返回 null 表示成功 */
+    healTagged(tag: string, amount: number): string | null {
+        if (this.result !== 'ongoing') return '战斗已结束';
+        const unit = this.units.find((u) => u.tag === tag && u.side === 'ally');
+        if (!unit || !unit.alive) return '已经被摧毁了';
+        const healed = Math.min(amount, unit.stats.maxHp - unit.hp);
+        if (healed <= 0) return '不需要修补';
+        unit.hp += healed;
+        this.emit({ t: this.time, type: 'heal', source: unit.uid, target: unit.uid, amount: healed });
+        this.inputs.push({ t: this.time, heal: tag, amount });
+        return null;
     }
 
     side(side: Side): BattleUnit[] {
@@ -122,6 +159,7 @@ export class Battle implements BattleContext {
 
     step(): void {
         if (this.result !== 'ongoing') return;
+        while (this.scripted.length > 0 && this.scripted[0].t <= this.time + 1e-9) this.replayInput(this.scripted.shift()!);
         this.time = round(this.time + STEP);
         this.spawnDue();
         if (!this.started) {
@@ -136,6 +174,12 @@ export class Battle implements BattleContext {
             this.act(u);
         }
         this.checkResult();
+    }
+
+    private replayInput(input: BattleInput): void {
+        if ('cast' in input) this.useSkill(input.cast);
+        else if ('auto' in input) this.setAutoCast(input.auto);
+        else this.healTagged(input.heal, input.amount);
     }
 
     private act(u: BattleUnit): void {

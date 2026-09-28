@@ -1,11 +1,12 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, GameConfig, GameEventDef, GameState, ResourceBag } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, ResourceBag } from './types';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
 import { checkEpisode, startStory } from './story';
-import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, startExpedition, suggestSquad, treatSurvivor } from './combat';
+import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, scheduleFirstRaid, startExpedition, suggestSquad, treatSurvivor } from './combat';
+import { LiveRaid } from './liveRaid';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
@@ -19,6 +20,12 @@ import { grantOfflineReward } from './offline';
 export class CampGame {
     /** 新解锁、还没在界面上提示过的成就；界面取走后自己清空 */
     readonly newAchievements: AchievementDef[] = [];
+    /**
+     * 界面打开时设为 true：尸潮来了不自动结算，放进 state.pendingRaid 等玩家亲手守夜（见 liveRaid.ts）。
+     * 测试和数值模拟保持 false，照旧自动结算。
+     */
+    liveRaids = false;
+    private live: LiveRaid | null = null;
 
     constructor(readonly config: GameConfig, public state: GameState) {}
 
@@ -69,7 +76,9 @@ export class CampGame {
         checkSeasonChange(this.config, s, now);
         recoverInjuries(this.config, s, now);
         resolveExpeditions(this.config, s, now);
-        maybeRunRaid(this.config, s, now);
+        // 没有界面在看（比如模拟器），留着的尸潮直接自动打完
+        if (!this.liveRaids && s.pendingRaid) new LiveRaid(this.config, s, s.pendingRaid).finish();
+        maybeRunRaid(this.config, s, now, this.liveRaids);
         maybeTriggerRandomEvent(this.config, s, now);
         this.settle(now);
     }
@@ -77,6 +86,7 @@ export class CampGame {
     /** 每个操作之后都检查一次剧情目标和成就 */
     private settle(now: number): void {
         checkEpisode(this.config, this.state, now);
+        scheduleFirstRaid(this.config, this.state, now);
         this.newAchievements.push(...checkAchievements(this.config, this.state, now));
     }
 
@@ -136,6 +146,27 @@ export class CampGame {
 
     claimBounty(bountyId: string, now: number): ActionResult {
         return this.act(now, () => claimBounty(this.config, this.state, bountyId, now));
+    }
+
+    /** 有尸潮在等玩家守夜时，返回这场战斗（同一场只创建一次）；界面每帧推进它 */
+    liveRaid(): LiveRaid | null {
+        const pending = this.state.pendingRaid;
+        if (!pending || this.state.gameOver) return null;
+        if (!this.live || this.live.pending !== pending) this.live = new LiveRaid(this.config, this.state, pending);
+        return this.live;
+    }
+
+    /** 守夜打完（或跳过）后调用：结算奖励、伤亡，写战报 */
+    finishLiveRaid(now: number): BattleReport | null {
+        const live = this.liveRaid();
+        if (!live) return null;
+        let report: BattleReport | null = null;
+        this.act(now, () => {
+            report = live.finish();
+            return { ok: true } as ActionResult;
+        });
+        this.live = null;
+        return report;
     }
 
     get currentEvent(): GameEventDef | undefined {

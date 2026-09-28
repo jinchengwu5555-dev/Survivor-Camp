@@ -18,6 +18,8 @@
     "injuryRecoveryMinutes": 40,
     "healCost": { "medicine": 5 },
     "raidIntervalMinutes": 80,
+    "firstRaidMinutes": 8,
+    "raidRepair": { "hpRatio": 0.2, "woodPerHp": 0.1, "minWood": 10, "maxUses": 3 },
     "maxDefenders": 5,
     "barricadeHpPerSafety": 30,
     "raidLossRatio": 0.1,
