@@ -38,6 +38,10 @@ export const HOUR = 60 * MIN;
 export const DAY = balance.dayLengthMinutes * MIN;
 /** 尸潮间隔（毫秒） */
 export const RAID = balance.raidIntervalMinutes * MIN;
+/** 随机事件间隔（毫秒） */
+export const EVENT = balance.eventIntervalMinutes * MIN;
+/** 伤员自然痊愈时间（毫秒） */
+export const INJURY = balance.injuryRecoveryMinutes * MIN;
 /** 第 n 天（从 1 开始）的开头 */
 export const dayStart = (n: number) => T0 + (n - 1) * DAY;
 

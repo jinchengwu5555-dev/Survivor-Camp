@@ -6,7 +6,7 @@ import { applyEffect } from '../assets/scripts/core/events';
 import { carryOverAchievements, emptyRecords, recordRun } from '../assets/scripts/core/records';
 import { addWanderer, applyHardship, deathChance, killSurvivor, resolveFallen, survivorInfo } from '../assets/scripts/core/roster';
 import { relocationBlocker } from '../assets/scripts/core/sites';
-import { dayStart, loadConfig, MIN, T0 } from './helpers';
+import { DAY, dayStart, loadConfig, MIN, T0 } from './helpers';
 
 function newGame() {
     const game = CampGame.newGame(loadConfig(), T0, 42);
@@ -79,24 +79,25 @@ describe('死亡', () => {
         expect(state.survivors).toHaveLength(4);
     });
 
-    it('连续挨饿 8 小时死一个人，吃饱就重新计时', () => {
+    it('连续挨饿 hardshipDeathMinutes 分钟死一个人，吃饱就重新计时', () => {
         const game = newGame();
         const { config, state } = game;
-        applyHardship(config, state, 300, LATER);
+        const limit = config.balance.hardshipDeathMinutes;
+        applyHardship(config, state, limit - 10, LATER);
         applyHardship(config, state, 0, LATER);
-        applyHardship(config, state, 300, LATER);
+        applyHardship(config, state, limit - 10, LATER);
         expect(state.survivors).toHaveLength(5);
-        applyHardship(config, state, 200, LATER);
+        applyHardship(config, state, 30, LATER);
         expect(state.survivors).toHaveLength(4);
         expect(state.hardshipMinutes).toBe(20);
     });
 
     it('没有粮食时真的会饿死人', () => {
         const game = newGame();
-        const { state } = game;
-        state.createdAt = T0 - 8 * 4 * 60 * MIN; // 已经过了新手保护期
+        const { config, state } = game;
+        state.createdAt = T0 - (config.balance.deathGraceDays + 2) * DAY; // 已经过了新手保护期
         state.resources.food = 0;
-        game.tick(T0 + 9 * 60 * MIN);
+        game.tick(T0 + (config.balance.hardshipDeathMinutes + 60) * MIN);
         expect(state.survivors.length).toBeLessThan(5);
     });
 });

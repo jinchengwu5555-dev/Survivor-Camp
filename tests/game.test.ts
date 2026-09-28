@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { foodConsumptionPerMinute, morale, moraleMultiplier, productionPerMinute } from '../assets/scripts/core/economy';
 import { loadGame, saveGame } from '../assets/scripts/core/save';
-import { loadConfig, MemoryStorage, MIN, T0 } from './helpers';
+import { EVENT, loadConfig, MemoryStorage, MIN, T0 } from './helpers';
 
 function newGame() {
     const game = CampGame.newGame(loadConfig(), T0, 42);
@@ -141,10 +141,10 @@ describe('事件', () => {
 
     it('随机事件按间隔触发，队列里有事件时不叠加', () => {
         const game = CampGame.newGame(loadConfig(), T0, 7);
-        game.tick(T0 + 10 * MIN);
+        game.tick(T0 + EVENT);
         expect(game.state.eventQueue).toEqual(['s1e1_open']);
-        game.choose(0, T0 + 10 * MIN);
-        game.tick(T0 + 20 * MIN);
+        game.choose(0, T0 + EVENT);
+        game.tick(T0 + 2 * EVENT);
         expect(game.state.eventQueue.length).toBe(1);
         expect(game.currentEvent?.weight).toBeGreaterThan(0);
     });

@@ -3,6 +3,7 @@
 
 import type { BattleResult, SkillDef, StatusDef, UnitDef } from './battle/types';
 import type { BattleSetup, UnitSetup } from './battle/Battle';
+import type { ClockState } from './clock';
 
 export type ResourceId = 'food' | 'wood' | 'parts' | 'medicine' | 'cans';
 export const RESOURCE_IDS: ResourceId[] = ['food', 'wood', 'parts', 'medicine', 'cans'];
@@ -16,8 +17,16 @@ export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' |
 export interface BalanceDef {
     /** 每个幸存者每分钟吃掉的食物 */
     foodPerSurvivorPerMinute: number;
-    /** 离线收益最多计算多少小时 */
-    offlineCapHours: number;
+    /**
+     * 在线时钟：游戏时间只在在线时走，1 秒真实时间 = onlineTimeScale 秒游戏时间；
+     * 两次心跳间隔超过 onlineGapSeconds 秒就算离线（见 core/clock.ts）
+     */
+    clock: { onlineTimeScale: number; onlineGapSeconds: number };
+    /**
+     * 离线挂机收益：离线 1 分钟 = gameMinutesPerRealMinute 分钟的产量，只发 resources 里的资源，
+     * 最多算 capHours 小时，不足 minMinutes 分钟不发（见 core/offline.ts）
+     */
+    offline: { capHours: number; minMinutes: number; gameMinutesPerRealMinute: number; resources: ResourceId[] };
     /** 专长对口时的产量倍率 */
     specialtyBonus: number;
     /** 吃饱时心情每分钟恢复多少（最高到 moodRecoveryMax） */
@@ -29,7 +38,7 @@ export interface BalanceDef {
     newSurvivorMood: number;
     /** 随机事件间隔（分钟） */
     eventIntervalMinutes: number;
-    /** 游戏里的一天等于现实多少分钟 */
+    /** 游戏里的一天有多少（游戏）分钟；在线时按 clock.onlineTimeScale 倍速走 */
     dayLengthMinutes: number;
     /** 同时能进行几个建造 */
     buildQueueSize: number;
@@ -37,6 +46,8 @@ export interface BalanceDef {
     startingSurvivors: string[];
     /** 资源基础上限；不写的资源没有上限 */
     baseStorage: ResourceBag;
+    /** 探索打赢后，这个地点要过多少分钟才能再去（物资重新聚起来） */
+    locationRestockMinutes: number;
     /** 探索小队最多几个人 */
     maxSquadSize: number;
     /** 受伤后自然恢复需要的分钟数 */
@@ -465,6 +476,10 @@ export interface GameState {
     version: number;
     createdAt: number;
     lastTickAt: number;
+    /** 在线时钟（第 6 版存档新增） */
+    clock: ClockState;
+    /** 地点 id → 什么时候（游戏时间）物资重新聚起来，可以再去探索（第 6 版存档新增） */
+    restockAt: Record<string, number>;
     resources: Record<ResourceId, number>;
     buildings: Record<string, BuildingState>;
     survivors: SurvivorState[];

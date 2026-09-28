@@ -98,16 +98,27 @@ export function killSurvivor(config: GameConfig, state: GameState, id: string, n
     for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
     setFlag(state, `dead_${id}`);
     addStat(state, 'deaths');
+    addStat(state, `death_${cause}`);
     addLog(state, now, `☠ ${name}${cause}。`);
     checkGameOver(config, state, now, `${name}${cause}`);
     return name;
 }
 
-/** 战斗中倒下的人：按死亡概率决定是战死还是重伤。返回战死者的名字和受伤者的 id */
-export function resolveFallen(config: GameConfig, state: GameState, fallen: string[], now: number, cause: string): { dead: string[]; injured: string[] } {
+/**
+ * 战斗中倒下的人：按死亡概率决定是战死还是重伤。返回战死者的名字和受伤者的 id。
+ * canDie = false 时只受伤（比如探索打赢了，队友会把倒下的人背回来）
+ */
+export function resolveFallen(
+    config: GameConfig,
+    state: GameState,
+    fallen: string[],
+    now: number,
+    cause: string,
+    canDie = true,
+): { dead: string[]; injured: string[] } {
     const dead: string[] = [];
     const injured: string[] = [];
-    const chance = deathChance(config, state, now);
+    const chance = canDie ? deathChance(config, state, now) : 0;
     for (const id of fallen) {
         const s = state.survivors.find((x) => x.id === id);
         if (!s) continue;

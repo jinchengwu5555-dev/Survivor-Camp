@@ -1,6 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, GameConfig, GameEventDef, GameState } from './types';
+import { AchievementDef, ActionResult, GameConfig, GameEventDef, GameState, ResourceBag } from './types';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -13,6 +13,8 @@ import { checkSeasonChange } from './seasons';
 import { createNewState } from './state';
 import { applyHardship } from './roster';
 import { relocate } from './sites';
+import { advanceClock } from './clock';
+import { grantOfflineReward } from './offline';
 
 export class CampGame {
     /** 新解锁、还没在界面上提示过的成就；界面取走后自己清空 */
@@ -26,15 +28,31 @@ export class CampGame {
         return game;
     }
 
+    /** 当前游戏时间：界面上的倒计时、各种操作都用它，不要用 Date.now() */
+    get now(): number {
+        return this.state.clock.gameTime;
+    }
+
     /**
-     * 推进时间到 now。离线回来时第一次调用会一次性结算离线收益（最多 offlineCapHours 小时）。
+     * 界面每秒调用一次，传真实时间。在线时游戏时间按倍速前进并结算；
+     * 离线回来的第一次调用只发离线挂机收益（游戏时间不动），返回到手的物资。
+     */
+    online(realNow: number): { now: number; offlineReward: ResourceBag | null } {
+        const step = advanceClock(this.config, this.state, realNow);
+        const offlineReward = step.offlineMs > 0 ? grantOfflineReward(this.config, this.state, step.offlineMs, step.gameNow) : null;
+        this.tick(step.gameNow);
+        return { now: step.gameNow, offlineReward };
+    }
+
+    /**
+     * 推进游戏时间到 now（游戏时间，不是真实时间）。
      * 生产按段结算：在每个升级完成的时间点切开，保证升级后的产量从完成那一刻开始计算。
      */
     tick(now: number): void {
         const s = this.state;
         if (now <= s.lastTickAt || s.gameOver) return;
-        const capMs = this.config.balance.offlineCapHours * 3_600_000;
-        let t = Math.max(s.lastTickAt, now - capMs);
+        s.clock.gameTime = Math.max(s.clock.gameTime, now);
+        let t = s.lastTickAt;
 
         const finishTimes = Object.values(s.buildings)
             .map((b) => b.upgradeEndsAt)

@@ -239,12 +239,20 @@ export function clearedFlag(locationId: string): string {
     return `cleared_${locationId}`;
 }
 
+/** 地点刚被搜刮过：还要过多少秒（游戏时间）才能再去；0 表示可以去 */
+export function restockSecondsLeft(state: GameState, locationId: string, now: number): number {
+    const at = state.restockAt[locationId];
+    return at === undefined ? 0 : Math.max(0, Math.ceil((at - now) / 1000));
+}
+
 /** 检查能否出发；返回 null 表示可以 */
 export function expeditionBlocker(config: GameConfig, state: GameState, locationId: string, squad: string[], now: number): string | null {
     const loc = getLocation(config, locationId);
     if (!loc) return '地点不存在';
     if (!conditionMet(config, state, loc.conditions, now)) return '这个地点还没解锁';
     if (state.expeditions.some((e) => e.location === locationId)) return '已经有小队在这里了';
+    const restock = restockSecondsLeft(state, locationId, now);
+    if (restock > 0) return '刚搜刮过，物资还没重新聚起来';
     if (squad.length === 0) return '没有能出发的人';
     if (squad.length > config.balance.maxSquadSize) return `小队最多 ${config.balance.maxSquadSize} 人`;
     if (new Set(squad).size !== squad.length) return '小队成员重复';
@@ -301,6 +309,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         addStat(state, 'expeditions_won');
         addStat(state, `clear_${loc.id}`);
         loot = grantResources(config, state, expeditionLoot(config, state, loc));
+        state.restockAt[loc.id] = at + config.balance.locationRestockMinutes * 60_000;
         if (!hasFlag(state, clearedFlag(loc.id))) {
             setFlag(state, clearedFlag(loc.id));
             if (loc.firstClearFlag) setFlag(state, loc.firstClearFlag);
@@ -311,7 +320,8 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         addStat(state, 'expeditions_lost');
         for (const s of state.survivors) if (squad.includes(s.id)) s.mood = Math.max(0, s.mood - 5);
     }
-    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${loc.name}牺牲了`);
+    // 打赢了队友会把倒下的人背回来，只有打输撤退时才会有人回不来
+    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${loc.name}牺牲了`, result === 'lose');
     let rescued = '';
     if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) {
         const w = addWanderer(config, state, at);

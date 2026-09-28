@@ -4,7 +4,7 @@ import { CampGame } from '../assets/scripts/core/CampGame';
 import { battleRegistry, currentRaid, runRaid, suggestSquad } from '../assets/scripts/core/combat';
 import { applyEffect } from '../assets/scripts/core/events';
 import { loadGame } from '../assets/scripts/core/save';
-import { dayStart, loadConfig, MemoryStorage, MIN, RAID, T0 } from './helpers';
+import { dayStart, INJURY, loadConfig, MemoryStorage, MIN, RAID, T0 } from './helpers';
 
 function newGame() {
     const game = CampGame.newGame(loadConfig(), T0, 42);
@@ -68,6 +68,15 @@ describe('探索', () => {
         expect(game.state.resources.food).toBe(200);
     });
 
+    it('打赢后地点要过一段时间才能再去', () => {
+        const game = newGame();
+        game.explore('gas_station', T0);
+        game.tick(T0 + 3 * MIN);
+        const restock = game.config.balance.locationRestockMinutes * MIN;
+        expect(game.explore('gas_station', T0 + 3 * MIN)).toEqual({ ok: false, reason: '刚搜刮过，物资还没重新聚起来' });
+        expect(game.explore('gas_station', T0 + 3 * MIN + restock).ok).toBe(true);
+    });
+
     it('看广告加速：小队立即返回', () => {
         const game = newGame();
         game.explore('gas_station', T0);
@@ -76,7 +85,7 @@ describe('探索', () => {
         expect(game.state.reports).toHaveLength(1);
     });
 
-    it('打输了：倒下的人受伤，30 分钟后自然痊愈', () => {
+    it('打输了：倒下的人受伤，过一段时间自然痊愈', () => {
         const game = newGame();
         game.state.flags.push('cleared_hardware_store');
         game.explore('clinic', T0, ['sophie']);
@@ -86,7 +95,7 @@ describe('探索', () => {
         const sophie = survivor(game, 'sophie');
         expect(sophie.injured).toBe(true);
         expect(game.explore('gas_station', T0 + 20 * MIN, ['sophie']).ok).toBe(false);
-        game.tick(T0 + 50 * MIN);
+        game.tick(T0 + 20 * MIN + INJURY);
         expect(sophie.injured).toBe(false);
     });
 
@@ -102,8 +111,10 @@ describe('探索', () => {
         expect(game.state.reports[0].result).toBe('win');
         expect(game.state.eventQueue).toContain('sheriff_photo');
         game.state.eventQueue = [];
-        game.explore('sheriff_office', later + 30 * MIN);
-        game.tick(later + 60 * MIN);
+        const again = later + 30 * MIN + game.config.balance.locationRestockMinutes * MIN;
+        expect(game.explore('sheriff_office', again).ok).toBe(true);
+        game.tick(again + 30 * MIN);
+        expect(game.state.reports[game.state.reports.length - 1].result).toBe('win');
         expect(game.state.eventQueue).not.toContain('sheriff_photo');
     });
 
@@ -186,7 +197,7 @@ describe('尸潮夜袭', () => {
         expect(currentRaid(game.config, game.state, dayStart(18))?.id).toBe('great_horde');
     });
 
-    it('离线 8 小时只结算一次尸潮', () => {
+    it('一次跳过很久也只结算一次尸潮', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.tick(T0 + 8 * RAID);
@@ -247,7 +258,8 @@ describe('老存档升级', () => {
         const storage = new MemoryStorage();
         storage.setItem('doomsday-camp-save', JSON.stringify(old));
         const loaded = loadGame(storage, game.config, T0)!;
-        expect(loaded.version).toBe(5);
+        expect(loaded.version).toBe(6);
+        expect(loaded.clock.gameTime).toBe(old.lastTickAt);
         expect(loaded.raidRelief).toBe(0);
         expect(loaded.siteId).toBe('supermarket');
         expect(loaded.discoveredSites).toEqual(['supermarket']);
@@ -257,6 +269,6 @@ describe('老存档升级', () => {
         expect(loaded.bounties).toEqual({ active: [], completed: [] });
         expect(loaded.seasonId).toBe('summer');
         expect(loaded.nextRaidAt).toBe(T0 + RAID);
-        expect(loaded.survivors[0].recoverAt).toBe(T0 + 30 * MIN);
+        expect(loaded.survivors[0].recoverAt).toBe(T0 + INJURY);
     });
 });

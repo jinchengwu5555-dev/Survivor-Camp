@@ -2,7 +2,8 @@
 //   npm run economy
 // 平时跑 npm test 时跳过。
 //
-// 玩家模型：开局先玩一次，之后每天 8:00～22:00 每 2 小时上线一次（一天 8 次），每次在线约 5 分钟，其余时间离线。每次上线：
+// 玩家模型：每天 8:00～22:00 每 2 小时上线一次（一天 8 次），每次在线 5 分钟（一天共 40 分钟在线），其余时间离线。
+// 游戏时间只在在线时走（见 core/clock.ts），离线回来先领挂机收益。在线期间每秒一次心跳，每分钟操作一次：
 //   处理事件（选第一个能选的）→ 分配工作（厨房：为下一级指挥部攒粮时排满，否则够吃就行；其余人去废料场、医务室）→ 闲着的人够 2 个就去探索 → 升级（缺粮先升厨房，缺零件先升废料场，否则挑最便宜的）
 //   探索：有没打过的地点就去打；否则去上次打赢过、战利品最多的地点
 // 不看广告、不做物品、不接悬赏，代表“最低投入”的玩家。
@@ -73,19 +74,13 @@ function session(game: CampGame, now: number): void {
     if (options.length) game.upgrade(options[0].id, now);
 }
 
-/** 一次上线：玩家会多待一会儿，把几分钟内就能完成的升级连着做掉（最多在线 STAY_MINUTES 分钟） */
-const STAY_MINUTES = 5;
+/** 一次上线：在线 SESSION_MINUTES 分钟，每秒心跳一次，每分钟操作一次 */
+const SESSION_MINUTES = 5;
 function onlineSession(game: CampGame, start: number): void {
-    let now = start;
-    for (let i = 0; i < 10; i++) {
-        session(game, now);
-        const ends = Object.values(game.state.buildings)
-            .map((b) => b.upgradeEndsAt)
-            .filter((t): t is number => t !== null);
-        const next = Math.min(...ends);
-        if (!ends.length || next > start + STAY_MINUTES * MIN) return;
-        now = next;
-        game.tick(now);
+    for (let sec = 0; sec <= SESSION_MINUTES * 60; sec++) {
+        game.online(start + sec * 1000);
+        if (game.state.gameOver) return;
+        if (sec % 60 === 0) session(game, game.now);
     }
 }
 
@@ -96,13 +91,10 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const r = (n: number, w = 5) => String(Math.round(n)).padStart(w);
     let starvedSessions = 0;
     let sessions = 0;
-    onlineSession(game, T0);
     for (let day = 0; day < REAL_DAYS; day++) {
         for (const h of SESSION_HOURS) {
-            const now = T0 + (day * 24 + h) * HOUR;
-            game.tick(now);
+            onlineSession(game, T0 + (day * 24 + h) * HOUR);
             if (state.gameOver) break;
-            onlineSession(game, now);
             sessions++;
             if (state.resources.food < 1) starvedSessions++;
         }
@@ -111,14 +103,16 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
             break;
         }
         if (day >= 14 && (day + 1) % 3 !== 0) continue;
-        const now = T0 + (day * 24 + 23) * HOUR;
+        const now = game.now;
         const others = config.buildings.filter((b) => b.id !== 'hq');
         const avg = others.reduce((sum, b) => sum + state.buildings[b.id].level, 0) / others.length;
         lines.push(
             `${r(day + 1, 4)}  ${r(currentDay(config, state, now), 6)}   ${seasonAt(config, state, now).season.icon}   ${r(hqLevel(state), 5)}  ${avg.toFixed(1).padStart(10)}   ${r(state.resources.food)}  ${r(state.resources.wood)}  ${r(state.resources.parts)}  ${r(state.resources.medicine, 4)}  ${r(morale(state), 4)}  ${r(state.survivors.length, 4)}   ${r(state.stats.raids_won ?? 0, 4)}/${state.stats.raids_lost ?? 0}   ${r(raidEnemyBonus(config, state, now), 6)}(${state.raidRelief})   ${r(state.stats.deaths ?? 0, 4)}  ${r(state.achievements.length, 4)}`,
         );
     }
-    lines.push('', `上线时食物为 0 的次数：${starvedSessions}/${sessions}`);
+    lines.push('', `上线时食物为 0 的次数：${starvedSessions}/${sessions}   领到离线收益 ${state.stats.offline_rewards ?? 0} 次`);
+    const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
+    lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));
     expect(lines.length).toBeGreaterThan(1);
 });

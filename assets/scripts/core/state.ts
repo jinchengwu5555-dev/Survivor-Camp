@@ -2,8 +2,9 @@
 
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
+import { newClock } from './clock';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 const MAX_LOG = 50;
 
 export function createNewState(config: GameConfig, now: number, seed: number): GameState {
@@ -15,6 +16,8 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         version: SAVE_VERSION,
         createdAt: now,
         lastTickAt: now,
+        clock: newClock(now),
+        restockAt: {},
         resources,
         buildings: {},
         survivors: b.startingSurvivors.map((id) => newSurvivorState(config, id)),
@@ -69,6 +72,12 @@ export function migrateState(config: GameConfig, state: GameState, now: number):
     if (state.version === 4) {
         Object.assign(state, emptyV5Fields(config));
         state.version = 5;
+    }
+    if (state.version === 5) {
+        // 之前按真实时间走：游戏时间从上次结算的时刻接着走，中间这段不补
+        state.clock = { ...newClock(now), gameTime: state.lastTickAt };
+        state.restockAt = {};
+        state.version = 6;
     }
     return state.version === SAVE_VERSION;
 }
