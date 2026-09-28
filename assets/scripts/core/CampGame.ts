@@ -7,6 +7,9 @@ import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } fro
 import { checkEpisode, startStory } from './story';
 import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, scheduleFirstRaid, startExpedition, suggestSquad, treatSurvivor } from './combat';
 import { LiveRaid } from './liveRaid';
+import { collectPickup, PickupResult, updatePickups } from './pickups';
+import { claimDaily, claimDailyChest, refreshDaily } from './daily';
+import { addWorker, autoAssign, removeWorker } from './workers';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
@@ -80,6 +83,7 @@ export class CampGame {
         if (!this.liveRaids && s.pendingRaid) new LiveRaid(this.config, s, s.pendingRaid).finish();
         maybeRunRaid(this.config, s, now, this.liveRaids);
         maybeTriggerRandomEvent(this.config, s, now);
+        updatePickups(this.config, s, now);
         this.settle(now);
     }
 
@@ -87,10 +91,11 @@ export class CampGame {
     private settle(now: number): void {
         checkEpisode(this.config, this.state, now);
         scheduleFirstRaid(this.config, this.state, now);
+        if (!this.state.gameOver) refreshDaily(this.config, this.state, now);
         this.newAchievements.push(...checkAchievements(this.config, this.state, now));
     }
 
-    private act<T extends ActionResult | ChoiceResult>(now: number, action: () => T): T {
+    private act<T extends ActionResult | ChoiceResult | PickupResult>(now: number, action: () => T): T {
         this.tick(now);
         if (this.state.gameOver) return { ok: false, reason: '营地已经覆灭了' } as T;
         const result = action();
@@ -109,6 +114,33 @@ export class CampGame {
 
     assign(survivorId: string, buildingId: string | null, now: number): ActionResult {
         return this.act(now, () => assignSurvivor(this.config, this.state, survivorId, buildingId));
+    }
+
+    /** 给建筑加一个人（优先专长对口的） */
+    addWorker(buildingId: string, now: number): ActionResult {
+        return this.act(now, () => addWorker(this.config, this.state, buildingId));
+    }
+
+    removeWorker(buildingId: string, now: number): ActionResult {
+        return this.act(now, () => removeWorker(this.config, this.state, buildingId));
+    }
+
+    /** 一键安排所有闲着的人 */
+    autoAssign(now: number): ActionResult {
+        return this.act(now, () => autoAssign(this.config, this.state, now));
+    }
+
+    /** 捡起营地附近的东西 */
+    collectPickup(pickupId: number, now: number): PickupResult {
+        return this.act(now, () => collectPickup(this.config, this.state, pickupId, now));
+    }
+
+    claimDaily(taskId: string, now: number): ActionResult {
+        return this.act(now, () => claimDaily(this.config, this.state, taskId, now));
+    }
+
+    claimDailyChest(now: number): ActionResult {
+        return this.act(now, () => claimDailyChest(this.config, this.state, now));
     }
 
     /** 派小队去探索；不指定成员时自动挑战斗力最高的人 */

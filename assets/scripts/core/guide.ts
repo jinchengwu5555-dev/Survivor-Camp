@@ -25,7 +25,7 @@ export function nextHint(config: GameConfig, state: GameState, now: number): Gui
     if (state.gameOver || state.eventQueue.length > 0 || state.pendingRaid) return null;
     const newbie = currentDay(config, state, now) <= NEWBIE_DAYS;
     if (newbie && !state.survivors.some((s) => s.assignment)) {
-        return { text: '去「幸存者」页给厨房安排人手——有人干活才有饭吃', target: 'assign', tab: 'survivors' };
+        return { text: '去「幸存者」页点“一键安排工作”——有人干活才有饭吃', target: 'assign', tab: 'survivors' };
     }
     const ep = currentEpisode(config, state);
     const obj = ep?.objectives.find((o) => !objectiveDone(config, state, o, now));

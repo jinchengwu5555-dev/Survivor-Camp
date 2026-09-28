@@ -30,6 +30,9 @@ import { realSeconds } from '../core/clock';
 import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { GuideHint, nextHint } from '../core/guide';
 import { eventSpeaker } from '../core/portrait';
+import { activePickups, pickupKind } from '../core/pickups';
+import { dailyChest, dailyClaimable, dailyProgress, dailyTaskDef } from '../core/daily';
+import { idleSurvivors, workersIn } from '../core/workers';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
@@ -59,7 +62,7 @@ const TABS: [Tab, string][] = [
     ['camp', '营地'],
     ['survivors', '幸存者'],
     ['explore', '探索'],
-    ['bounties', '悬赏'],
+    ['bounties', '任务'],
     ['workshop', '工坊'],
     ['achievements', '成就'],
     ['reports', '战报'],
@@ -410,6 +413,7 @@ export class GameRoot extends Component {
             const name = bloodMoon ? `🩸血月夜！${raid.name}${level}（数量多一半，奖励翻倍）` : `${raid.name}${level}${relief}`;
             this.text(`🧟 ${formatTime(left)} 后${name}来袭`, left <= 15 ? 26 : 22, LOSE);
         }
+        this.renderPickups(camp, now);
         this.gap(8);
 
         const ep = currentEpisode(config, state);
@@ -449,6 +453,26 @@ export class GameRoot extends Component {
 
         if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
         this.finishLayout();
+    }
+
+    /** 营地附近能捡的东西：一排金色按钮，点一下捡走 */
+    private renderPickups(camp: CampGame, now: number): void {
+        const pickups = activePickups(camp.state, now);
+        if (pickups.length === 0) return;
+        const w = (WIDTH - 10 * (camp.config.pickups.maxActive - 1)) / camp.config.pickups.maxActive;
+        const top = this.cursorY - 4;
+        pickups.forEach((p, i) => {
+            const kind = pickupKind(camp.config, p.kind);
+            if (!kind) return;
+            this.cursorY = top;
+            this.button(`${kind.icon} ${kind.name}`, w, () => {
+                const res = camp.collectPickup(p.id, camp.now);
+                if (res.ok) this.effect(`${kind.icon} ${formatBag(camp.config, res.gained ?? {}) || kind.name}`, WIN, 28);
+                else this.showToast(res.reason ?? '');
+                this.render();
+            }, LEFT + i * (w + 10), 'highlight', 22, 48);
+        });
+        this.gap(4);
     }
 
     /** 记下内容高度，限制滚动范围 */
@@ -652,6 +676,27 @@ export class GameRoot extends Component {
         const current = b.level > 0 ? def.levels[b.level - 1] : undefined;
         const next = def.levels[b.level];
         if (current) this.text(`现在：${levelSummary(config, current) || '—'}`, 20, DIM);
+        const slots = current?.workerSlots ?? 0;
+        if (slots > 0) {
+            const workers = workersIn(state, def.id);
+            const names = workers.map((s) => survivorInfo(config, state, s.id)?.name ?? s.id).join('、') || '没人';
+            this.text(`👷 ${workers.length}/${slots}：${names}（闲着 ${idleSurvivors(state).length} 人）`, 20);
+            const half = (WIDTH - 10) / 2;
+            const row = this.cursorY;
+            this.button('－ 撤下一人', half, () => {
+                const res = camp.removeWorker(def.id, camp.now);
+                if (!res.ok) this.showToast(res.reason);
+                this.render();
+            }, LEFT, workers.length === 0 ? 'disabled' : 'normal', 22, 48);
+            this.cursorY = row;
+            this.button('＋ 派一个人来', half, () => {
+                const res = camp.addWorker(def.id, camp.now);
+                if (res.ok) this.effect(`👷 ${res.message}去${def.name}干活了`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT + half + 10, workers.length >= slots || idleSurvivors(state).length === 0 ? 'disabled' : 'normal', 22, 48);
+            this.gap(6);
+        }
         if (next) this.text(`下一级：${levelSummary(config, next) || '—'}`, 20, WIN);
         if (b.upgradeEndsAt !== null) {
             const left = realSeconds(config, b.upgradeEndsAt - now);
@@ -681,7 +726,8 @@ export class GameRoot extends Component {
             this.cursorY = rowTop;
             const guided = this.guide?.tab === tab && this.tab !== tab;
             const style: ButtonStyle = guided ? 'highlight' : this.tab === tab ? 'normal' : 'disabled';
-            this.button(guided ? `👉${name}` : this.tab === tab ? `【${name}】` : name, w, () => {
+            const dot = tab === 'bounties' && this.camp && this.hasClaimable(this.camp) ? '❗' : '';
+            this.button(guided ? `👉${name}` : this.tab === tab ? `【${name}${dot}】` : `${name}${dot}`, w, () => {
                 this.tab = tab;
                 this.resetScroll();
                 if (tab === 'rank') this.loadRanking();
@@ -691,8 +737,49 @@ export class GameRoot extends Component {
         this.gap(14);
     }
 
+    /** 任务页有没有能领的奖励（页签上显示 ❗） */
+    private hasClaimable(camp: CampGame): boolean {
+        const { config, state } = camp;
+        if (dailyClaimable(config, state)) return true;
+        return state.bounties.active.some((a) => {
+            const { current, target } = bountyProgress(config, state, a.id);
+            return target > 0 && current >= target;
+        });
+    }
+
+    /** 每日目标：每个游戏日 3 个小目标，全部完成开宝箱 */
+    private renderDaily(camp: CampGame): void {
+        const { config, state } = camp;
+        const daily = state.daily;
+        if (!daily) return;
+        this.text(`—— 第 ${daily.day} 天的目标（每天换一批，没领的第二天就没了）——`, 22, DIM);
+        for (const t of daily.tasks) {
+            const def = dailyTaskDef(config, t.id);
+            if (!def) continue;
+            const { current, target } = dailyProgress(config, state, t.id);
+            const done = current >= target;
+            const label = t.claimed ? `✅ ${def.text}（已领取）` : `${done ? '🎁' : '⬜'} ${def.text}  ${current}/${target}  奖励 ${formatBag(config, def.reward)}`;
+            this.button(label, WIDTH, () => {
+                const res = camp.claimDaily(t.id, camp.now);
+                if (res.ok) this.effect(`🎁 ${res.message ?? ''}`, WIN, 28);
+                this.render();
+            }, LEFT, t.claimed || !done ? 'disabled' : 'highlight', 22, 48);
+            this.gap(6);
+        }
+        const allClaimed = daily.tasks.length > 0 && daily.tasks.every((t) => t.claimed);
+        const chest = daily.chestClaimed ? '📭 今天的宝箱已经打开了' : `📦 全部完成开宝箱：${formatBag(config, dailyChest(config, state))}`;
+        this.button(chest, WIDTH, () => {
+            const res = camp.claimDailyChest(camp.now);
+            if (res.ok) this.effect(`📦 宝箱：${res.message ?? ''}`, ACCENT, 30);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, allClaimed && !daily.chestClaimed ? 'highlight' : 'disabled', 22, 52);
+        this.gap(14);
+    }
+
     private renderBounties(camp: CampGame, now: number): void {
         const { config, state } = camp;
+        this.renderDaily(camp);
         this.text(`—— 悬赏板（${hunterRankName(config, state)} · 经验 ${state.hunterXp}）——`, 22, DIM);
         this.text(`进行中 ${state.bounties.active.length}/${config.balance.maxActiveBounties}`, 22, ACCENT);
         for (const active of state.bounties.active) {
@@ -757,8 +844,15 @@ export class GameRoot extends Component {
         const { config, state } = camp;
         this.text(`—— 幸存者（点名字切换工作；伤员点击用药品治疗）战斗等级 ${survivorBattleLevel(config, state)} ——`, 22, DIM);
         const jobs: (string | null)[] = [null, ...config.buildings.filter((b) => b.levels.some((l) => l.workerSlots)).map((b) => b.id)];
-        // 新手引导“安排人手”：高亮第一个闲着的人
-        const guidedId = this.isGuided('assign') ? state.survivors.find((s) => !s.injured && !s.assignment && !isOnExpedition(state, s.id))?.id : undefined;
+        // 新手引导“安排人手”：高亮“一键安排工作”
+        const idle = idleSurvivors(state).length;
+        this.button(`${this.isGuided('assign') ? '👉 ' : ''}一键安排工作（闲着 ${idle} 人）`, WIDTH, () => {
+            const res = camp.autoAssign(camp.now);
+            if (res.ok) this.effect(`👷 ${res.message}`, WIN);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, idle === 0 ? 'disabled' : this.isGuided('assign') ? 'highlight' : 'normal', 24, 56);
+        this.gap(10);
         const colWidth = (WIDTH - 10) / 2;
         let rowTop = this.cursorY;
         state.survivors.forEach((s, i) => {
@@ -774,8 +868,7 @@ export class GameRoot extends Component {
                   : s.assignment
                     ? getBuildingDef(config, s.assignment)?.name
                     : '空闲';
-            const guided = guidedId === s.id;
-            this.button(`${guided ? '👉' : ''}${def?.name ?? s.id} 😊${Math.round(s.mood)} ${job}`, colWidth, () => {
+            this.button(`${def?.name ?? s.id} 😊${Math.round(s.mood)} ${job}`, colWidth, () => {
                 if (s.injured) {
                     const res = camp.treat(s.id, camp.now);
                     this.showToast(res.ok ? `${def?.name}的伤治好了` : res.reason);
@@ -787,7 +880,7 @@ export class GameRoot extends Component {
                     if (camp.assign(s.id, jobs[(start + step) % jobs.length], camp.now).ok) break;
                 }
                 this.render();
-            }, col === 0 ? LEFT : LEFT + colWidth + 10, guided ? 'highlight' : 'normal', 22, 50);
+            }, col === 0 ? LEFT : LEFT + colWidth + 10, 'normal', 22, 50);
             if (col === 1 || i === state.survivors.length - 1) this.gap(8);
         });
         this.gap(6);

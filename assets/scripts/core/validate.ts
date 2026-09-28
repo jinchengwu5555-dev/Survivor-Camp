@@ -187,6 +187,22 @@ export function validateConfig(config: GameConfig): string[] {
     if (!battle.hasUnit(w.battleUnit)) errors.push(`wanderers.json：未知战斗角色 ${w.battleUnit}`);
     for (const sp of w.specialties) if (!w.titles[sp]?.length) errors.push(`wanderers.json：专长 ${sp} 没有职业名`);
 
+    checkUnique('拾荒物', config.pickups.kinds.map((x) => x.id));
+    if (config.pickups.intervalMinutes <= 0) errors.push('pickups.json：intervalMinutes 必须大于 0');
+    for (const k of config.pickups.kinds) {
+        checkBag(`拾荒物 ${k.id}`, k.reward);
+        if (k.weight <= 0) errors.push(`拾荒物 ${k.id}：weight 必须大于 0`);
+    }
+    checkUnique('每日目标', config.daily.tasks.map((x) => x.id));
+    checkBag('每日宝箱', config.daily.chest);
+    for (const t of config.daily.tasks) {
+        const where = `每日目标 ${t.id}`;
+        checkBag(where, t.reward);
+        if (t.amount <= 0) errors.push(`${where}：amount 必须大于 0`);
+        if (t.requiresBuilding && !buildingIds.has(t.requiresBuilding)) errors.push(`${where}：未知建筑 ${t.requiresBuilding}`);
+        for (const id of t.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+    }
+
     checkUnique('成就', config.achievements.map((x) => x.id));
     for (const a of config.achievements) {
         checkBag(`成就 ${a.id}`, a.reward);

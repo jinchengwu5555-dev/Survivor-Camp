@@ -6,7 +6,7 @@
 // 游戏时间只在在线时走（见 core/clock.ts），离线回来先领挂机收益。在线期间每秒一次心跳，每分钟操作一次：
 //   处理事件（选第一个能选的）→ 分配工作（厨房：为下一级指挥部攒粮时排满，否则够吃就行；其余人去废料场、医务室）→ 闲着的人够 2 个就去探索 → 升级（缺粮先升厨房，缺零件先升废料场，否则挑最便宜的）
 //   探索：有没打过的地点就去打；否则去上次打赢过、战利品最多的地点
-// 不看广告、不做物品、不接悬赏，代表“最低投入”的玩家。
+// 不看广告、不做物品、不接悬赏，代表“最低投入”的玩家（会顺手捡营地附近的东西、领每日目标）。
 
 import { expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
@@ -16,6 +16,7 @@ import { upgradeBlocker } from '../assets/scripts/core/buildings';
 import { currentDay } from '../assets/scripts/core/state';
 import { seasonAt } from '../assets/scripts/core/seasons';
 import { RESOURCE_IDS } from '../assets/scripts/core/types';
+import { activePickups } from '../assets/scripts/core/pickups';
 import { loadConfig, MIN, T0 } from './helpers';
 
 const showReport = (import.meta as unknown as { env: { MODE: string } }).env.MODE === 'economy';
@@ -28,6 +29,10 @@ const lootValue = (bag: Partial<Record<string, number>>) => Object.values(bag).r
 
 function session(game: CampGame, now: number): void {
     const { config, state } = game;
+    // 捡掉营地附近的东西、领每日目标
+    for (const p of activePickups(state, now)) game.collectPickup(p.id, now);
+    for (const t of state.daily?.tasks ?? []) game.claimDaily(t.id, now);
+    game.claimDailyChest(now);
     for (let guard = 0; game.currentEvent && guard < 20; guard++) {
         const choices = game.currentEvent.choices.length;
         let ok = false;

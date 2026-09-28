@@ -1,0 +1,16 @@
+{
+    "tasksPerDay": 3,
+    "chest": { "cans": 3, "food": 40, "wood": 40, "parts": 15 },
+    "tasks": [
+        { "id": "kill_15", "text": "消灭 15 只丧尸", "stat": "zombies_killed", "amount": 15, "reward": { "parts": 10 } },
+        { "id": "explore_1", "text": "探索成功 1 次", "stat": "expeditions_won", "amount": 1, "reward": { "food": 30 } },
+        { "id": "explore_2", "text": "探索成功 2 次", "stat": "expeditions_won", "amount": 2, "reward": { "food": 40, "wood": 20 } },
+        { "id": "upgrade_1", "text": "开始 1 次建筑升级", "stat": "upgrades", "amount": 1, "reward": { "wood": 30 } },
+        { "id": "pickup_3", "text": "在营地附近捡 3 样东西", "stat": "pickups_collected", "amount": 3, "reward": { "wood": 20, "parts": 5 } },
+        { "id": "event_2", "text": "做出 2 次抉择", "stat": "events_resolved", "amount": 2, "reward": { "food": 25 } },
+        { "id": "raid_1", "text": "守住 1 次尸潮", "stat": "raids_won", "amount": 1, "reward": { "parts": 15, "cans": 1 }, "conditions": { "flags": ["raids_started"] } },
+        { "id": "repair_1", "text": "守夜时修补 1 次路障", "stat": "barricade_repairs", "amount": 1, "reward": { "wood": 30 }, "conditions": { "flags": ["raids_started"] } },
+        { "id": "craft_1", "text": "在工坊做 1 个物品", "stat": "items_crafted", "amount": 1, "reward": { "parts": 10 }, "requiresBuilding": "workshop" },
+        { "id": "treat_1", "text": "在医务室治好 1 个伤员", "stat": "treated", "amount": 1, "reward": { "medicine": 5 }, "requiresBuilding": "infirmary" }
+    ]
+}

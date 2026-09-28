@@ -2,7 +2,7 @@
 
 import { ActionResult, GameConfig, GameState } from './types';
 import { canAfford, getBuildingDef, hqLevel, pay, workerSlots } from './economy';
-import { addLog } from './state';
+import { addLog, addStat } from './state';
 
 export function activeUpgrades(state: GameState): number {
     return Object.values(state.buildings).filter((b) => b.upgradeEndsAt !== null).length;
@@ -30,6 +30,7 @@ export function startUpgrade(config: GameConfig, state: GameState, buildingId: s
     const next = def.levels[b.level];
     pay(state, next.cost);
     b.upgradeEndsAt = now + next.buildSeconds * 1000;
+    addStat(state, 'upgrades');
     return { ok: true };
 }
 

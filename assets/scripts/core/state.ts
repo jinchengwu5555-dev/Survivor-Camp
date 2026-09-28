@@ -30,6 +30,8 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         log: [],
         expeditions: [],
         nextRaidAt: now + b.raidIntervalMinutes * 60_000,
+        // 第一个拾荒物来得快一点，开局就有东西可以点
+        nextPickupAt: now + config.pickups.intervalMinutes * 30_000,
         reports: [],
         nextId: 1,
         ...emptyV3Fields(config),

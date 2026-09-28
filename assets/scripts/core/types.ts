@@ -414,9 +414,55 @@ export interface GameConfig {
     achievements: AchievementDef[];
     sites: SiteDef[];
     wanderers: WandererDef;
+    pickups: PickupConfig;
+    daily: DailyConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
+}
+
+/** 路边拾荒：营地附近时不时出现可以点一下捡走的东西（pickups.json） */
+export interface PickupKindDef {
+    id: string;
+    name: string;
+    icon: string;
+    weight: number;
+    /** 基础奖励，随指挥部等级按探索战利品的倍率成长 */
+    reward: ResourceBag;
+    /** 捡到时的一句话 */
+    text: string;
+    /** 算作消灭一只丧尸（统计 zombies_killed） */
+    kill?: boolean;
+}
+
+export interface PickupConfig {
+    /** 平均每多少（游戏）分钟出现一个（实际在 0.5～1.5 倍之间随机） */
+    intervalMinutes: number;
+    /** 最多同时有几个 */
+    maxActive: number;
+    /** 多少分钟没人捡就消失 */
+    lifetimeMinutes: number;
+    kinds: PickupKindDef[];
+}
+
+/** 每日目标：每个游戏日从任务池里抽几个，用统计数据判断进度（daily.json） */
+export interface DailyTaskDef {
+    id: string;
+    text: string;
+    stat: string;
+    amount: number;
+    reward: ResourceBag;
+    conditions?: Condition;
+    /** 需要这个建筑至少 1 级才会抽到 */
+    requiresBuilding?: string;
+}
+
+export interface DailyConfig {
+    /** 每天抽几个 */
+    tasksPerDay: number;
+    /** 全部完成后的宝箱（随指挥部等级成长） */
+    chest: ResourceBag;
+    tasks: DailyTaskDef[];
 }
 
 // ---------- 存档状态 ----------
@@ -529,6 +575,25 @@ export interface GameState {
     gameOver: GameOverInfo | null;
     /** 等玩家亲手守夜的尸潮；没有时为 null / 不存在（老存档） */
     pendingRaid?: PendingRaid | null;
+    /** 营地附近可以捡的东西（老存档没有，用到时补上） */
+    pickups?: PickupState[];
+    nextPickupAt?: number;
+    /** 今天的每日目标（老存档没有，用到时补上） */
+    daily?: DailyState;
+}
+
+export interface PickupState {
+    id: number;
+    kind: string;
+    /** 什么时候消失（游戏时间） */
+    expiresAt: number;
+}
+
+export interface DailyState {
+    /** 第几个游戏日的目标 */
+    day: number;
+    tasks: { id: string; baseline: number; claimed: boolean }[];
+    chestClaimed: boolean;
 }
 
 /** 已经来了、等玩家亲手守夜的尸潮（界面关掉再打开会从头再打一次） */
