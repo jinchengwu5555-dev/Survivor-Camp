@@ -1,0 +1,30 @@
+[
+    { "id": "ration_s", "name": "一袋口粮", "icon": "🥫", "type": "resource", "reward": { "food": 60 }, "description": "压缩饼干和几罐豆子。打开得到食物。" },
+    { "id": "ration_l", "name": "一箱口粮", "icon": "📦", "type": "resource", "reward": { "food": 220 }, "description": "整箱的军用口粮，够全营地吃好几顿。" },
+    { "id": "lumber_s", "name": "一捆木板", "icon": "🪵", "type": "resource", "reward": { "wood": 60 }, "description": "拆下来的旧木板，钉子都拔干净了。" },
+    { "id": "lumber_l", "name": "一车木材", "icon": "🛻", "type": "resource", "reward": { "wood": 220 }, "description": "满满一皮卡的木材。" },
+    { "id": "parts_s", "name": "一盒零件", "icon": "🔩", "type": "resource", "reward": { "parts": 20 }, "description": "螺丝、垫片、弹簧，德里克看了会笑。" },
+    { "id": "parts_l", "name": "一箱零件", "icon": "🧰", "type": "resource", "reward": { "parts": 80 }, "description": "汽修店的整箱备件。" },
+    { "id": "med_box", "name": "药箱", "icon": "💊", "type": "resource", "reward": { "medicine": 15 }, "description": "绷带、消毒水和几板药片。" },
+    { "id": "canned_meat", "name": "午餐肉罐头", "icon": "🥩", "type": "resource", "reward": { "cans": 3 }, "description": "末日里的硬通货，一次 3 罐。" },
+    { "id": "wrench", "name": "扳手", "icon": "🔧", "type": "speedup", "minutes": 40, "description": "正在升级的建筑加速一段时间（在线约 5 分钟）。" },
+    { "id": "toolbox", "name": "工具箱", "icon": "🛠️", "type": "speedup", "minutes": 240, "description": "正在升级的建筑大幅加速（在线约 30 分钟）。" },
+    { "id": "walkie", "name": "对讲机", "icon": "📻", "type": "recall", "description": "呼叫在外探索的小队，让他们立即回来。" },
+    { "id": "coffee", "name": "一罐咖啡", "icon": "☕", "type": "mood", "amount": 15, "description": "所有人心情 +15。" },
+    { "id": "chocolate", "name": "巧克力", "icon": "🍫", "type": "mood", "amount": 8, "description": "所有人心情 +8。" },
+    { "id": "field_kit", "name": "野战医疗包", "icon": "🧳", "type": "heal", "description": "立刻治好所有伤员。" },
+    { "id": "flyer", "name": "招募传单", "icon": "📜", "type": "recruit", "description": "在镇上贴出去，会有一个流浪者来投奔（需要空床位）。" },
+    {
+        "id": "mystery_box", "name": "神秘补给箱", "icon": "🎁", "type": "chest",
+        "description": "不知道谁留下的补给箱，打开看看运气。",
+        "contents": [
+            { "weight": 3, "prop": "ration_l" },
+            { "weight": 3, "prop": "lumber_l" },
+            { "weight": 2, "prop": "parts_l" },
+            { "weight": 2, "prop": "toolbox" },
+            { "weight": 2, "prop": "field_kit" },
+            { "weight": 1, "prop": "flyer" },
+            { "weight": 2, "resources": { "cans": 8 } }
+        ]
+    }
+]

@@ -184,6 +184,20 @@
 | `item_molotov.png` | 物品：燃烧瓶 | 一个塞着布条、布条在燃烧的玻璃瓶 | a glass bottle with a burning rag stuffed in it |
 | `item_medkit.png` | 物品：急救包 | 一卷绷带和一个小药盒 | a roll of bandage and a small medicine box |
 | `item_nail_bomb.png` | 物品：钉子炸弹 | 一个插满钉子、有引线的铁罐 | a tin can bristling with nails and a fuse |
+| `item_smoke_bomb.png` | 物品：烟雾弹 | 一个冒着灰白烟雾的土制罐子 | a homemade canister billowing grey-white smoke |
+| `item_spike_trap.png` | 物品：钉板陷阱 | 一块钉满长钉的木板 | a wooden board bristling with long nails |
+| `item_stim_shot.png` | 物品：兴奋剂 | 一支装着黄色药水的注射器 | a syringe filled with yellow liquid |
+| `prop_ration_s.png` / `prop_ration_l.png` | 背包：口粮（小 / 大） | 一小袋压缩饼干 / 一整箱军用口粮 | a small bag of hardtack / a full crate of military rations |
+| `prop_lumber_s.png` / `prop_lumber_l.png` | 背包：木材（小 / 大） | 一捆木板 / 一辆装满木材的小皮卡 | a bundle of planks / a small pickup loaded with lumber |
+| `prop_parts_s.png` / `prop_parts_l.png` | 背包：零件（小 / 大） | 一小盒螺丝零件 / 一个装满零件的铁皮工具箱 | a small box of screws and parts / a metal crate full of parts |
+| `prop_med_box.png` | 背包：药箱 | 一个白色药箱 | a white medicine box |
+| `prop_canned_meat.png` | 背包：午餐肉罐头 | 三个叠在一起的午餐肉罐头 | three stacked cans of luncheon meat |
+| `prop_wrench.png` / `prop_toolbox.png` | 背包：加速（扳手 / 工具箱） | 一把扳手 / 一个红色工具箱，带一个小时钟标记 | a wrench / a red toolbox with a small clock badge |
+| `prop_walkie.png` | 背包：对讲机 | 一台旧对讲机，天线竖起 | an old walkie-talkie with antenna up |
+| `prop_coffee.png` / `prop_chocolate.png` | 背包：咖啡 / 巧克力 | 一罐冒热气的咖啡 / 一块巧克力 | a steaming can of coffee / a chocolate bar |
+| `prop_field_kit.png` | 背包：野战医疗包 | 一个军绿色医疗包 | an olive-green field medical kit |
+| `prop_flyer.png` | 背包：招募传单 | 一张手写的“欢迎幸存者”传单（不要写字，画成涂鸦符号） | a hand-drawn welcome flyer (no readable text, doodle symbols only) |
+| `prop_mystery_box.png` | 背包：神秘补给箱 | 一个带问号贴纸、发着微光的木箱 | a glowing wooden crate with a question-mark sticker |
 | `skill_cover_fire.png` | 技能：伊森·掩护射击 | 一把手枪，枪口冒出火光 | a pistol with a muzzle flash |
 | `skill_hot_soup.png` | 技能：玛莎·热汤 | 一碗冒热气的汤，上面有爱心形状的热气 | a steaming bowl of soup with heart-shaped steam |
 | `skill_molotov.png` | 技能：德里克·燃烧瓶 | 一团橙色的火焰 | a burst of orange flame |

@@ -4,6 +4,7 @@
 
 import { canAfford, grantResources, hqLevel, pay } from './economy';
 import { formatBag } from './combat';
+import { addProp, formatProps } from './props';
 import { nextRandom, pickWeighted } from './rng';
 import { addLog, addStat } from './state';
 import { ActionResult, GameConfig, GameState, RESOURCE_IDS, ResourceBag, TraderState } from './types';
@@ -33,7 +34,7 @@ function rollOffers(config: GameConfig, state: GameState): TraderState['offers']
         const def = pickWeighted(state, pool)!;
         pool.splice(pool.indexOf(def), 1);
         const jitter = 1 + (nextRandom(state) * 2 - 1) * cfg.priceJitter;
-        offers.push({ id: def.id, give: scale(config, state, def.give, 1), get: scale(config, state, def.get, jitter), bought: false });
+        offers.push({ id: def.id, give: scale(config, state, def.give, 1), get: scale(config, state, def.get, jitter), props: def.getProps, bought: false });
     }
     return offers;
 }
@@ -71,10 +72,12 @@ export function trade(config: GameConfig, state: GameState, index: number, now: 
     if (!canAfford(state, offer.give)) return { ok: false, reason: '东西不够换' };
     pay(state, offer.give);
     const got = grantResources(config, state, offer.get);
+    for (const [id, n] of Object.entries(offer.props ?? {})) addProp(state, id, n);
+    const text = [formatBag(config, got), formatProps(config, offer.props ?? {})].filter(Boolean).join('，');
     offer.bought = true;
     addStat(state, 'trades');
-    addLog(state, now, `和商人用 ${formatBag(config, offer.give)} 换了 ${formatBag(config, got) || '（仓库满了，没拿到）'}。`);
-    return { ok: true, message: formatBag(config, got) };
+    addLog(state, now, `和商人用 ${formatBag(config, offer.give)} 换了 ${text || '（仓库满了，没拿到）'}。`);
+    return { ok: true, message: text };
 }
 
 /** 看完激励视频后调用：重新摆一批货 */

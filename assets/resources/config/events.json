@@ -861,6 +861,10 @@
                                 "flag": "safe_letter"
                             },
                             {
+                                "type": "prop",
+                                "prop": "mystery_box"
+                            },
+                            {
                                 "type": "mood",
                                 "target": "toby",
                                 "amount": 10
@@ -1114,6 +1118,11 @@
                                 "type": "mood",
                                 "target": "toby",
                                 "amount": 10
+                            },
+                            {
+                                "type": "prop",
+                                "prop": "wrench",
+                                "amount": 2
                             }
                         ]
                     }

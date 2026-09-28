@@ -99,6 +99,8 @@ export interface BalanceDef {
     hardshipDeathMinutes: number;
     /** 开局的营地 */
     startingSite: string;
+    /** 开局送的背包道具 */
+    startingProps?: Record<string, number>;
     /** 搬迁：只能带走 carryRatio 的物资，每人路上吃 foodPerSurvivor 食物，搬完后 cooldownDays 天内不能再搬 */
     relocation: { carryRatio: number; foodPerSurvivor: number; cooldownDays: number };
 }
@@ -200,7 +202,9 @@ export type Effect =
     | { type: 'flag'; flag: string }
     | { type: 'triggerEvent'; event: string }
     /** 累计统计数据（成就、悬赏会用到），amount 默认 1 */
-    | { type: 'stat'; stat: string; amount?: number };
+    | { type: 'stat'; stat: string; amount?: number }
+    /** 获得背包道具，amount 默认 1 */
+    | { type: 'prop'; prop: string; amount?: number };
 
 export interface Condition {
     minDay?: number;
@@ -284,6 +288,8 @@ export interface LocationDef {
     discoversSite?: string;
     /** 打赢后救回一个流浪者的概率 */
     recruitChance?: number;
+    /** 打赢后可能找到的道具 */
+    drops?: PropDrop[];
 }
 
 export interface RaidDef {
@@ -295,6 +301,8 @@ export interface RaidDef {
     /** 撑过多少秒就算守住 */
     timeLimit: number;
     reward: ResourceBag;
+    /** 守住后可能得到的道具 */
+    drops?: PropDrop[];
 }
 
 export interface SeasonDef {
@@ -419,6 +427,7 @@ export interface GameConfig {
     pickups: PickupConfig;
     daily: DailyConfig;
     trader: TraderConfig;
+    props: PropDef[];
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -436,6 +445,8 @@ export interface PickupKindDef {
     text: string;
     /** 算作消灭一只丧尸（统计 zombies_killed） */
     kill?: boolean;
+    /** 捡到时可能顺便得到的道具 */
+    drops?: PropDrop[];
 }
 
 export interface PickupConfig {
@@ -448,11 +459,44 @@ export interface PickupConfig {
     kinds: PickupKindDef[];
 }
 
+/**
+ * 背包道具（props.json）。type 决定用法：
+ *   resource  打开得到 reward（随指挥部等级成长，罐头不成长）
+ *   speedup   正在升级的建筑减少 minutes 分钟（游戏时间）
+ *   recall    在外探索的小队立即回来
+ *   mood      所有人心情 +amount
+ *   heal      治好所有伤员
+ *   recruit   招来一个流浪者（需要空床位）
+ *   chest     从 contents 里随机开出一样（道具或资源）
+ */
+export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest';
+
+export interface PropDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    type: PropType;
+    reward?: ResourceBag;
+    minutes?: number;
+    amount?: number;
+    contents?: { weight: number; prop?: string; amount?: number; resources?: ResourceBag }[];
+}
+
+/** 道具掉落：chance 概率（默认 1）掉 amount 个（默认 1） */
+export interface PropDrop {
+    prop: string;
+    chance?: number;
+    amount?: number;
+}
+
 /** 流浪商人的一笔交易（trader.json）：给出 give，换来 get */
 export interface TraderOfferDef {
     id: string;
     give: ResourceBag;
     get: ResourceBag;
+    /** 换来的道具（道具 id → 数量） */
+    getProps?: Record<string, number>;
     weight: number;
 }
 
@@ -486,6 +530,8 @@ export interface DailyConfig {
     tasksPerDay: number;
     /** 全部完成后的宝箱（随指挥部等级成长） */
     chest: ResourceBag;
+    /** 宝箱里的道具 */
+    chestProps?: PropDrop[];
     tasks: DailyTaskDef[];
 }
 
@@ -606,6 +652,8 @@ export interface GameState {
     daily?: DailyState;
     /** 流浪商人（老存档没有，用到时补上） */
     trader?: TraderState;
+    /** 背包道具：道具 id → 数量（老存档没有，用到时补上） */
+    props?: Record<string, number>;
     /** 界面红点：已经看过的新内容（见 core/badges.ts） */
     seen?: SeenState;
 }
@@ -617,7 +665,7 @@ export interface TraderState {
     leavesAt: number | null;
     /** 第几次来访（红点用） */
     visit: number;
-    offers: { id: string; give: ResourceBag; get: ResourceBag; bought: boolean }[];
+    offers: { id: string; give: ResourceBag; get: ResourceBag; props?: Record<string, number>; bought: boolean }[];
     refreshesLeft: number;
 }
 

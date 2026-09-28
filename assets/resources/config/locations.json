@@ -7,6 +7,7 @@
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
         "timeLimit": 60,
         "loot": { "food": 50, "wood": 10 },
+        "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 } ],
         "discoversSite": "garage",
         "recruitChance": 0.1
     },
@@ -22,6 +23,7 @@
         ],
         "timeLimit": 60,
         "loot": { "food": 40, "medicine": 8 },
+        "drops": [ { "prop": "med_box", "chance": 0.4 }, { "prop": "chocolate", "chance": 0.3 } ],
         "recruitChance": 0.1
     },
     {
@@ -36,6 +38,7 @@
         ],
         "timeLimit": 90,
         "loot": { "wood": 60, "parts": 25 },
+        "drops": [ { "prop": "lumber_s", "chance": 0.6 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "wrench", "chance": 0.3 } ],
         "discoversSite": "farm",
         "recruitChance": 0.15
     },
@@ -51,6 +54,7 @@
         ],
         "timeLimit": 90,
         "loot": { "medicine": 20, "food": 20 },
+        "drops": [ { "prop": "med_box", "chance": 0.7 }, { "prop": "field_kit", "chance": 0.25 }, { "prop": "coffee", "chance": 0.3 } ],
         "discoversSite": "clinic",
         "recruitChance": 0.2
     },
@@ -66,6 +70,7 @@
         ],
         "timeLimit": 120,
         "loot": { "parts": 40, "cans": 10 },
+        "drops": [ { "prop": "parts_l", "chance": 0.4 }, { "prop": "walkie", "chance": 0.3 }, { "prop": "toolbox", "chance": 0.2 }, { "prop": "mystery_box", "chance": 0.2 } ],
         "firstClearEvent": "sheriff_photo",
         "discoversSite": "police",
         "recruitChance": 0.25

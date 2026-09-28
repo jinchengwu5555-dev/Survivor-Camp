@@ -15,6 +15,7 @@ import { addLog, addStat, currentDay, hasFlag, healSurvivorState, setFlag } from
 import { addWanderer, killRandom, resolveFallen, survivorInfo, survivorName } from './roster';
 import { siteRaidLevel } from './siteMods';
 import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
+import { formatProps, rollDrops } from './props';
 import {
     ActionResult,
     BattleReport,
@@ -311,11 +312,13 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const setup = expeditionSetup(config, loc, squadOf(config, state, squad), survivorBattleLevel(config, state), ex.seed, expeditionEnemyBonus(config, state));
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     let loot: ResourceBag = {};
+    let found = '';
 
     if (result === 'win') {
         addStat(state, 'expeditions_won');
         addStat(state, `clear_${loc.id}`);
         loot = grantResources(config, state, expeditionLoot(config, state, loc));
+        found = formatProps(config, rollDrops(state, loc.drops));
         state.restockAt[loc.id] = at + config.balance.locationRestockMinutes * 60_000;
         if (!hasFlag(state, clearedFlag(loc.id))) {
             setFlag(state, clearedFlag(loc.id));
@@ -336,7 +339,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     }
 
     const summary =
-        (result === 'win' ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。` : `探索${loc.name}失败，小队狼狈撤回。`) +
+        (result === 'win' ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。${found ? `还找到了${found}。` : ''}` : `探索${loc.name}失败，小队狼狈撤回。`) +
         casualtyText(config, state, injured, dead) +
         rescued +
         usedText(itemsUsed);
@@ -418,6 +421,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
     const survivorIds = new Set(state.survivors.map((s) => s.id));
     const fallenSurvivors = fallen.filter((t) => survivorIds.has(t));
     let loot: ResourceBag = {};
+    let found = '';
     const lost: ResourceBag = {};
 
     if (result === 'win') {
@@ -429,6 +433,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         const reward: ResourceBag = {};
         for (const id of RESOURCE_IDS) if (raid.reward[id]) reward[id] = Math.round(raid.reward[id]! * mult);
         loot = grantResources(config, state, reward);
+        found = formatProps(config, rollDrops(state, raid.drops));
         for (const s of state.survivors) s.mood = Math.min(100, s.mood + 3);
     } else {
         addStat(state, 'raids_lost');
@@ -454,7 +459,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
 
     const summary =
         (result === 'win'
-            ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}`
+            ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}${found ? `还捡到了${found}。` : ''}`
             : `【${title}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。`) +
         casualtyText(config, state, injured, dead) +
         usedText(itemsUsed);

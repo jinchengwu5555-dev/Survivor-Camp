@@ -3,10 +3,10 @@
     "maxActive": 3,
     "lifetimeMinutes": 60,
     "kinds": [
-        { "id": "crate", "name": "补给箱", "icon": "📦", "weight": 4, "reward": { "food": 20, "wood": 10 }, "text": "路边翻倒的货车里还有一箱补给。" },
-        { "id": "scrap", "name": "废铁堆", "icon": "🔩", "weight": 3, "reward": { "wood": 15, "parts": 6 }, "text": "拆下几块还能用的铁皮和零件。" },
-        { "id": "medkit", "name": "急救箱", "icon": "🩹", "weight": 1, "reward": { "medicine": 4 }, "text": "一辆救护车的后门开着。" },
-        { "id": "walker", "name": "落单的行尸", "icon": "🧟", "weight": 2, "reward": { "parts": 5, "cans": 1 }, "text": "一只行尸晃到了围栏边，伊森一棍解决了它。", "kill": true },
-        { "id": "cans", "name": "罐头", "icon": "🥫", "weight": 1, "reward": { "cans": 2 }, "text": "排水沟里滚出来两个没开封的罐头。" }
+        { "id": "crate", "name": "补给箱", "icon": "📦", "weight": 4, "reward": { "food": 20, "wood": 10 }, "text": "路边翻倒的货车里还有一箱补给。", "drops": [ { "prop": "ration_s", "chance": 0.3 } ] },
+        { "id": "scrap", "name": "废铁堆", "icon": "🔩", "weight": 3, "reward": { "wood": 15, "parts": 6 }, "text": "拆下几块还能用的铁皮和零件。", "drops": [ { "prop": "parts_s", "chance": 0.2 }, { "prop": "wrench", "chance": 0.1 } ] },
+        { "id": "medkit", "name": "急救箱", "icon": "🩹", "weight": 1, "reward": { "medicine": 4 }, "text": "一辆救护车的后门开着。", "drops": [ { "prop": "med_box", "chance": 0.3 } ] },
+        { "id": "walker", "name": "落单的行尸", "icon": "🧟", "weight": 2, "reward": { "parts": 5, "cans": 1 }, "text": "一只行尸晃到了围栏边，伊森一棍解决了它。", "kill": true, "drops": [ { "prop": "chocolate", "chance": 0.15 } ] },
+        { "id": "cans", "name": "罐头", "icon": "🥫", "weight": 1, "reward": { "cans": 2 }, "text": "排水沟里滚出来两个没开封的罐头。", "drops": [ { "prop": "coffee", "chance": 0.15 } ] }
     ]
 }

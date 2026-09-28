@@ -18,6 +18,7 @@ import wanderers from '../assets/resources/config/wanderers.json';
 import pickups from '../assets/resources/config/pickups.json';
 import daily from '../assets/resources/config/daily.json';
 import trader from '../assets/resources/config/trader.json';
+import props from '../assets/resources/config/props.json';
 import { GameConfig } from '../assets/scripts/core/types';
 import { expandConfig } from '../assets/scripts/core/configExpand';
 import { KeyValueStorage } from '../assets/scripts/core/save';
@@ -25,7 +26,7 @@ import { KeyValueStorage } from '../assets/scripts/core/save';
 /** 还没展开成长公式的原始配置（深拷贝） */
 export function loadRawConfig(): GameConfig {
     return JSON.parse(
-        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, units, skills, statuses }),
+        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, props, units, skills, statuses }),
     ) as GameConfig;
 }
 

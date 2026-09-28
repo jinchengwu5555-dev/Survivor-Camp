@@ -50,6 +50,7 @@ import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
 import { BadgeGroup } from '../core/badges';
+import { formatProps, propBlocker, propCount, propReward } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
@@ -61,7 +62,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v0.8 红点+商人+新内容';
+const GAME_VERSION = 'v0.9 背包道具';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -116,7 +117,7 @@ const TABS: [Tab, string][] = [
 ];
 const TABS_PER_ROW = 4;
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | 'trader' | null;
+type Sheet = 'building' | 'sites' | 'trader' | 'props' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -538,9 +539,25 @@ export class GameRoot extends Component {
         const line = (text: string, size: number, color: Color, y: number) =>
             addLabel(bar, text, size, color, { width: WIDTH, align: 'left' }).node.setPosition(0, y - centerY);
         line(GAME_VERSION, 14, DIM, 630);
-        line(`第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天   ${site?.icon ?? ''}${site?.name ?? ''}   🏆纪录 ${this.records.bestDays} 天`, 26, ACCENT, 603);
+        line(`第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天   ${site?.icon ?? ''}${site?.name ?? ''}`, 26, ACCENT, 603);
         line(this.resourceLine(config, camp, now), 20, TEXT, 570);
-        line(`士气 ${Math.round(morale(state))}   安全 ${safety(config, state)}   人数 ${state.survivors.length}/${bedCount(config, state)}   战斗等级 ${survivorBattleLevel(config, state)}`, 18, DIM, 538);
+        line(`士气 ${Math.round(morale(state))}  安全 ${safety(config, state)}  人数 ${state.survivors.length}/${bedCount(config, state)}  战斗 Lv${survivorBattleLevel(config, state)}  🏆${this.records.bestDays} 天`, 18, DIM, 538);
+
+        // 右上角：背包
+        const totalProps = Object.values(state.props ?? {}).reduce((sum, n) => sum + n, 0);
+        const bag = makeNode('Bag', bar, 120, 46);
+        bag.setPosition(WIDTH / 2 - 60, 603 - centerY);
+        drawPanel(bag.addComponent(Graphics), 120, 46, this.sheet === 'props' ? COLORS.highlight : COLORS.button, 10, ACCENT, 2);
+        addLabel(bag, `🎒背包 ${totalProps}`, 20, TEXT, { width: 112 });
+        addBadge(bag, 54, 18, camp.badges().props);
+        bag.on(Node.EventType.TOUCH_END, () => {
+            if (camp.currentEvent) return;
+            punch(bag);
+            this.tab = 'camp';
+            this.sheet = this.sheet === 'props' ? null : 'props';
+            this.resetScroll();
+            this.render();
+        });
     }
 
     /** 底部导航：两行，每行四个 */
@@ -615,7 +632,7 @@ export class GameRoot extends Component {
             addLabel(node, kind.name, 16, TEXT, { width: 110 }).node.setPosition(0, -38);
             node.on(Node.EventType.TOUCH_END, () => {
                 const res = camp.collectPickup(p.id, camp.now);
-                if (res.ok) this.effect(`${kind.icon} ${formatBag(config, res.gained ?? {}) || kind.name}`, WIN, 28);
+                if (res.ok) this.effect(`${kind.icon} ${[formatBag(config, res.gained ?? {}), res.found].filter(Boolean).join(' ') || kind.name}`, WIN, 28);
                 else this.showToast(res.reason ?? '');
                 this.render();
             });
@@ -819,6 +836,9 @@ export class GameRoot extends Component {
             else if (this.sheet === 'trader') {
                 this.renderTrader(camp, now);
                 camp.markSeen('trader');
+            } else if (this.sheet === 'props') {
+                this.renderProps(camp, now);
+                camp.markSeen('props');
             } else {
                 this.renderSites(camp, now);
                 camp.markSeen('sites');
@@ -835,6 +855,32 @@ export class GameRoot extends Component {
         if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
     }
 
+    /** 背包：每种道具一行，写清楚效果，点“使用” */
+    private renderProps(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        this.text('🎒 背包', 28, ACCENT);
+        this.text('探索、守夜、拾荒、每日宝箱、商人和事件都会得到道具。', 20, DIM);
+        this.gap(8);
+        const owned = config.props.filter((p) => propCount(state, p.id) > 0);
+        if (owned.length === 0) this.text('背包是空的。', 22, DIM);
+        for (const def of owned) {
+            const count = propCount(state, def.id);
+            const blocker = propBlocker(config, state, def.id);
+            let effect = def.description;
+            if (def.type === 'resource') effect = `打开得到 ${formatBag(config, propReward(config, state, def))}`;
+            if (def.type === 'speedup') effect = `正在升级的建筑加速 ${formatTime(realSeconds(config, (def.minutes ?? 0) * 60_000))}（在线时间）`;
+            this.text(`${def.icon} ${def.name} ×${count}   ${effect}`, 22);
+            const half = (WIDTH - 10) / 2;
+            this.button(blocker ? `使用（${blocker}）` : '使用', half, () => {
+                const res = camp.useProp(def.id, camp.now);
+                if (res.ok) this.effect(`${def.icon} ${res.message ?? def.name}`, WIN, 28);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, blocker ? 'disabled' : 'normal', 22, 48);
+            this.gap(12);
+        }
+    }
+
     /** 流浪商人：几笔以物易物的交易 + 看广告刷新货架 */
     private renderTrader(camp: CampGame, now: number): void {
         const { config, state } = camp;
@@ -848,7 +894,8 @@ export class GameRoot extends Component {
         this.gap(8);
         t.offers.forEach((o, i) => {
             const affordable = RESOURCE_IDS.every((id) => state.resources[id] >= (o.give[id] ?? 0));
-            const label = o.bought ? `✅ 已换：${formatBag(config, o.give)} → ${formatBag(config, o.get)}` : `给 ${formatBag(config, o.give)}  →  换 ${formatBag(config, o.get)}`;
+            const get = [formatBag(config, o.get), formatProps(config, o.props ?? {})].filter(Boolean).join(' ');
+            const label = o.bought ? `✅ 已换：${formatBag(config, o.give)} → ${get}` : `给 ${formatBag(config, o.give)}  →  换 ${get}`;
             this.button(label, WIDTH, () => {
                 const res = camp.trade(i, camp.now);
                 if (res.ok) this.effect(`🤝 换到了 ${res.message ?? ''}`, WIN, 28);

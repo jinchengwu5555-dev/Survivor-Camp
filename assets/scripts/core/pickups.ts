@@ -2,6 +2,7 @@
 // 按游戏时间刷新（只在在线时出现），没人捡一段时间后消失。奖励随指挥部等级成长。
 
 import { formatBag } from './combat';
+import { formatProps, rollDrops } from './props';
 import { grantResources, hqLevel } from './economy';
 import { nextRandom, pickWeighted } from './rng';
 import { addLog, addStat } from './state';
@@ -55,6 +56,8 @@ export interface PickupResult {
     reason?: string;
     text?: string;
     gained?: ResourceBag;
+    /** 顺便捡到的道具，比如“🔧扳手” */
+    found?: string;
 }
 
 export function collectPickup(config: GameConfig, state: GameState, pickupId: number, now: number): PickupResult & ActionResult {
@@ -68,6 +71,7 @@ export function collectPickup(config: GameConfig, state: GameState, pickupId: nu
         addStat(state, 'zombies_killed');
         addStat(state, 'kill_walker');
     }
-    addLog(state, now, `${kind.icon}${kind.text}${formatBag(config, gained) ? `（${formatBag(config, gained)}）` : ''}`);
-    return { ok: true, text: kind.text, gained };
+    const found = formatProps(config, rollDrops(state, kind.drops));
+    addLog(state, now, `${kind.icon}${kind.text}${formatBag(config, gained) ? `（${formatBag(config, gained)}）` : ''}${found ? `还捡到了${found}。` : ''}`);
+    return { ok: true, text: kind.text, gained, found };
 }

@@ -138,5 +138,26 @@
         "targeting": { "rule": "currentTarget" },
         "effects": [ { "type": "status", "status": "slow", "duration": 2 } ],
         "tags": ["beast"]
+    },
+    {
+        "id": "item_smoke", "name": "烟雾弹", "description": "让一大片敌人减速、攻击变慢。",
+        "trigger": { "type": "auto" }, "cooldown": 999, "range": 5,
+        "targeting": { "rule": "nearestEnemy", "radius": 3 },
+        "effects": [ { "type": "status", "status": "slow", "duration": 6 } ],
+        "tags": ["item", "aoe", "control"]
+    },
+    {
+        "id": "item_spike", "name": "钉板陷阱", "description": "扎伤一小片敌人并把它们定在原地。",
+        "trigger": { "type": "auto" }, "cooldown": 999, "range": 3,
+        "targeting": { "rule": "nearestEnemy", "radius": 1.5 },
+        "effects": [ { "type": "damage", "ratio": 1.5 }, { "type": "status", "status": "root", "duration": 3 } ],
+        "tags": ["item", "aoe", "control"]
+    },
+    {
+        "id": "item_stim", "name": "兴奋剂", "description": "危急时注射：回血并进入狂怒。",
+        "trigger": { "type": "hpBelow", "ratio": 0.4 }, "cooldown": 0,
+        "targeting": { "rule": "self" },
+        "effects": [ { "type": "heal", "ratio": 2.0 }, { "type": "status", "status": "rage", "duration": 8 } ],
+        "tags": ["item", "buff"]
     }
 ]

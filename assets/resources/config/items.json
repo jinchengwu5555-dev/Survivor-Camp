@@ -25,5 +25,32 @@
         "workshopLevel": 2,
         "cost": { "parts": 10, "wood": 5 },
         "battleSkill": "item_nailbomb"
+    },
+    {
+        "id": "smoke_bomb",
+        "name": "烟雾弹",
+        "icon": "💨",
+        "description": "化肥和糖做的土烟雾弹。扔进尸群，让它们晕头转向、走得更慢。",
+        "workshopLevel": 1,
+        "cost": { "wood": 4, "parts": 4, "food": 5 },
+        "battleSkill": "item_smoke"
+    },
+    {
+        "id": "spike_trap",
+        "name": "钉板陷阱",
+        "icon": "📌",
+        "description": "木板上钉满长钉，铺在路障前面。踩上去的丧尸被扎住动弹不得。",
+        "workshopLevel": 2,
+        "cost": { "wood": 10, "parts": 6 },
+        "battleSkill": "item_spike"
+    },
+    {
+        "id": "stim_shot",
+        "name": "兴奋剂",
+        "icon": "💉",
+        "description": "诺拉配的肾上腺素针剂。携带者危急时自动注射：回一点血，打得更凶。",
+        "workshopLevel": 2,
+        "cost": { "medicine": 6, "parts": 2 },
+        "battleSkill": "item_stim"
     }
 ]

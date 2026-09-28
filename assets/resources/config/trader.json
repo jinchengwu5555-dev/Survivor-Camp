@@ -14,6 +14,11 @@
         { "id": "cans_for_parts", "give": { "cans": 3 }, "get": { "parts": 40 }, "weight": 2 },
         { "id": "cans_for_medicine", "give": { "cans": 3 }, "get": { "medicine": 20 }, "weight": 2 },
         { "id": "medicine_for_cans", "give": { "medicine": 15 }, "get": { "cans": 2 }, "weight": 1 },
-        { "id": "wood_for_cans", "give": { "wood": 150 }, "get": { "cans": 2 }, "weight": 1 }
+        { "id": "wood_for_cans", "give": { "wood": 150 }, "get": { "cans": 2 }, "weight": 1 },
+        { "id": "parts_for_toolbox", "give": { "parts": 40 }, "get": {}, "getProps": { "toolbox": 1 }, "weight": 2 },
+        { "id": "food_for_coffee", "give": { "food": 50 }, "get": {}, "getProps": { "coffee": 2 }, "weight": 2 },
+        { "id": "cans_for_mystery", "give": { "cans": 5 }, "get": {}, "getProps": { "mystery_box": 1 }, "weight": 2 },
+        { "id": "wood_for_flyer", "give": { "wood": 120 }, "get": {}, "getProps": { "flyer": 1 }, "weight": 1 },
+        { "id": "medicine_for_walkie", "give": { "medicine": 12 }, "get": {}, "getProps": { "walkie": 1 }, "weight": 1 }
     ]
 }

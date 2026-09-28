@@ -5,7 +5,8 @@
         "conditions": { "flags": ["raids_started"] },
         "enemies": [ { "unit": "walker" }, { "unit": "walker", "spawnAt": 3 }, { "unit": "walker", "spawnAt": 6 } ],
         "timeLimit": 30,
-        "reward": { "parts": 5 }
+        "reward": { "parts": 5 },
+        "drops": [ { "prop": "ration_s", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.2 } ]
     },
     {
         "id": "horde",
@@ -19,7 +20,8 @@
             { "unit": "frenzied", "spawnAt": 16 }
         ],
         "timeLimit": 40,
-        "reward": { "parts": 10, "wood": 20 }
+        "reward": { "parts": 10, "wood": 20 },
+        "drops": [ { "prop": "parts_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.3 } ]
     },
     {
         "id": "great_horde",
@@ -33,6 +35,7 @@
             { "unit": "brute", "spawnAt": 20 }
         ],
         "timeLimit": 60,
-        "reward": { "parts": 25, "cans": 5 }
+        "reward": { "parts": 25, "cans": 5 },
+        "drops": [ { "prop": "mystery_box", "chance": 0.4 }, { "prop": "toolbox", "chance": 0.3 } ]
     }
 ]

@@ -6,6 +6,7 @@ import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorSta
 import { pickOne, pickWeighted } from './rng';
 import { addWanderer, checkGameOver, injureSurvivor, survivorInfo, survivorName as rosterName } from './roster';
 import { getSite } from './siteMods';
+import { addProp } from './props';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
     return config.events.find((e) => e.id === id);
@@ -148,6 +149,9 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             break;
         case 'stat':
             addStat(state, effect.stat, effect.amount ?? 1);
+            break;
+        case 'prop':
+            addProp(state, effect.prop, effect.amount ?? 1);
             break;
     }
 }

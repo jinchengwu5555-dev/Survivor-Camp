@@ -1,6 +1,7 @@
 {
     "tasksPerDay": 3,
     "chest": { "cans": 3, "food": 40, "wood": 40, "parts": 15 },
+    "chestProps": [ { "prop": "mystery_box", "chance": 0.5 }, { "prop": "wrench", "chance": 0.5 } ],
     "tasks": [
         { "id": "kill_15", "text": "消灭 15 只丧尸", "stat": "zombies_killed", "amount": 15, "reward": { "parts": 10 } },
         { "id": "explore_1", "text": "探索成功 1 次", "stat": "expeditions_won", "amount": 1, "reward": { "food": 30 } },

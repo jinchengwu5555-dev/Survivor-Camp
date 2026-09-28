@@ -1,6 +1,6 @@
 // 配置表检查：改完 JSON 后跑 `npm test`，写错的 id、引用不存在的事件等都会被报出来。
 
-import { Effect, GameConfig, Objective, RESOURCE_IDS, ResourceBag } from './types';
+import { Effect, GameConfig, Objective, PropDrop, RESOURCE_IDS, ResourceBag } from './types';
 import { BattleRegistry } from './battle/registry';
 import { UnitSetup } from './battle/Battle';
 import { BARRICADE_UNIT, DOG_UNIT } from './combat';
@@ -31,6 +31,16 @@ export function validateConfig(config: GameConfig): string[] {
     };
     const checkSurvivor = (where: string, id: string, allowed: string[]) => {
         if (!allowed.includes(id) && !survivorIds.has(id)) errors.push(`${where}：未知幸存者 ${id}`);
+    };
+    const propIds = new Set((config.props ?? []).map((p) => p.id));
+    const checkProp = (where: string, id: string) => {
+        if (!propIds.has(id)) errors.push(`${where}：未知道具 ${id}`);
+    };
+    const checkDrops = (where: string, drops: PropDrop[] | undefined) => {
+        for (const d of drops ?? []) {
+            checkProp(where, d.prop);
+            if (d.chance !== undefined && (d.chance < 0 || d.chance > 1)) errors.push(`${where}：道具 ${d.prop} 的 chance 要在 0～1 之间`);
+        }
     };
     const checkEvent = (where: string, id: string) => {
         if (!eventIds.has(id)) errors.push(`${where}：未知事件 ${id}`);
@@ -79,6 +89,9 @@ export function validateConfig(config: GameConfig): string[] {
                 break;
             case 'addWanderer':
                 if (e.specialty && !config.wanderers.specialties.includes(e.specialty)) errors.push(`${where}：流浪者没有专长 ${e.specialty}`);
+                break;
+            case 'prop':
+                checkProp(where, e.prop);
                 break;
             case 'discoverSite':
                 if (!config.sites.some((s) => s.id === e.site)) errors.push(`${where}：未知营地地点 ${e.site}`);
@@ -132,6 +145,7 @@ export function validateConfig(config: GameConfig): string[] {
         checkEnemies(where, loc.enemies);
         checkBag(where, loc.loot);
         if (loc.durationMinutes <= 0) errors.push(`${where}：durationMinutes 必须大于 0`);
+        checkDrops(where, loc.drops);
         if (loc.firstClearEvent) checkEvent(where, loc.firstClearEvent);
         if (loc.discoversSite && !config.sites.some((s) => s.id === loc.discoversSite)) errors.push(`${where}：未知营地地点 ${loc.discoversSite}`);
         if (loc.recruitChance !== undefined && (loc.recruitChance < 0 || loc.recruitChance > 1)) errors.push(`${where}：recruitChance 要在 0～1 之间`);
@@ -141,6 +155,7 @@ export function validateConfig(config: GameConfig): string[] {
         const where = `尸潮 ${raid.id}`;
         checkEnemies(where, raid.enemies);
         checkBag(where, raid.reward);
+        checkDrops(where, raid.drops);
         for (const id of raid.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
     }
 
@@ -191,23 +206,45 @@ export function validateConfig(config: GameConfig): string[] {
     if (config.pickups.intervalMinutes <= 0) errors.push('pickups.json：intervalMinutes 必须大于 0');
     for (const k of config.pickups.kinds) {
         checkBag(`拾荒物 ${k.id}`, k.reward);
+        checkDrops(`拾荒物 ${k.id}`, k.drops);
         if (k.weight <= 0) errors.push(`拾荒物 ${k.id}：weight 必须大于 0`);
     }
     checkUnique('商人交易', config.trader.offers.map((x) => x.id));
     for (const o of config.trader.offers) {
         checkBag(`商人交易 ${o.id}`, o.give);
         checkBag(`商人交易 ${o.id}`, o.get);
+        for (const id of Object.keys(o.getProps ?? {})) checkProp(`商人交易 ${o.id}`, id);
         if (o.weight <= 0) errors.push(`商人交易 ${o.id}：weight 必须大于 0`);
     }
     if (config.trader.offersPerVisit > config.trader.offers.length) errors.push('trader.json：offersPerVisit 不能多于交易种类');
     checkUnique('每日目标', config.daily.tasks.map((x) => x.id));
     checkBag('每日宝箱', config.daily.chest);
+    checkDrops('每日宝箱', config.daily.chestProps);
     for (const t of config.daily.tasks) {
         const where = `每日目标 ${t.id}`;
         checkBag(where, t.reward);
         if (t.amount <= 0) errors.push(`${where}：amount 必须大于 0`);
         if (t.requiresBuilding && !buildingIds.has(t.requiresBuilding)) errors.push(`${where}：未知建筑 ${t.requiresBuilding}`);
         for (const id of t.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+    }
+
+    checkUnique('道具', config.props.map((x) => x.id));
+    for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
+    for (const p of config.props) {
+        const where = `道具 ${p.id}`;
+        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        checkBag(where, p.reward);
+        if (p.type === 'resource' && !p.reward) errors.push(`${where}：资源箱要写 reward`);
+        if (p.type === 'speedup' && !(p.minutes && p.minutes > 0)) errors.push(`${where}：加速道具要写 minutes`);
+        if (p.type === 'mood' && !p.amount) errors.push(`${where}：士气道具要写 amount`);
+        if (p.type === 'chest') {
+            if (!p.contents?.length) errors.push(`${where}：宝箱要写 contents`);
+            for (const c of p.contents ?? []) {
+                if (c.prop) checkProp(where, c.prop);
+                checkBag(where, c.resources);
+                if (!c.prop && !c.resources) errors.push(`${where}：contents 每一项要有 prop 或 resources`);
+            }
+        }
     }
 
     checkUnique('成就', config.achievements.map((x) => x.id));

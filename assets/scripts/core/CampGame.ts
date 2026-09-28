@@ -12,6 +12,7 @@ import { claimDaily, claimDailyChest, refreshDaily } from './daily';
 import { addWorker, autoAssign, removeWorker } from './workers';
 import { refreshTraderOffers, trade, updateTrader } from './trader';
 import { BadgeGroup, badgeCounts, markSeen } from './badges';
+import { useProp } from './props';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
@@ -146,6 +147,11 @@ export class CampGame {
     /** 看完激励视频后调用：商人重新摆货 */
     refreshTrader(now: number): ActionResult {
         return this.act(now, () => refreshTraderOffers(this.config, this.state, now));
+    }
+
+    /** 使用背包里的一个道具 */
+    useProp(propId: string, now: number): ActionResult {
+        return this.act(now, () => useProp(this.config, this.state, propId, now));
     }
 
     /** 各处的红点数 */

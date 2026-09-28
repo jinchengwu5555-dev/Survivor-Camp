@@ -2,6 +2,7 @@
 // 和悬赏一样用统计数据判断进度：抽到时记下当前值，之后增加 amount 就算完成。没领的奖励第二天就没了。
 
 import { formatBag } from './combat';
+import { formatProps, rollDrops } from './props';
 import { conditionMet } from './events';
 import { grantResources, hqLevel } from './economy';
 import { nextRandom } from './rng';
@@ -83,7 +84,9 @@ export function claimDailyChest(config: GameConfig, state: GameState, now: numbe
     if (!daily.tasks.every((t) => t.claimed)) return { ok: false, reason: '先完成今天的全部目标' };
     daily.chestClaimed = true;
     const got = grantResources(config, state, dailyChest(config, state));
+    const found = formatProps(config, rollDrops(state, config.daily.chestProps));
+    const text = [formatBag(config, got), found].filter(Boolean).join('，');
     addStat(state, 'daily_chests');
-    addLog(state, now, `打开了今天的宝箱：${formatBag(config, got) || '空的'}。`);
-    return { ok: true, message: formatBag(config, got) };
+    addLog(state, now, `打开了今天的宝箱：${text || '空的'}。`);
+    return { ok: true, message: text };
 }

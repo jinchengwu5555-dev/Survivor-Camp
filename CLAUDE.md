@@ -13,6 +13,7 @@
 - `platform/` 放微信 / Cocos 平台相关代码，`ui/` 放界面。
 - **时间只按在线时间算**（`core/clock.ts`）：core 里的 `now` 都是游戏时间，界面操作一律用 `camp.now`，每秒调用 `camp.online(Date.now())`；倒计时用 `realSeconds()` 换算。离线时营地暂停，只发 `offline.ts` 的挂机收益。改时钟参数要同步 `build-templates/wechatgame/cloudfunctions/leaderboard/config.json`（测试会检查）。
 - 守夜是玩家亲手打的（`core/liveRaid.ts` + `ui/BattleView.ts`）：界面把 `camp.liveRaids` 设为 true，尸潮进 `state.pendingRaid`；测试和模拟保持 false 自动结算。玩家操作记在 `BattleSetup.inputs` 里，战报必须能完整重放。新手引导由 `core/guide.ts` 从剧情目标推出来，不要另写引导脚本。
+- 背包道具在 `props.json` + `core/props.ts`，各处掉落统一写成 `drops` 掉落表（`rollDrops`）；新增道具类型时同步 `PropType`、`useProp`、`validate.ts` 和 README 的道具表。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。

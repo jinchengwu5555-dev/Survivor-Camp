@@ -37,6 +37,7 @@
     "raidBreachDeaths": 1,
     "hardshipDeathMinutes": 160,
     "startingSite": "supermarket",
+    "startingProps": { "ration_s": 2, "wrench": 3, "coffee": 1, "mystery_box": 1 },
     "relocation": { "carryRatio": 0.5, "foodPerSurvivor": 20, "cooldownDays": 3 },
     "hunterRanks": [
         { "name": "见习猎人", "xp": 0 },
