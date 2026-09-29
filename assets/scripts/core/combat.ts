@@ -19,6 +19,9 @@ import { formatProps, rollDrops } from './props';
 import { combatMultiplier } from './talents';
 import { passNight, rollRaid, watchersText } from './watch';
 import { changeMoodAll } from './mood';
+import { carryHome, makePieces, newHaul } from './packing';
+import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
+import { tierAt } from './districts';
 import {
     ActionResult,
     BattleReport,
@@ -57,7 +60,11 @@ export function battleRegistry(config: GameConfig): BattleRegistry {
 
 /** 在外面：探索小队里，或者正在侦察 */
 export function isOnExpedition(state: GameState, survivorId: string): boolean {
-    return state.expeditions.some((e) => e.squad.includes(survivorId)) || (state.scouts ?? []).some((s) => s.survivor === survivorId);
+    return (
+        state.expeditions.some((e) => e.squad.includes(survivorId)) ||
+        (state.scouts ?? []).some((s) => s.survivor === survivorId) ||
+        (state.surveys ?? []).some((s) => s.squad.includes(survivorId))
+    );
 }
 
 function battleUnitOf(config: GameConfig, state: GameState, survivorId: string): string | undefined {
@@ -269,10 +276,12 @@ export function restockSecondsLeft(state: GameState, locationId: string, now: nu
 }
 
 /** 检查能否出发；返回 null 表示可以 */
-export function expeditionBlocker(config: GameConfig, state: GameState, locationId: string, squad: string[], now: number): string | null {
+export function expeditionBlocker(config: GameConfig, state: GameState, locationId: string, squad: string[], now: number, vehicle?: string): string | null {
     const loc = getLocation(config, locationId);
     if (!loc) return '地点不存在';
     if (!conditionMet(config, state, loc.conditions, now)) return '这个地点还没解锁';
+    const ride = pickVehicle(config, state, tierAt(config, loc.map), vehicle);
+    if (ride.blocker) return ride.blocker;
     if (state.expeditions.some((e) => e.location === locationId)) return '已经有小队在这里了';
     const restock = restockSecondsLeft(state, locationId, now);
     if (restock > 0) return '刚搜刮过，物资还没重新聚起来';
@@ -284,21 +293,29 @@ export function expeditionBlocker(config: GameConfig, state: GameState, location
     return null;
 }
 
-export function startExpedition(config: GameConfig, state: GameState, locationId: string, squad: string[], now: number): ActionResult {
-    const blocker = expeditionBlocker(config, state, locationId, squad, now);
+export function startExpedition(config: GameConfig, state: GameState, locationId: string, squad: string[], now: number, vehicle?: string): ActionResult {
+    const blocker = expeditionBlocker(config, state, locationId, squad, now, vehicle);
     if (blocker) return { ok: false, reason: blocker };
     const loc = getLocation(config, locationId)!;
+    const v = pickVehicle(config, state, tierAt(config, loc.map), vehicle).vehicle;
+    useVehicle(state, v);
     for (const s of state.survivors) if (squad.includes(s.id)) s.assignment = null;
     state.expeditions.push({
         id: state.nextId++,
         location: locationId,
         squad: [...squad],
         startedAt: now,
-        returnsAt: now + loc.durationMinutes * 60_000,
+        returnsAt: now + loc.durationMinutes * (v?.speed ?? 1) * 60_000,
         seed: randomSeed(state),
+        vehicle: v?.id,
     });
-    addLog(state, now, `小队出发前往${loc.name}。`);
+    addLog(state, now, `小队${v ? `开着${v.icon}${v.name}` : '步行'}出发前往${loc.name}。`);
     return { ok: true };
+}
+
+/** 这个地点在哪个区、要什么交通工具 */
+export function locationTier(config: GameConfig, loc: LocationDef): number {
+    return tierAt(config, loc.map);
 }
 
 /** 看完广告后立即返回 */
@@ -310,15 +327,19 @@ export function finishExpeditionNow(config: GameConfig, state: GameState, expedi
     return { ok: true };
 }
 
-export function resolveExpeditions(config: GameConfig, state: GameState, now: number): void {
+/**
+ * 到时间的小队回来。live = true（界面在看）时，打赢的战利品放进 state.pendingHauls 让玩家自己装背包；
+ * 否则（测试、模拟、对讲机召回）自动装好带回来。
+ */
+export function resolveExpeditions(config: GameConfig, state: GameState, now: number, live = false): void {
     const due = state.expeditions.filter((e) => e.returnsAt <= now).sort((a, b) => a.returnsAt - b.returnsAt);
     for (const ex of due) {
         state.expeditions = state.expeditions.filter((e) => e !== ex);
-        resolveExpedition(config, state, ex);
+        resolveExpedition(config, state, ex, live);
     }
 }
 
-function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionState): void {
+function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionState, live: boolean): void {
     const loc = getLocation(config, ex.location);
     const at = ex.returnsAt;
     const squad = ex.squad.filter((id) => state.survivors.some((s) => s.id === id));
@@ -328,12 +349,24 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const { result, fallen, itemsUsed } = fight(config, state, setup);
     let loot: ResourceBag = {};
     let found = '';
+    let packNote = '';
 
     if (result === 'win') {
         addStat(state, 'expeditions_won');
         addStat(state, `clear_${loc.id}`);
-        loot = grantResources(config, state, expeditionLoot(config, state, loc));
-        found = formatProps(config, rollDrops(state, loc.drops));
+        // 战利品要装进背包才能带回来（见 packing.ts）
+        const pieces = makePieces(config, state, expeditionLoot(config, state, loc), rollDrops(state, loc.drops, false));
+        const cap = haulCapacity(config, squad.length, vehicleDef(config, ex.vehicle));
+        const haul = newHaul(config, state, loc.name, at, pieces, cap.grid, cap.maxWeight);
+        if (live) {
+            state.pendingHauls = [...(state.pendingHauls ?? []), haul];
+            packNote = '战利品摊了一地，等你装背包。';
+        } else {
+            const home = carryHome(config, state, haul);
+            loot = home.loot;
+            found = formatProps(config, home.props);
+            if (home.left) packNote = `背包装不下，留下了：${home.left}。`;
+        }
         state.restockAt[loc.id] = at + config.balance.locationRestockMinutes * 60_000;
         if (!hasFlag(state, clearedFlag(loc.id))) {
             setFlag(state, clearedFlag(loc.id));
@@ -354,7 +387,11 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     }
 
     const summary =
-        (result === 'win' ? `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。${found ? `还找到了${found}。` : ''}` : `探索${loc.name}失败，小队狼狈撤回。`) +
+        (result === 'win'
+            ? live
+                ? `探索${loc.name}成功！${packNote}`
+                : `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。${found ? `还找到了${found}。` : ''}${packNote}`
+            : `探索${loc.name}失败，小队狼狈撤回。`) +
         casualtyText(config, state, injured, dead) +
         rescued +
         usedText(itemsUsed);

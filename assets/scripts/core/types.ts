@@ -478,6 +478,12 @@ export interface GameConfig {
     scouting: ScoutingConfig;
     /** 营地闲聊（老配置没有） */
     chatter?: ChatterConfig;
+    /** 镇地图分区（老配置没有） */
+    districts?: DistrictsConfig;
+    /** 交通工具（老配置没有） */
+    vehicles?: VehicleDef[];
+    /** 探索背包：资源怎么分包、占几格、多重（老配置没有） */
+    packing?: PackingConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -550,6 +556,9 @@ export interface PropDef {
     gear?: GearStats;
     /** type = gear 时：工坊能不能打造（需要的工坊等级和资源） */
     craft?: { workshopLevel: number; cost: ResourceBag };
+    /** 在探索背包里占几格（宽 × 高）、多重；不写用 packing 的默认值 */
+    size?: [number, number];
+    weight?: number;
 }
 
 /** 天赋（talents.json），见 core/talents.ts */
@@ -702,6 +711,8 @@ export interface ExpeditionState {
     startedAt: number;
     returnsAt: number;
     seed: number;
+    /** 开的什么车（不开车为空） */
+    vehicle?: string;
 }
 
 /** 战报：保存了完整的战斗参数，界面可以用同一个种子重放整场战斗 */
@@ -792,9 +803,119 @@ export interface GameState {
     chatterSeen?: string[];
     chatter?: ChatterEntry[];
     nextChatAt?: number;
+    /** 拥有的交通工具 id（老存档没有，用到时补上） */
+    vehicles?: string[];
+    /** 正在勘察分区的小队、勘察驱散迷雾的点、已经探索完的分区 */
+    surveys?: SurveyState[];
+    surveyed?: { x: number; y: number; r: number }[];
+    districtsCompleted?: string[];
+    /** 探索回来、等玩家装背包的战利品（见 core/packing.ts） */
+    pendingHauls?: HaulState[];
 }
 
-export type ChatterKind = 'chat' | 'gossip' | 'joke' | 'warm' | 'worry' | 'quarrel';
+export interface SurveyState {
+    id: number;
+    district: string;
+    squad: string[];
+    vehicle?: string;
+    startedAt: number;
+    returnsAt: number;
+}
+
+/** 一件战利品：一包资源或者一个道具 */
+export interface LootPiece {
+    id: number;
+    kind: 'resource' | 'prop';
+    /** 资源 id 或道具 id */
+    item: string;
+    amount: number;
+    w: number;
+    h: number;
+    weight: number;
+}
+
+export interface PackedPiece {
+    piece: number;
+    x: number;
+    y: number;
+    /** 转了 90 度 */
+    rotated: boolean;
+}
+
+export interface HaulState {
+    id: number;
+    title: string;
+    at: number;
+    pieces: LootPiece[];
+    packed: PackedPiece[];
+    grid: [number, number];
+    maxWeight: number;
+}
+
+export interface DistrictDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** 地图上的范围（和 locations 的 map 坐标一样） */
+    rect: { x1: number; y1: number; x2: number; y2: number };
+    /** 要什么等级的交通工具才能去：0 走路，1 自行车，2 摩托 / 皮卡，3 货车 */
+    tier: number;
+    /** 勘察一趟要多少游戏分钟（会乘交通工具的速度） */
+    surveyMinutes: number;
+    /** 勘察的人受伤的概率 */
+    danger: number;
+    /** 勘察带回的资源（随指挥部等级按一半指数成长） */
+    loot: ResourceBag;
+    drops?: PropDrop[];
+    /** 整个区都探索完的一次性奖励 */
+    complete?: { resources?: ResourceBag; props?: Record<string, number> };
+}
+
+export interface DistrictsConfig {
+    /** 计算探索进度的网格大小 */
+    cell: number;
+    /** 勘察一次驱散多大一片迷雾 */
+    revealRadius: number;
+    /** 每个人能背多重 */
+    carryPerPerson: number;
+    districts: DistrictDef[];
+}
+
+export interface VehicleDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** 能去的最远分区等级 */
+    tier: number;
+    /** 探索背包的格子（宽 × 高） */
+    grid: [number, number];
+    /** 额外能装多重 */
+    cargo: number;
+    /** 路上时间倍率 */
+    speed: number;
+    /** 每趟烧几桶汽油（背包道具 gasoline） */
+    fuel: number;
+    /** 开局就有 */
+    startOwned?: boolean;
+    /** 这个人加入营地时自带 */
+    comesWith?: string;
+    /** 自己造：指挥部、工坊等级和资源 */
+    obtain?: { hq: number; workshopLevel: number; cost: ResourceBag };
+}
+
+export interface PackingConfig {
+    /** 不开车时的背包格子 */
+    baseGrid: [number, number];
+    /** 每种资源打成一包：每包多少、占几格、多重 */
+    bundles: Record<ResourceId, { amount: number; size: [number, number]; weight: number }>;
+    /** 道具没写 size / weight 时的默认值 */
+    defaultPropSize: [number, number];
+    defaultPropWeight: number;
+}
+
+export type ChatterKind ='chat' | 'gossip' | 'joke' | 'warm' | 'worry' | 'quarrel';
 
 export interface ChatterDialogueDef {
     id: string;

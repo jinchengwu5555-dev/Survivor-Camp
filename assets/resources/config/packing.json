@@ -1,0 +1,12 @@
+{
+    "baseGrid": [3, 3],
+    "bundles": {
+        "food": { "amount": 20, "size": [1, 1], "weight": 2 },
+        "wood": { "amount": 25, "size": [2, 1], "weight": 4 },
+        "parts": { "amount": 15, "size": [1, 1], "weight": 3 },
+        "medicine": { "amount": 8, "size": [1, 1], "weight": 1 },
+        "cans": { "amount": 4, "size": [1, 1], "weight": 2 }
+    },
+    "defaultPropSize": [1, 1],
+    "defaultPropWeight": 1
+}

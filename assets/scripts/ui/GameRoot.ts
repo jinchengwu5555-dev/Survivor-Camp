@@ -22,6 +22,7 @@ import {
     raidDefenders,
     raidEnemyBonus,
     raidSetup,
+    locationTier,
     restockSecondsLeft,
     squadOf,
     suggestSquad,
@@ -35,7 +36,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { BattleReport, BuildingDef, BuildingLevelDef, GameConfig, GEAR_SLOTS, RESOURCE_IDS, ResourceBag, WatchMode } from '../core/types';
+import { BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo, survivorName } from '../core/roster';
@@ -54,6 +55,9 @@ import { combatMultiplier, sleepFactor, talentsOf, workMultiplier } from '../cor
 import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearStatsText } from '../core/gear';
 import { campStats } from '../core/campStats';
 import { moodFactors, moodTier } from '../core/mood';
+import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
+import { buildVehicleBlocker, FUEL_PROP, haulCapacity, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
+import { occupancy, packedWeight, pieceOf, pieceText } from '../core/packing';
 import { planWatch, raidChanceTonight, WATCH_MODE_NAMES, watchersNeeded, watchersText } from '../core/watch';
 import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
@@ -71,7 +75,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.4 心情+设施阶段';
+const GAME_VERSION = 'v1.5 分区+车辆+背包格子';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -202,6 +206,13 @@ export class GameRoot extends Component {
     private selectedSurvivor: string | null = null;
     /** 刚做完的事件选择：结果卡片（点“继续”后才看下一个事件） */
     private eventResult: { title: string; choice: string; text: string; effects: string } | null = null;
+    /** 探索页选中的分区（选中时下方显示分区详情和“勘察”） */
+    private selectedDistrict: string | null = null;
+    /** 出发时选的车：undefined = 自动挑，'walk' = 走路 */
+    private selectedVehicle: string | undefined = undefined;
+    /** 装背包：选中的战利品、要不要转 90 度 */
+    private selectedPiece: number | null = null;
+    private pieceRotated = false;
     /** 探索页选中的地点 */
     private selectedLocation: string | null = null;
     /** 当前的新手引导 */
@@ -522,7 +533,7 @@ export class GameRoot extends Component {
 
     /** 正在处理事件（或者在看事件选择的结果） */
     private eventShowing(camp: CampGame): boolean {
-        return !!camp.currentEvent || this.eventResult !== null;
+        return !!camp.currentEvent || this.eventResult !== null || !!camp.currentHaul;
     }
 
     /** 有没有打开的面板（事件、页签、建筑详情……）；没有就显示营地地图 */
@@ -959,6 +970,10 @@ export class GameRoot extends Component {
         drawPanel(bg.addComponent(Graphics), 720, 2400, COLORS.bg, 0);
         if (this.eventResult) {
             this.renderEventResult(camp);
+            return;
+        }
+        if (camp.currentHaul) {
+            this.renderHaul(camp);
             return;
         }
         if (camp.currentEvent) {
@@ -1412,6 +1427,28 @@ export class GameRoot extends Component {
             }, LEFT, blocker !== null ? 'disabled' : 'normal');
             this.gap(10);
         }
+        // 车库：交通工具决定能去多远、背包多大
+        this.gap(10);
+        this.text(`—— 🚗 车库（⛽ 汽油 ${propCount(state, FUEL_PROP)} 桶）——`, 22, DIM);
+        const owned = new Set(ownedVehicles(config, state).map((v) => v.id));
+        for (const v of config.vehicles ?? []) {
+            const has = owned.has(v.id);
+            this.text(`${v.icon}${v.name}${has ? ' ✅' : ''}  能到：${TIER_NAMES[v.tier]}能去的地方 · 背包 ${v.grid[0]}×${v.grid[1]} · 多装 ${v.cargo} 重 · ${v.fuel ? `每趟 ⛽${v.fuel}` : '不用油'}`, 20, has ? WIN : TEXT);
+            this.text(v.description, 17, DIM);
+            if (!has && v.obtain) {
+                const blocker = buildVehicleBlocker(config, state, v.id);
+                this.button(`🔧 修好它 ${formatCost(config, v.obtain.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
+                    const res = camp.buildVehicle(v.id, camp.now);
+                    if (res.ok) this.effect(`🔧 修好了${res.message}！`, WIN, 30);
+                    else this.showToast(res.reason);
+                    this.render();
+                }, LEFT, blocker ? 'disabled' : 'normal', 20, 46);
+            } else if (!has && v.comesWith) {
+                this.text(`（${survivorName(config, state, v.comesWith)}加入营地时会开过来）`, 17, DIM);
+            }
+            this.gap(8);
+        }
+
         // 打造装备：做好放进背包，到幸存者档案里给人穿上
         this.gap(10);
         this.text('—— 打造装备（做好放进背包，到幸存者档案里穿上）——', 22, DIM);
@@ -1713,7 +1750,8 @@ export class GameRoot extends Component {
         const statusOf = new Map(config.locations.map((l) => [l.id, locationStatus(config, state, l, now)]));
         const visible = config.locations.filter((l) => l.map && statusOf.get(l.id) !== 'hidden');
         const guidedLoc = this.guide?.target?.startsWith('explore:') ? this.guide.target.slice('explore:'.length) : null;
-        if (!this.selectedLocation || !visible.some((l) => l.id === this.selectedLocation)) {
+        if (guidedLoc) this.selectedDistrict = null;
+        if (!this.selectedDistrict && (!this.selectedLocation || !visible.some((l) => l.id === this.selectedLocation))) {
             this.selectedLocation = guidedLoc ?? visible.find((l) => statusOf.get(l.id) === 'known')?.id ?? null;
         }
 
@@ -1749,6 +1787,28 @@ export class GameRoot extends Component {
         // 深雾里零星写几个“未知区域”（位置固定，不会每秒乱跳）
         for (const spot of FOG_LABELS) {
             if (!isRevealed(edge, spot.x, spot.y)) addLabel(fogNode, '🌫️ 未知区域', 18, new Color(120, 125, 130), { width: 160 }).node.setPosition(spot.x, spot.y);
+        }
+
+        // 分区：边界虚线 + 左上角的区名牌（点一下选中这个区，可以派人去勘察）
+        const border = fogNode.addComponent(Graphics);
+        const maxTier = maxTierOwned(config, state);
+        for (const d of config.districts?.districts ?? []) {
+            const { x1, y1, x2, y2 } = d.rect;
+            const col = this.selectedDistrict === d.id ? ACCENT : new Color(200, 190, 160, 110);
+            const corners = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
+            corners.forEach((c, i) => dashedLine(border, c, corners[(i + 1) % 4], col, this.selectedDistrict === d.id ? 3 : 2, 8));
+            const explored = Math.round(districtExplored(config, state, d, now) * 100);
+            const locked = d.tier > maxTier;
+            const plate = makeNode('District', map, 150, 26);
+            plate.setPosition(Math.max(-MAP_WIDTH / 2 + 78, x1 + 78), Math.min(TOWN_HEIGHT / 2 - 60, y2 - 16));
+            drawPanel(plate.addComponent(Graphics), 150, 26, this.selectedDistrict === d.id ? COLORS.highlight : new Color(20, 22, 20, 190), 13);
+            addLabel(plate, `${locked ? '🔒' : d.icon}${d.name} ${explored}%`, 15, locked ? DIM : TEXT, { width: 146, height: 24 });
+            plate.on(Node.EventType.TOUCH_END, () => {
+                punch(plate);
+                this.selectedDistrict = d.id;
+                this.selectedLocation = null;
+                this.render();
+            });
         }
 
         // 已经发现的其他营地地点（可以搬过去）
@@ -1787,6 +1847,7 @@ export class GameRoot extends Component {
             node.on(Node.EventType.TOUCH_END, () => {
                 punch(node);
                 this.selectedLocation = loc.id;
+                this.selectedDistrict = null;
                 this.render();
             });
         }
@@ -1810,9 +1871,13 @@ export class GameRoot extends Component {
         };
         for (const ex of state.expeditions) {
             const target = config.locations.find((l) => l.id === ex.location)?.map;
-            if (target) walker(camp0, target, ex.startedAt, ex.returnsAt, '🚶');
+            if (target) walker(camp0, target, ex.startedAt, ex.returnsAt, vehicleDef(config, ex.vehicle)?.icon ?? '🚶');
         }
         for (const sc of state.scouts ?? []) walker(camp0, sc, sc.startedAt, sc.returnsAt, '🔭');
+        for (const sv of state.surveys ?? []) {
+            const d = districtDef(config, sv.district);
+            if (d) walker(camp0, { x: (d.rect.x1 + d.rect.x2) / 2, y: (d.rect.y1 + d.rect.y2) / 2 }, sv.startedAt, sv.returnsAt, vehicleDef(config, sv.vehicle)?.icon ?? '🗺️');
+        }
 
         // 侦察点
         for (const spot of activeScoutSpots(state, now)) {
@@ -1896,10 +1961,15 @@ export class GameRoot extends Component {
     /** 地图下面：选中地点的详情和按钮 */
     private renderLocationCard(camp: CampGame, now: number, statusOf: Map<string, string>): void {
         const { config, state } = camp;
+        const district = this.selectedDistrict ? districtDef(config, this.selectedDistrict) : undefined;
+        if (district) {
+            this.renderDistrictCard(camp, district, now);
+            return;
+        }
         const loc = this.selectedLocation ? config.locations.find((l) => l.id === this.selectedLocation) : undefined;
         const scouting = (state.scouts ?? []).length;
         if (!loc) {
-            this.text('点地图上的地点查看详情。金色的小圆点是侦察点，点一下派一个人去。', 20, DIM);
+            this.text('点地图上的地点查看详情；点分区的名牌可以派人去勘察，驱散迷雾。金色的小圆点是侦察点。', 20, DIM);
             if (scouting) this.text(`🔭 ${scouting} 个人在外面侦察`, 20, ACCENT);
             return;
         }
@@ -1926,14 +1996,184 @@ export class GameRoot extends Component {
             const left = realSeconds(config, restockSecondsLeft(state, loc.id, now) * 1000);
             this.button(`刚搜刮过，${formatTime(left)} 后物资重新聚起来`, WIDTH, () => {}, LEFT, 'disabled', 22, 50);
         } else {
+            const tier = locationTier(config, loc);
+            const d = districtAt(config, loc.map);
+            this.text(`${d ? `${d.icon}${d.name} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
+            this.renderVehiclePicker(camp, tier, squad.length);
             const guided = this.isGuided(`explore:${loc.id}`);
             this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
-                const res = camp.explore(loc.id, camp.now);
+                const res = camp.explore(loc.id, camp.now, undefined, this.selectedVehicle);
                 if (res.ok) this.effect(`🚶 小队出发前往${loc.name}`, ACCENT);
                 else this.showToast(res.reason);
                 this.render();
             }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
         }
+    }
+
+    /**
+     * 装背包：战利品摊在地上，玩家把它们摆进背包格子里。
+     * 点下面的东西选中（或点“放进去”自动找位置），再点格子放到那里；点背包里的东西拿出来。
+     */
+    private renderHaul(camp: CampGame): void {
+        const { config } = camp;
+        const haul = camp.currentHaul!;
+        const [gw, gh] = haul.grid;
+        const weight = packedWeight(haul);
+        this.text(`🎒 从${haul.title}带回什么？`, 28, ACCENT);
+        this.text(`背包 ${gw}×${gh} 格 · 负重 ${weight}/${haul.maxWeight}${(camp.state.pendingHauls?.length ?? 0) > 1 ? ` · 还有 ${camp.state.pendingHauls!.length - 1} 包等着装` : ''}`, 20, weight > haul.maxWeight * 0.9 ? LOSE : TEXT);
+        this.text('点下面的东西选中，再点背包里的空格放进去；点背包里的东西可以拿出来。装不下的只能留下。', 17, DIM);
+        this.gap(6);
+
+        // 背包格子
+        const cell = Math.min(84, Math.floor((WIDTH - 20) / gw), Math.floor(420 / gh));
+        const gridW = cell * gw;
+        const gridH = cell * gh;
+        const top = this.cursorY;
+        const grid = makeNode('Bag', this.content!, gridW, gridH);
+        grid.setPosition(0, top - gridH / 2);
+        const g = grid.addComponent(Graphics);
+        drawPanel(g, gridW + 8, gridH + 8, new Color(60, 48, 36, 240), 8, new Color(150, 120, 80), 3);
+        const selected = this.selectedPiece !== null ? pieceOf(haul, this.selectedPiece) : undefined;
+        const cellPos = (x: number, y: number) => ({ x: -gridW / 2 + x * cell + cell / 2, y: gridH / 2 - y * cell - cell / 2 });
+        const occ = occupancy(haul);
+        for (let y = 0; y < gh; y++) {
+            for (let x = 0; x < gw; x++) {
+                const p = cellPos(x, y);
+                const node = makeNode('Cell', grid, cell - 4, cell - 4);
+                node.setPosition(p.x, p.y);
+                drawPanel(node.addComponent(Graphics), cell - 4, cell - 4, new Color(90, 74, 56, 230), 6);
+                if (occ[y][x]) continue;
+                node.on(Node.EventType.TOUCH_END, () => {
+                    if (this.selectedPiece === null) return;
+                    const res = camp.placeLoot(this.selectedPiece, x, y, this.pieceRotated);
+                    if (!res.ok) this.showToast(res.reason);
+                    else this.selectedPiece = null;
+                    this.render();
+                });
+            }
+        }
+        for (const pk of haul.packed) {
+            const piece = pieceOf(haul, pk.piece);
+            if (!piece) continue;
+            const w = pk.rotated ? piece.h : piece.w;
+            const h = pk.rotated ? piece.w : piece.h;
+            const node = makeNode('Piece', grid, w * cell - 6, h * cell - 6);
+            node.setPosition(-gridW / 2 + (pk.x + w / 2) * cell, gridH / 2 - (pk.y + h / 2) * cell);
+            drawPanel(node.addComponent(Graphics), w * cell - 6, h * cell - 6, pieceColor(piece), 8, TEXT, 2);
+            addLabel(node, pieceText(config, piece), Math.min(20, Math.floor(cell / 3.4)), TEXT, { width: w * cell - 10, wrap: true });
+            node.on(Node.EventType.TOUCH_END, () => {
+                punch(node);
+                camp.unpackLoot(piece.id);
+                this.render();
+            });
+        }
+        this.cursorY = top - gridH - 16;
+
+        // 操作
+        const third = (WIDTH - 20) / 3;
+        const row = this.cursorY;
+        this.button(`🔄 旋转${this.pieceRotated ? '（已转）' : ''}`, third, () => {
+            this.pieceRotated = !this.pieceRotated;
+            this.render();
+        }, LEFT, this.pieceRotated ? 'highlight' : 'normal', 20, 50);
+        this.cursorY = row;
+        this.button('✨ 自动整理', third, () => {
+            camp.autoPackLoot();
+            this.selectedPiece = null;
+            this.render();
+        }, LEFT + third + 10, 'normal', 20, 50);
+        this.cursorY = row;
+        this.button('✅ 带回营地', third, () => {
+            const res = camp.carryHaul(camp.now);
+            if (res.ok) this.effect(`🎒 带回 ${res.message || '一点杂物'}`, WIN, 28);
+            else this.showToast(res.reason);
+            this.selectedPiece = null;
+            this.resetScroll();
+            this.render();
+        }, LEFT + (third + 10) * 2, 'highlight', 20, 50);
+        this.gap(12);
+
+        // 地上还没装的东西
+        const packed = new Set(haul.packed.map((pk) => pk.piece));
+        const loose = haul.pieces.filter((p) => !packed.has(p.id));
+        this.text(loose.length ? `地上还有 ${loose.length} 件没装：` : '全都装进去了！', 20, loose.length ? TEXT : WIN);
+        const half = (WIDTH - 10) / 2;
+        for (const p of loose) {
+            const r = this.cursorY;
+            const isSel = selected?.id === p.id;
+            this.button(`${isSel ? '👉 ' : ''}${pieceText(config, p)}  ${p.w}×${p.h}格 重${p.weight}`, half, () => {
+                this.selectedPiece = isSel ? null : p.id;
+                this.render();
+            }, LEFT, isSel ? 'highlight' : 'normal', 18, 44);
+            this.cursorY = r;
+            this.button('放进去', half, () => {
+                const res = camp.autoPlaceLoot(p.id);
+                if (!res.ok) this.showToast(res.reason);
+                this.render();
+            }, LEFT + half + 10, 'normal', 18, 44);
+            this.gap(6);
+        }
+    }
+
+    /** 选车：走路 / 每辆车一个按钮，写清楚背包大小、负重、汽油 */
+    private renderVehiclePicker(camp: CampGame, tier: number, squadSize: number): void {
+        const { config, state } = camp;
+        const owned = ownedVehicles(config, state);
+        if (owned.length === 0 && tier === 0) return;
+        const auto = pickVehicle(config, state, tier, this.selectedVehicle).vehicle;
+        const chosen = this.selectedVehicle === 'walk' ? undefined : this.selectedVehicle ? vehicleDef(config, this.selectedVehicle) : auto;
+        const cap = haulCapacity(config, squadSize, chosen);
+        this.text(`🎒 背包 ${cap.grid[0]}×${cap.grid[1]} 格 · 能背 ${cap.maxWeight} 重 · ⛽汽油 ${propCount(state, FUEL_PROP)} 桶`, 18, ACCENT);
+        const options: { id: string | undefined; label: string; blocker: string | null }[] = [
+            { id: undefined, label: '自动', blocker: null },
+            { id: 'walk', label: '🚶走路', blocker: tier > 0 ? '太远' : null },
+            ...owned.map((v) => ({
+                id: v.id,
+                label: `${v.icon}${v.name.slice(-3)}${v.fuel ? `⛽${v.fuel}` : ''}`,
+                blocker: v.tier < tier ? '到不了' : vehicleBlocker(state, v),
+            })),
+        ];
+        const perRow = 3;
+        const w = (WIDTH - 10 * (perRow - 1)) / perRow;
+        for (let row = 0; row * perRow < options.length; row++) {
+            const top = this.cursorY;
+            options.slice(row * perRow, row * perRow + perRow).forEach((o, i) => {
+                this.cursorY = top;
+                const current = this.selectedVehicle === o.id;
+                this.button(o.blocker ? `${o.label}（${o.blocker}）` : o.label, w, () => {
+                    this.selectedVehicle = o.id;
+                    this.render();
+                }, LEFT + i * (w + 10), current ? 'highlight' : o.blocker ? 'disabled' : 'normal', 16, 44, true);
+            });
+            this.cursorY = top - 44;
+            this.gap(8);
+        }
+    }
+
+    /** 分区详情：探索进度、要什么车、危险程度、派人勘察 */
+    private renderDistrictCard(camp: CampGame, d: DistrictDef, now: number): void {
+        const { config, state } = camp;
+        const explored = districtExplored(config, state, d, now);
+        this.text(`${d.icon} ${d.name}  已探索 ${Math.round(explored * 100)}%${state.districtsCompleted?.includes(d.id) ? ' ✅' : ''}`, 24, ACCENT);
+        this.text(d.description, 18, DIM);
+        this.text(`要${TIER_NAMES[d.tier]}才能到 · 勘察一趟 ${formatTime(realSeconds(config, d.surveyMinutes * 60_000))} · 受伤概率 ${Math.round(d.danger * 100)}%`, 18, d.tier > maxTierOwned(config, state) ? LOSE : TEXT);
+        const reward = [formatBag(config, d.complete?.resources ?? {}), formatProps(config, d.complete?.props ?? {})].filter(Boolean).join(' ');
+        if (reward) this.text(`全部探索完奖励：${reward}`, 18, WIN);
+        const busy = (state.surveys ?? []).find((s) => s.district === d.id);
+        if (busy) {
+            this.text(`🗺️ ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}正在勘察，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 20, ACCENT);
+            return;
+        }
+        const who = suggestSurveyors(state);
+        this.renderVehiclePicker(camp, d.tier, who.length);
+        const blocker = surveyBlocker(config, state, d.id, who, now, this.selectedVehicle);
+        const names = who.map((id) => survivorName(config, state, id)).join('、') || '没有能派的人';
+        this.button(blocker ? `勘察（${blocker}）` : `🗺️ 派 ${names} 去勘察，驱散一片迷雾`, WIDTH, () => {
+            const res = camp.survey(d.id, camp.now, who, this.selectedVehicle);
+            if (res.ok) this.effect(`🗺️ 出发勘察${d.name}`, ACCENT);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, blocker ? 'disabled' : 'normal', 22, 52);
     }
 
     private renderReports(camp: CampGame): void {
@@ -2063,6 +2303,13 @@ export class GameRoot extends Component {
     private gap(px: number): void {
         this.cursorY -= px;
     }
+}
+
+/** 背包里每种东西一个颜色 */
+function pieceColor(p: LootPiece): Color {
+    if (p.kind === 'prop') return new Color(120, 80, 140, 240);
+    const colors: Record<string, string> = { food: '#a8743a', wood: '#7a5a34', parts: '#5a6a78', medicine: '#3a8a6a', cans: '#9a8a3a' };
+    return hexColor(colors[p.item] ?? '#666666');
 }
 
 /** 精力：😴 越低越累 */

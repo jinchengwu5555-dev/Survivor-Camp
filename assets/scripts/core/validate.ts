@@ -252,6 +252,38 @@ export function validateConfig(config: GameConfig): string[] {
     }
     for (const loc of config.locations) if (!loc.map) errors.push(`地点 ${loc.id}：没有写镇地图坐标 map`);
 
+    const districtList = config.districts?.districts ?? [];
+    checkUnique('分区', districtList.map((d) => d.id));
+    for (const d of districtList) {
+        const where = `分区 ${d.id}`;
+        checkBag(where, d.loot);
+        checkDrops(where, d.drops);
+        checkBag(where, d.complete?.resources);
+        for (const id of Object.keys(d.complete?.props ?? {})) checkProp(where, id);
+        if (d.rect.x2 <= d.rect.x1 || d.rect.y2 <= d.rect.y1) errors.push(`${where}：rect 范围不对`);
+        if (d.surveyMinutes <= 0) errors.push(`${where}：surveyMinutes 必须大于 0`);
+    }
+    const vehicleList = config.vehicles ?? [];
+    checkUnique('交通工具', vehicleList.map((v) => v.id));
+    for (const v of vehicleList) {
+        const where = `交通工具 ${v.id}`;
+        if (v.grid[0] < 1 || v.grid[1] < 1) errors.push(`${where}：grid 至少 1×1`);
+        if (v.speed <= 0) errors.push(`${where}：speed 必须大于 0`);
+        if (v.obtain) checkBag(where, v.obtain.cost);
+        if (v.comesWith) checkSurvivor(where, v.comesWith, []);
+        if (!v.startOwned && !v.obtain && !v.comesWith) errors.push(`${where}：没有办法得到（startOwned / obtain / comesWith）`);
+    }
+    if (districtList.length && !vehicleList.length && districtList.some((d) => d.tier > 0)) errors.push('有远的分区但没有交通工具');
+    for (const tier of new Set(districtList.map((d) => d.tier))) {
+        if (tier > 0 && !vehicleList.some((v) => v.tier >= tier)) errors.push(`分区等级 ${tier} 没有交通工具能到`);
+    }
+    // 探索背包：每件道具至少要能放进最小的背包
+    const minGrid = config.packing?.baseGrid ?? [3, 3];
+    for (const p of config.props) {
+        const [w, h] = p.size ?? [1, 1];
+        if (Math.min(w, h) > Math.min(...minGrid) || Math.max(w, h) > Math.max(...minGrid)) errors.push(`道具 ${p.id}：${w}×${h} 放不进 ${minGrid[0]}×${minGrid[1]} 的背包`);
+    }
+
     const dialogues = config.chatter?.dialogues ?? [];
     checkUnique('闲聊', dialogues.map((d) => d.id));
     for (const d of dialogues) {

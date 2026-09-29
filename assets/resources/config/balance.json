@@ -31,7 +31,7 @@
     "bloodMoonRewardMultiplier": 2,
     "maxActiveBounties": 3,
     "adSpeedUp": { "minMinutes": 30, "fraction": 0.25 },
-    "raidScaling": { "startDay": 24, "daysPerLevel": 6, "rewardGrowth": 1.15, "reliefPerLoss": 2, "reliefRecoverPerWin": 1 },
+    "raidScaling": { "startDay": 22, "daysPerLevel": 5, "rewardGrowth": 1.15, "reliefPerLoss": 2, "reliefRecoverPerWin": 1 },
     "expeditionScaling": { "enemyLevelPerHq": 0.5, "lootGrowth": 1.25 },
     "deathChanceOnFall": 0.3,
     "deathReductionPerInfirmaryLevel": 0.03,

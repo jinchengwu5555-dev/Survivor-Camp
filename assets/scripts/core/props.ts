@@ -24,13 +24,13 @@ export function addProp(state: GameState, id: string, amount = 1): void {
     state.props[id] = propCount(state, id) + amount;
 }
 
-/** 按掉落表掷骰子，得到的道具放进背包，返回得到了什么（道具 id → 数量） */
-export function rollDrops(state: GameState, drops: PropDrop[] | undefined): Record<string, number> {
+/** 按掉落表掷骰子，得到的道具放进背包（keep = false 时只掷骰子不放），返回得到了什么（道具 id → 数量） */
+export function rollDrops(state: GameState, drops: PropDrop[] | undefined, keep = true): Record<string, number> {
     const got: Record<string, number> = {};
     for (const d of drops ?? []) {
         if (nextRandom(state) >= (d.chance ?? 1)) continue;
         const n = d.amount ?? 1;
-        addProp(state, d.prop, n);
+        if (keep) addProp(state, d.prop, n);
         got[d.prop] = (got[d.prop] ?? 0) + n;
     }
     return got;

@@ -1,9 +1,12 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, GearSlot, ResourceBag, WatchMode } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
 import { updateChatter } from './chatter';
+import { resolveSurveys, startSurvey, suggestSurveyors } from './districts';
+import { buildVehicle, checkVehicleOwners } from './vehicles';
+import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './packing';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -85,8 +88,12 @@ export class CampGame {
         s.lastTickAt = now;
         checkSeasonChange(this.config, s, now);
         recoverInjuries(this.config, s, now);
-        resolveExpeditions(this.config, s, now);
+        resolveExpeditions(this.config, s, now, this.liveRaids);
         resolveScouts(this.config, s, now);
+        resolveSurveys(this.config, s, now);
+        checkVehicleOwners(this.config, s, now);
+        // 没有界面在看（比如模拟器），等着装的背包自动装好带回来
+        if (!this.liveRaids) for (const h of [...(s.pendingHauls ?? [])]) confirmHaul(this.config, s, h.id, now);
         // 没有界面在看（比如模拟器），留着的尸潮直接自动打完
         if (!this.liveRaids && s.pendingRaid) new LiveRaid(this.config, s, s.pendingRaid).finish();
         maybeRunRaid(this.config, s, now, this.liveRaids);
@@ -185,10 +192,59 @@ export class CampGame {
     }
 
     /** 派小队去探索；不指定成员时自动挑战斗力最高的人 */
-    explore(locationId: string, now: number, squad?: string[]): ActionResult {
+    /** vehicle：开哪辆车（'walk' = 走路；不写 = 自动挑能到的最好的一辆） */
+    explore(locationId: string, now: number, squad?: string[], vehicle?: string): ActionResult {
         return this.act(now, () =>
-            startExpedition(this.config, this.state, locationId, squad ?? suggestSquad(this.config, this.state), now),
+            startExpedition(this.config, this.state, locationId, squad ?? suggestSquad(this.config, this.state), now, vehicle),
         );
+    }
+
+    /** 勘察一个分区：驱散一片迷雾 */
+    survey(districtId: string, now: number, squad?: string[], vehicle?: string): ActionResult {
+        return this.act(now, () => startSurvey(this.config, this.state, districtId, squad ?? suggestSurveyors(this.state), now, vehicle));
+    }
+
+    /** 在工坊修一辆车 */
+    buildVehicle(vehicleId: string, now: number): ActionResult {
+        return this.act(now, () => buildVehicle(this.config, this.state, vehicleId, now));
+    }
+
+    /** 当前要装的背包（探索回来的战利品） */
+    get currentHaul(): HaulState | undefined {
+        return this.state.pendingHauls?.[0];
+    }
+
+    /** 装背包：把一件东西放到 (x, y) */
+    placeLoot(pieceId: number, x: number, y: number, rotated: boolean): ActionResult {
+        const h = this.currentHaul;
+        if (!h) return { ok: false, reason: '没有要装的东西' };
+        const reason = placePiece(h, pieceId, x, y, rotated);
+        return reason ? { ok: false, reason } : { ok: true };
+    }
+
+    /** 装背包：自动找个位置放 */
+    autoPlaceLoot(pieceId: number): ActionResult {
+        const h = this.currentHaul;
+        if (!h) return { ok: false, reason: '没有要装的东西' };
+        const reason = autoPlace(h, pieceId);
+        return reason ? { ok: false, reason } : { ok: true };
+    }
+
+    /** 装背包：拿出来 */
+    unpackLoot(pieceId: number): void {
+        if (this.currentHaul) removePiece(this.currentHaul, pieceId);
+    }
+
+    /** 装背包：一键整理 */
+    autoPackLoot(): void {
+        if (this.currentHaul) autoPack(this.config, this.currentHaul);
+    }
+
+    /** 背上背包回营地 */
+    carryHaul(now: number): ActionResult {
+        const h = this.currentHaul;
+        if (!h) return { ok: false, reason: '没有要装的东西' };
+        return this.act(now, () => confirmHaul(this.config, this.state, h.id, now));
     }
 
     /** 看完激励视频后调用：小队立即返回 */

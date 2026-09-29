@@ -71,6 +71,8 @@ export function revealers(config: GameConfig, state: GameState, now: number): Re
     for (const site of config.sites) {
         if (site.map && state.discoveredSites.includes(site.id)) out.push({ ...site.map, r: m.revealSite });
     }
+    // 勘察分区驱散的迷雾（见 districts.ts）
+    for (const p of state.surveyed ?? []) out.push({ ...p });
     return out;
 }
 

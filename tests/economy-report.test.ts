@@ -10,7 +10,9 @@
 
 import { expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { availableLocations, clearedFlag, raidEnemyBonus, suggestSquad } from '../assets/scripts/core/combat';
+import { availableLocations, clearedFlag, expeditionBlocker, raidEnemyBonus, suggestSquad } from '../assets/scripts/core/combat';
+import { suggestSurveyors } from '../assets/scripts/core/districts';
+import { buildVehicleBlocker } from '../assets/scripts/core/vehicles';
 import { economyRates, hqLevel, morale, workerSlots } from '../assets/scripts/core/economy';
 import { upgradeBlocker } from '../assets/scripts/core/buildings';
 import { currentDay } from '../assets/scripts/core/state';
@@ -85,14 +87,24 @@ function session(game: CampGame, now: number): void {
         for (const s of idleFor(b).slice(0, workerSlots(config, state, b))) game.assign(s.id, b, now);
     }
     const squad = suggestSquad(config, state).filter((id) => !state.survivors.find((x) => x.id === id)?.assignment);
-    if (state.expeditions.length === 0 && squad.length >= 2) {
-        const locs = availableLocations(config, state, now).filter((l) => !lost.has(l.name) || training > lost.get(l.name)!);
+    if (state.expeditions.length === 0 && squad.length >= 3) {
+        const locs = availableLocations(config, state, now)
+            .filter((l) => !lost.has(l.name) || training > lost.get(l.name)!)
+            .filter((l) => expeditionBlocker(config, state, l.id, squad, now) === null);
         const lastResult = (id: string) => [...state.reports].reverse().find((r) => r.kind === 'expedition' && r.title === config.locations.find((l) => l.id === id)?.name)?.result;
         const fresh = locs.find((l) => !state.flags.includes(clearedFlag(l.id)) && lastResult(l.id) !== 'lose');
         const farm = locs.filter((l) => lastResult(l.id) === 'win').sort((a, b) => lootValue(b.loot) - lootValue(a.loot))[0];
         const target = fresh ?? farm ?? locs[0];
         if (target) game.explore(target.id, now, squad);
     }
+    // 有空就派两个人去勘察还没探索完的分区（近的先去），能修车就修车
+    const districts = config.districts?.districts ?? [];
+    for (const d of districts) {
+        const who = suggestSurveyors(state).filter((id) => !state.survivors.find((x) => x.id === id)?.assignment);
+        if (who.length === 0) break;
+        if (game.survey(d.id, now, who.slice(0, 1)).ok) break;
+    }
+    for (const v of config.vehicles ?? []) if (buildVehicleBlocker(config, state, v.id) === null) game.buildVehicle(v.id, now);
     // 升级：缺粮先升厨房，缺零件先升废料场，其余挑最便宜的（花费总和最小）
     const rates = economyRates(config, state, now).net;
     const urgent = rates.food < 0 ? 'kitchen' : rates.parts < 0.5 ? 'scrapyard' : null;

@@ -236,14 +236,15 @@ describe('无限流经济', () => {
         expect(game.state.buildings.hq.upgradeEndsAt).toBe(T0 + 30 * MIN);
     });
 
-    it('无尽尸潮：第 24 天开始每 6 天 +1 级，输了喘息 -2，赢了恢复 1', () => {
+    it('无尽尸潮：第 startDay 天开始每 daysPerLevel 天 +1 级，喘息值抵消等级', () => {
         const game = newGame();
         const { config, state } = game;
-        expect(raidEnemyBonus(config, state, dayStart(23))).toBe(0);
-        expect(raidEnemyBonus(config, state, dayStart(24))).toBe(1);
-        expect(raidEnemyBonus(config, state, dayStart(36))).toBe(3);
+        const { startDay, daysPerLevel } = config.balance.raidScaling;
+        expect(raidEnemyBonus(config, state, dayStart(startDay - 1))).toBe(0);
+        expect(raidEnemyBonus(config, state, dayStart(startDay))).toBe(1);
+        expect(raidEnemyBonus(config, state, dayStart(startDay + daysPerLevel * 2))).toBe(3);
         state.raidRelief = 2;
-        expect(raidEnemyBonus(config, state, dayStart(36))).toBe(1);
+        expect(raidEnemyBonus(config, state, dayStart(startDay + daysPerLevel * 2))).toBe(1);
     });
 
     it('守住高等级尸潮：奖励按等级指数增长，记录最高等级，喘息值恢复', () => {
