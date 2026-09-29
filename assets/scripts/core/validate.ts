@@ -277,12 +277,15 @@ export function validateConfig(config: GameConfig): string[] {
     for (const tier of new Set(districtList.map((d) => d.tier))) {
         if (tier > 0 && !vehicleList.some((v) => v.tier >= tier)) errors.push(`分区等级 ${tier} 没有交通工具能到`);
     }
-    // 探索背包：每件道具至少要能放进最小的背包
-    const minGrid = config.packing?.baseGrid ?? [3, 3];
+    // 探索背包：每件道具至少要能放进某一块格子区（两只手、某种包、某辆车的后备箱）
+    const areas: [number, number][] = [config.packing?.handsGrid ?? [2, 2], ...vehicleList.map((v) => v.grid)];
+    for (const p of config.props) for (const sec of p.bag?.sections ?? []) areas.push(sec);
+    const fits = ([w, h]: [number, number]) => areas.some(([aw, ah]) => (w <= aw && h <= ah) || (h <= aw && w <= ah));
     for (const p of config.props) {
-        const [w, h] = p.size ?? [1, 1];
-        if (Math.min(w, h) > Math.min(...minGrid) || Math.max(w, h) > Math.max(...minGrid)) errors.push(`道具 ${p.id}：${w}×${h} 放不进 ${minGrid[0]}×${minGrid[1]} 的背包`);
+        const size = p.size ?? [1, 1];
+        if (!fits(size)) errors.push(`道具 ${p.id}：${size[0]}×${size[1]} 放不进任何背包格子`);
     }
+    for (const [res, b] of Object.entries(config.packing?.bundles ?? {})) if (!fits(b.size)) errors.push(`资源包 ${res}：放不进任何背包格子`);
 
     if (config.recruits) {
         const r = config.recruits;
@@ -318,9 +321,11 @@ export function validateConfig(config: GameConfig): string[] {
         const where = `道具 ${p.id}`;
         if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
         if (p.type === 'gear') {
-            if (!p.slot || !GEAR_SLOTS.includes(p.slot)) errors.push(`${where}：装备要写 slot（weapon / armor / tool）`);
+            if (!p.slot || !GEAR_SLOTS.includes(p.slot)) errors.push(`${where}：装备要写 slot（weapon / armor / tool / bag）`);
             const g = p.gear;
-            if (!g || !(g.atk || g.hp || g.work || g.scout)) errors.push(`${where}：装备要写 gear 属性`);
+            if (p.slot === 'bag') {
+                if (!p.bag?.sections.length) errors.push(`${where}：背包要写 bag.sections`);
+            } else if (!g || !(g.atk || g.hp || g.work || g.scout)) errors.push(`${where}：装备要写 gear 属性`);
             if (g?.work?.building && !config.buildings.some((b) => b.id === g.work!.building)) errors.push(`${where}：未知建筑 ${g.work.building}`);
             if (p.craft) checkBag(where, p.craft.cost);
         }

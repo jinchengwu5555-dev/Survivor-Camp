@@ -10,7 +10,7 @@ import { addProp, propCount, propDef } from './props';
 import { addLog, addStat } from './state';
 import { ActionResult, GameConfig, GameState, GEAR_SLOTS, GearSlot, PropDef, SurvivorState } from './types';
 
-export const GEAR_SLOT_NAMES: Record<GearSlot, string> = { weapon: '武器', armor: '护甲', tool: '工具' };
+export const GEAR_SLOT_NAMES: Record<GearSlot, string> = { weapon: '武器', armor: '护甲', tool: '工具', bag: '背包' };
 
 /** 这个人身上的装备 */
 export function gearOf(config: GameConfig, state: GameState, survivorId: string): PropDef[] {
@@ -38,6 +38,7 @@ export function gearStatsText(config: GameConfig, def: PropDef): string {
         parts.push(`${b}产量 ${pct(g.work.mult)}`);
     }
     if (g.scout) parts.push(`侦察快 ${Math.round((1 - g.scout) * 100)}%`);
+    if (def.bag) parts.push(`格子 ${def.bag.sections.map(([w, h]) => `${w}×${h}`).join(' + ')}，多背 ${def.bag.carry}`);
     return parts.join('，');
 }
 

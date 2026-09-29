@@ -45,6 +45,10 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
     };
     syncBuildings(config, state);
     rollNames(config, state, seed);
+    for (const s of state.survivors) {
+        const gear = b.startingGear?.[s.id];
+        if (gear) s.gear = { ...gear };
+    }
     return state;
 }
 

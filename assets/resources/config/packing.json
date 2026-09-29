@@ -1,5 +1,5 @@
 {
-    "baseGrid": [3, 3],
+    "handsGrid": [2, 2],
     "bundles": {
         "food": { "amount": 20, "size": [1, 1], "weight": 2 },
         "wood": { "amount": 25, "size": [2, 1], "weight": 4 },

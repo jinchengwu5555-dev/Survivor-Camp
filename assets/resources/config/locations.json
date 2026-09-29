@@ -9,7 +9,7 @@
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
         "timeLimit": 60,
         "loot": { "food": 50, "wood": 10 },
-        "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 }, { "prop": "gasoline", "chance": 0.3 } ],
+        "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 }, { "prop": "gasoline", "chance": 0.3 }, { "prop": "waist_pouch", "chance": 0.2 } ],
         "discoversSite": "garage",
         "recruitChance": 0.1
     },
@@ -80,7 +80,7 @@
         ],
         "timeLimit": 120,
         "loot": { "parts": 40, "cans": 10 },
-        "drops": [ { "prop": "parts_l", "chance": 0.4 }, { "prop": "walkie", "chance": 0.3 }, { "prop": "toolbox", "chance": 0.2 }, { "prop": "mystery_box", "chance": 0.2 }, { "prop": "pistol", "chance": 0.4 }, { "prop": "riot_vest", "chance": 0.2 } ],
+        "drops": [ { "prop": "parts_l", "chance": 0.4 }, { "prop": "walkie", "chance": 0.3 }, { "prop": "toolbox", "chance": 0.2 }, { "prop": "mystery_box", "chance": 0.2 }, { "prop": "pistol", "chance": 0.4 }, { "prop": "riot_vest", "chance": 0.2 }, { "prop": "hiking_pack", "chance": 0.2 } ],
         "firstClearEvent": "sheriff_photo",
         "discoversSite": "police",
         "recruitChance": 0.25
@@ -99,7 +99,7 @@
         ],
         "timeLimit": 90,
         "loot": { "wood": 50, "parts": 30 },
-        "drops": [ { "prop": "flyer", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.5 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "bat", "chance": 0.25 } ],
+        "drops": [ { "prop": "flyer", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.5 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "bat", "chance": 0.25 }, { "prop": "school_bag", "chance": 0.3 } ],
         "recruitChance": 0.2
     },
     {
@@ -116,7 +116,7 @@
         ],
         "timeLimit": 90,
         "loot": { "food": 60, "medicine": 10, "cans": 3 },
-        "drops": [ { "prop": "ration_l", "chance": 0.4 }, { "prop": "coffee", "chance": 0.4 }, { "prop": "walkie", "chance": 0.2 }, { "prop": "leather_jacket", "chance": 0.25 } ],
+        "drops": [ { "prop": "ration_l", "chance": 0.4 }, { "prop": "coffee", "chance": 0.4 }, { "prop": "walkie", "chance": 0.2 }, { "prop": "leather_jacket", "chance": 0.25 }, { "prop": "courier_bag", "chance": 0.2 } ],
         "recruitChance": 0.2
     },
     {
@@ -366,7 +366,7 @@
             {
                 "prop": "mystery_box",
                 "chance": 0.2
-            }, { "prop": "chef_knife", "chance": 0.3 }, { "prop": "water", "chance": 0.5 } ],
+            }, { "prop": "chef_knife", "chance": 0.3 }, { "prop": "water", "chance": 0.5 }, { "prop": "courier_bag", "chance": 0.25 } ],
         "recruitChance": 0.2
     },
     {
@@ -441,7 +441,7 @@
             {
                 "prop": "walkie",
                 "chance": 0.2
-            }, { "prop": "helmet", "chance": 0.35 }, { "prop": "gasoline", "chance": 0.5 } ],
+            }, { "prop": "helmet", "chance": 0.35 }, { "prop": "gasoline", "chance": 0.5 }, { "prop": "hiking_pack", "chance": 0.15 } ],
         "recruitChance": 0.2
     },
     {
@@ -510,9 +510,9 @@
             {
                 "prop": "mystery_box",
                 "chance": 0.5
-            }, { "prop": "shotgun", "chance": 0.4 }, { "prop": "riot_vest", "chance": 0.4 } ],
+            }, { "prop": "shotgun", "chance": 0.4 }, { "prop": "riot_vest", "chance": 0.4 }, { "prop": "tactical_pack", "chance": 0.3 } ],
         "recruitChance": 0.3
     },
-    {"id": "raider_camp", "name": "掠夺者营地", "icon": "🏴", "map": {"x": 185, "y": -200}, "description": "镇南废车场里的另一个营地。他们不种地、不修墙，只靠抢。营地变大以后，你们就成了他们眼里的肥羊——不如先下手。", "durationMinutes": 25, "conditions": { "flags": ["camp_noticed"], "minHq": 11, "minDay": 30}, "enemies": [{"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider", "level": 8, "spawnAt": 10}, {"unit": "raider_gunner", "level": 8, "spawnAt": 15}, {"unit": "raider", "level": 9, "spawnAt": 25}, {"unit": "raider_gunner", "level": 9, "spawnAt": 30}], "timeLimit": 110, "loot": {"food": 90, "parts": 60, "medicine": 15, "cans": 8}, "drops": [{"prop": "pistol", "chance": 0.5}, {"prop": "shotgun", "chance": 0.2}, {"prop": "leather_jacket", "chance": 0.4}, {"prop": "gasoline", "chance": 0.5}], "recruitChance": 0.5, "firstClearEvent": "raider_camp_cleared"},
+    {"id": "raider_camp", "name": "掠夺者营地", "icon": "🏴", "map": {"x": 185, "y": -200}, "description": "镇南废车场里的另一个营地。他们不种地、不修墙，只靠抢。营地变大以后，你们就成了他们眼里的肥羊——不如先下手。", "durationMinutes": 25, "conditions": { "flags": ["camp_noticed"], "minHq": 11, "minDay": 30}, "enemies": [{"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider", "level": 8, "spawnAt": 10}, {"unit": "raider_gunner", "level": 8, "spawnAt": 15}, {"unit": "raider", "level": 9, "spawnAt": 25}, {"unit": "raider_gunner", "level": 9, "spawnAt": 30}], "timeLimit": 110, "loot": {"food": 90, "parts": 60, "medicine": 15, "cans": 8}, "drops": [{"prop": "pistol", "chance": 0.5}, {"prop": "shotgun", "chance": 0.2}, {"prop": "leather_jacket", "chance": 0.4}, {"prop": "gasoline", "chance": 0.5}, { "prop": "tactical_pack", "chance": 0.15 } ], "recruitChance": 0.5, "firstClearEvent": "raider_camp_cleared"},
     {"id": "fallen_camp", "name": "陷落的河湾营地", "icon": "⛺", "map": {"x": -305, "y": 55}, "description": "河湾边一个比你们还大的营地，栅栏被冲开了，帐篷里全是行尸。营地变大意味着什么，这里就是答案。", "durationMinutes": 20, "conditions": { "flags": ["camp_noticed"], "minHq": 8}, "enemies": [{"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "fatty", "level": 6, "spawnAt": 12}, {"unit": "armored", "level": 5, "spawnAt": 20}, {"unit": "armored", "level": 5, "spawnAt": 28}], "timeLimit": 100, "loot": {"food": 60, "wood": 80, "medicine": 20}, "drops": [{"prop": "flyer", "chance": 0.4}, {"prop": "water", "chance": 0.5}, {"prop": "helmet", "chance": 0.3}, {"prop": "field_kit", "chance": 0.2}], "recruitChance": 0.6}
 ]

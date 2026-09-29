@@ -11,7 +11,7 @@ import { injureSurvivor, survivorName } from './roster';
 import { addLog, addStat } from './state';
 import { isRevealed, revealers } from './townMap';
 import { ActionResult, DistrictDef, GameConfig, GameState, MapPoint, RESOURCE_IDS, ResourceBag } from './types';
-import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
+import { haulSections, pickVehicle, useVehicle, vehicleDef } from './vehicles';
 import { isBrokenDown } from './mood';
 import { districtName } from './names';
 
@@ -132,7 +132,7 @@ export function resolveSurveys(config: GameConfig, state: GameState, now: number
             state.surveyed.push({ ...point, r: config.districts?.revealRadius ?? 85 });
         }
         // 带回来的东西受背包限制：资源最多装满重量上限的一半（勘察主要是看路）
-        const cap = haulCapacity(config, squad.length, vehicleDef(config, sv.vehicle));
+        const cap = haulSections(config, state, squad, vehicleDef(config, sv.vehicle));
         const loot = surveyLoot(config, state, d);
         const scale = Math.min(1, (cap.maxWeight * 4) / Math.max(1, Object.values(loot).reduce((n, v) => n + (v ?? 0), 0)));
         for (const id of RESOURCE_IDS) if (loot[id]) loot[id] = Math.round(loot[id]! * scale);

@@ -6,7 +6,8 @@ import { workshopLevel } from './crafting';
 import { canAfford, hqLevel, pay } from './economy';
 import { propCount } from './props';
 import { addLog, addStat } from './state';
-import { ActionResult, GameConfig, GameState, VehicleDef } from './types';
+import { ActionResult, GameConfig, GameState, HaulSection, VehicleDef } from './types';
+import { survivorName } from './roster';
 
 export const FUEL_PROP = 'gasoline';
 export const TIER_NAMES = ['走路', '自行车', '摩托 / 皮卡', '货车'];
@@ -107,9 +108,30 @@ export function checkVehicleOwners(config: GameConfig, state: GameState, now: nu
     }
 }
 
-/** 背包格子和能装的重量：车决定格子，人数和车决定重量 */
-export function haulCapacity(config: GameConfig, squadSize: number, v: VehicleDef | undefined): { grid: [number, number]; maxWeight: number } {
-    const base = config.packing?.baseGrid ?? [3, 3];
+/**
+ * 这支队伍能装多少：每个人背的包（没背包就是两只手 handsGrid）各是一块或几块格子区，开车再加一块后备箱；
+ * 重量 = 每人 carryPerPerson + 包多背的 + 车的 cargo。
+ */
+export function haulSections(config: GameConfig, state: GameState, squad: string[], v: VehicleDef | undefined): { sections: HaulSection[]; maxWeight: number } {
+    const hands = config.packing?.handsGrid ?? [2, 2];
     const perPerson = config.districts?.carryPerPerson ?? 8;
-    return { grid: v ? v.grid : base, maxWeight: squadSize * perPerson + (v?.cargo ?? 0) };
+    const sections: HaulSection[] = [];
+    let maxWeight = 0;
+    for (const id of squad) {
+        const s = state.survivors.find((x) => x.id === id);
+        const bagDef = s?.gear?.bag ? config.props.find((p) => p.id === s.gear!.bag) : undefined;
+        const name = survivorName(config, state, id);
+        if (bagDef?.bag) {
+            bagDef.bag.sections.forEach(([w, h], i) => sections.push({ label: `${name}的${bagDef.name}${bagDef.bag!.sections.length > 1 ? ` ${i + 1}` : ''}`, w, h }));
+            maxWeight += perPerson + bagDef.bag.carry;
+        } else {
+            sections.push({ label: `${name}的两只手`, w: hands[0], h: hands[1] });
+            maxWeight += perPerson;
+        }
+    }
+    if (v) {
+        sections.push({ label: `${v.icon}${v.name}`, w: v.grid[0], h: v.grid[1] });
+        maxWeight += v.cargo;
+    }
+    return { sections, maxWeight };
 }

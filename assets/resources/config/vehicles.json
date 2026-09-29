@@ -1,6 +1,6 @@
 [
-    { "id": "bicycle", "name": "托比的自行车", "icon": "🚲", "tier": 1, "grid": [3, 4], "cargo": 6, "speed": 0.9, "fuel": 0, "startOwned": true, "description": "链子三天两头掉，但能骑到河对岸去。背包多一排格子。" },
-    { "id": "motorcycle", "name": "越野摩托", "icon": "🏍️", "tier": 2, "grid": [4, 4], "cargo": 12, "speed": 0.75, "fuel": 1, "obtain": { "hq": 4, "workshopLevel": 1, "cost": { "parts": 80, "wood": 20 } }, "description": "德里克从废车场拼出来的越野摩托。能去镇子最远的地方，每趟烧一桶汽油。" },
+    { "id": "bicycle", "name": "旧自行车", "icon": "🚲", "tier": 1, "grid": [2, 2], "cargo": 6, "speed": 0.9, "fuel": 0, "startOwned": true, "description": "超市后门停着的旧自行车，链子三天两头掉，但能骑到河对岸去。车筐能多放一点东西。" },
+    { "id": "motorcycle", "name": "越野摩托", "icon": "🏍️", "tier": 2, "grid": [3, 3], "cargo": 12, "speed": 0.75, "fuel": 1, "obtain": { "hq": 4, "workshopLevel": 1, "cost": { "parts": 80, "wood": 20 } }, "description": "德里克从废车场拼出来的越野摩托。能去镇子最远的地方，每趟烧一桶汽油。" },
     { "id": "pickup", "name": "老乔的皮卡", "icon": "🛻", "tier": 2, "grid": [5, 4], "cargo": 30, "speed": 0.7, "fuel": 1, "comesWith": "joe", "obtain": { "hq": 6, "workshopLevel": 1, "cost": { "parts": 180, "wood": 60 } }, "description": "掉了漆的皮卡，车斗能装一大堆东西。老乔来了就自带一辆，没有老乔也能自己修一辆。每趟一桶汽油。" },
     { "id": "truck", "name": "厢式货车", "icon": "🚚", "tier": 3, "grid": [6, 5], "cargo": 60, "speed": 0.6, "fuel": 2, "obtain": { "hq": 10, "workshopLevel": 2, "cost": { "parts": 450, "wood": 150 } }, "description": "物流公司的厢式货车，满载能拉回半个仓库。每趟两桶汽油。" }
 ]

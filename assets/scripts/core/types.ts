@@ -122,6 +122,8 @@ export interface BalanceDef {
         minFactor: number;
         understaffedWallFactor: number;
     };
+    /** 开局身上就穿着的装备：幸存者 id → 位置 → 道具 id */
+    startingGear?: Record<string, Partial<Record<GearSlot, string>>>;
     /** 开局送的背包道具 */
     startingProps?: Record<string, number>;
     /** 搬迁：只能带走 carryRatio 的物资，每人路上吃 foodPerSurvivor 食物，搬完后 cooldownDays 天内不能再搬 */
@@ -538,8 +540,8 @@ export interface PickupConfig {
  */
 export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear';
 
-export type GearSlot = 'weapon' | 'armor' | 'tool';
-export const GEAR_SLOTS: GearSlot[] = ['weapon', 'armor', 'tool'];
+export type GearSlot = 'weapon' | 'armor' | 'tool' | 'bag';
+export const GEAR_SLOTS: GearSlot[] = ['weapon', 'armor', 'tool', 'bag'];
 
 /** 装备属性：都是倍率 */
 export interface GearStats {
@@ -564,6 +566,8 @@ export interface PropDef {
     /** type = gear 时：装在哪个位置、有什么属性 */
     slot?: GearSlot;
     gear?: GearStats;
+    /** slot = bag 时：背包的格子区（宽 × 高，可以有好几块）和多背的重量 */
+    bag?: { sections: [number, number][]; carry: number };
     /** type = gear 时：工坊能不能打造（需要的工坊等级和资源） */
     craft?: { workshopLevel: number; cost: ResourceBag };
     /** 在探索背包里占几格（宽 × 高）、多重；不写用 packing 的默认值 */
@@ -858,6 +862,8 @@ export interface LootPiece {
 
 export interface PackedPiece {
     piece: number;
+    /** 放在第几块格子区 */
+    section: number;
     x: number;
     y: number;
     /** 转了 90 度 */
@@ -870,8 +876,15 @@ export interface HaulState {
     at: number;
     pieces: LootPiece[];
     packed: PackedPiece[];
-    grid: [number, number];
+    /** 几块格子区：每个人的包、车的后备箱 */
+    sections: HaulSection[];
     maxWeight: number;
+}
+
+export interface HaulSection {
+    label: string;
+    w: number;
+    h: number;
 }
 
 export interface DistrictDef {
@@ -980,8 +993,8 @@ export interface NamesConfig {
 }
 
 export interface PackingConfig {
-    /** 不开车时的背包格子 */
-    baseGrid: [number, number];
+    /** 没背包时每个人的格子（两只手） */
+    handsGrid: [number, number];
     /** 每种资源打成一包：每包多少、占几格、多重 */
     bundles: Record<ResourceId, { amount: number; size: [number, number]; weight: number }>;
     /** 道具没写 size / weight 时的默认值 */

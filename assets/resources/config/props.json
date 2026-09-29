@@ -40,5 +40,10 @@
     { "id": "chef_knife", "size": [1, 1], "weight": 1, "name": "主厨刀", "icon": "🔪", "type": "gear", "slot": "tool", "gear": { "work": { "building": "kitchen", "mult": 1.2 } }, "description": "餐厅后厨的好刀。厨房产量 +20%。" },
     { "id": "stethoscope", "size": [1, 1], "weight": 1, "name": "听诊器", "icon": "🩺", "type": "gear", "slot": "tool", "gear": { "work": { "building": "infirmary", "mult": 1.2 } }, "description": "医务室产量 +20%。" },
     { "id": "work_gloves", "size": [1, 1], "weight": 1, "name": "劳保手套", "icon": "🧤", "type": "gear", "slot": "tool", "gear": { "work": { "mult": 1.08 } }, "craft": { "workshopLevel": 1, "cost": { "wood": 10, "parts": 5 } }, "description": "干什么活都顺手，产量 +8%。" },
-    { "id": "hiking_boots", "size": [2, 1], "weight": 2, "name": "登山靴", "icon": "🥾", "type": "gear", "slot": "tool", "gear": { "scout": 0.7 }, "description": "侦察来回快 30%。" }
+    { "id": "hiking_boots", "size": [2, 1], "weight": 2, "name": "登山靴", "icon": "🥾", "type": "gear", "slot": "tool", "gear": { "scout": 0.7 }, "description": "侦察来回快 30%。" },
+    { "id": "waist_pouch", "name": "腰包", "icon": "👝", "type": "gear", "slot": "bag", "size": [2, 1], "weight": 1, "bag": { "sections": [[2, 1], [2, 1]], "carry": 2 }, "craft": { "workshopLevel": 1, "cost": { "wood": 10, "parts": 5 } }, "description": "两个小口袋，装点小东西。" },
+    { "id": "school_bag", "name": "书包", "icon": "🎒", "type": "gear", "slot": "bag", "size": [2, 2], "weight": 2, "bag": { "sections": [[3, 3]], "carry": 4 }, "description": "小学生的双肩包，一个大格子 3×3。" },
+    { "id": "courier_bag", "name": "外卖箱", "icon": "📦", "type": "gear", "slot": "bag", "size": [2, 2], "weight": 2, "bag": { "sections": [[4, 3]], "carry": 6 }, "description": "外卖骑手的保温箱，扁而宽，4×3。" },
+    { "id": "hiking_pack", "name": "登山包", "icon": "🏔️", "type": "gear", "slot": "bag", "size": [2, 3], "weight": 3, "bag": { "sections": [[3, 4], [2, 2]], "carry": 9 }, "craft": { "workshopLevel": 2, "cost": { "wood": 40, "parts": 30 } }, "description": "主仓 3×4，顶包 2×2，能背得更重。" },
+    { "id": "tactical_pack", "name": "战术背包", "icon": "🪖", "type": "gear", "slot": "bag", "size": [3, 3], "weight": 4, "bag": { "sections": [[4, 4], [2, 3], [2, 2]], "carry": 14 }, "description": "军用的大背包：主仓 4×4，两侧副包 2×3、2×2。" }
 ]

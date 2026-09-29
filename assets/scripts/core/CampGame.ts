@@ -234,10 +234,10 @@ export class CampGame {
     }
 
     /** 装背包：把一件东西放到 (x, y) */
-    placeLoot(pieceId: number, x: number, y: number, rotated: boolean): ActionResult {
+    placeLoot(pieceId: number, section: number, x: number, y: number, rotated: boolean): ActionResult {
         const h = this.currentHaul;
         if (!h) return { ok: false, reason: '没有要装的东西' };
-        const reason = placePiece(h, pieceId, x, y, rotated);
+        const reason = placePiece(h, pieceId, section, x, y, rotated);
         return reason ? { ok: false, reason } : { ok: true };
     }
 

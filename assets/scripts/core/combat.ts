@@ -23,7 +23,7 @@ import { takeDroppedGear } from './gear';
 import { firstRecruits, nightQuirks, offerCandidates } from './recruits';
 import { locationName } from './names';
 import { carryHome, makePieces, newHaul } from './packing';
-import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
+import { haulSections, pickVehicle, useVehicle, vehicleDef } from './vehicles';
 import { tierAt } from './districts';
 import {
     ActionResult,
@@ -364,8 +364,8 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         for (const [id, n] of Object.entries(recovered)) drops[id] = (drops[id] ?? 0) + n;
         if (Object.keys(recovered).length) addLog(state, at, `小队在${locationName(config, state, loc)}找到了战友留下的装备：${formatProps(config, recovered)}。`);
         const pieces = makePieces(config, state, expeditionLoot(config, state, loc), drops);
-        const cap = haulCapacity(config, squad.length, vehicleDef(config, ex.vehicle));
-        const haul = newHaul(config, state, locationName(config, state, loc), at, pieces, cap.grid, cap.maxWeight);
+        const cap = haulSections(config, state, squad, vehicleDef(config, ex.vehicle));
+        const haul = newHaul(config, state, locationName(config, state, loc), at, pieces, cap.sections, cap.maxWeight);
         if (live) {
             state.pendingHauls = [...(state.pendingHauls ?? []), haul];
             packNote = '战利品摊了一地，等你装背包。';

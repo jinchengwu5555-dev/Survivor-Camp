@@ -59,8 +59,8 @@ import { districtName, locationName, objectiveText, townName } from '../core/nam
 import { candidateInfo, quirksOf } from '../core/recruits';
 import { goldBlocker, goldOffer, goldValue } from '../core/gold';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
-import { buildVehicleBlocker, FUEL_PROP, haulCapacity, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
-import { occupancy, packedWeight, pieceOf, pieceText } from '../core/packing';
+import { buildVehicleBlocker, FUEL_PROP, haulSections, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
+import { occupancy, packedWeight, pieceOf, pieceText, totalCells } from '../core/packing';
 import { planWatch, raidChanceTonight, WATCH_MODE_NAMES, watchersNeeded, watchersText } from '../core/watch';
 import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
@@ -78,7 +78,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.6 单人开局+招募';
+const GAME_VERSION = 'v1.7 多种背包';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -2050,7 +2050,7 @@ export class GameRoot extends Component {
             const tier = locationTier(config, loc);
             const d = districtAt(config, loc.map);
             this.text(`${d ? `${d.icon}${districtName(state, d)} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
-            this.renderVehiclePicker(camp, tier, squad.length);
+            this.renderVehiclePicker(camp, tier, squad);
             const guided = this.isGuided(`explore:${loc.id}`);
             this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
                 const res = camp.explore(loc.id, camp.now, undefined, this.selectedVehicle);
@@ -2105,57 +2105,66 @@ export class GameRoot extends Component {
     private renderHaul(camp: CampGame): void {
         const { config } = camp;
         const haul = camp.currentHaul!;
-        const [gw, gh] = haul.grid;
         const weight = packedWeight(haul);
         this.text(`🎒 从${haul.title}带回什么？`, 28, ACCENT);
-        this.text(`背包 ${gw}×${gh} 格 · 负重 ${weight}/${haul.maxWeight}${(camp.state.pendingHauls?.length ?? 0) > 1 ? ` · 还有 ${camp.state.pendingHauls!.length - 1} 包等着装` : ''}`, 20, weight > haul.maxWeight * 0.9 ? LOSE : TEXT);
-        this.text('点下面的东西选中，再点背包里的空格放进去；点背包里的东西可以拿出来。装不下的只能留下。', 17, DIM);
+        this.text(`${haul.sections.length} 块格子 共 ${totalCells(haul)} 格 · 负重 ${weight}/${haul.maxWeight}${(camp.state.pendingHauls?.length ?? 0) > 1 ? ` · 还有 ${camp.state.pendingHauls!.length - 1} 包等着装` : ''}`, 20, weight > haul.maxWeight * 0.9 ? LOSE : TEXT);
+        this.text('点下面的东西选中，再点格子放进去；点装好的东西可以拿出来。每件东西只能放在一块区里。', 17, DIM);
         this.gap(6);
-
-        // 背包格子
-        const cell = Math.min(84, Math.floor((WIDTH - 20) / gw), Math.floor(420 / gh));
-        const gridW = cell * gw;
-        const gridH = cell * gh;
-        const top = this.cursorY;
-        const grid = makeNode('Bag', this.content!, gridW, gridH);
-        grid.setPosition(0, top - gridH / 2);
-        const g = grid.addComponent(Graphics);
-        drawPanel(g, gridW + 8, gridH + 8, new Color(60, 48, 36, 240), 8, new Color(150, 120, 80), 3);
         const selected = this.selectedPiece !== null ? pieceOf(haul, this.selectedPiece) : undefined;
-        const cellPos = (x: number, y: number) => ({ x: -gridW / 2 + x * cell + cell / 2, y: gridH / 2 - y * cell - cell / 2 });
-        const occ = occupancy(haul);
-        for (let y = 0; y < gh; y++) {
-            for (let x = 0; x < gw; x++) {
-                const p = cellPos(x, y);
-                const node = makeNode('Cell', grid, cell - 4, cell - 4);
-                node.setPosition(p.x, p.y);
-                drawPanel(node.addComponent(Graphics), cell - 4, cell - 4, new Color(90, 74, 56, 230), 6);
-                if (occ[y][x]) continue;
-                node.on(Node.EventType.TOUCH_END, () => {
-                    if (this.selectedPiece === null) return;
-                    const res = camp.placeLoot(this.selectedPiece, x, y, this.pieceRotated);
-                    if (!res.ok) this.showToast(res.reason);
-                    else this.selectedPiece = null;
-                    this.render();
-                });
+
+        // 每一块格子区（每个人的包、车的后备箱），两块一排
+        const maxW = Math.max(...haul.sections.map((sec) => sec.w));
+        const cell = Math.min(64, Math.floor((WIDTH / 2 - 20) / Math.max(1, maxW)));
+        const colW = WIDTH / 2;
+        for (let i = 0; i < haul.sections.length; i += 2) {
+            const rowTop = this.cursorY;
+            let rowH = 0;
+            for (let k = 0; k < 2 && i + k < haul.sections.length; k++) {
+                const section = i + k;
+                const sec = haul.sections[section];
+                const gridW = cell * sec.w;
+                const gridH = cell * sec.h;
+                const cx = LEFT + colW * k + colW / 2;
+                addLabel(this.content!, sec.label, 16, ACCENT, { width: colW - 10 }).node.setPosition(cx, rowTop - 12);
+                const grid = makeNode('Bag', this.content!, gridW, gridH);
+                grid.setPosition(cx, rowTop - 28 - gridH / 2);
+                drawPanel(grid.addComponent(Graphics), gridW + 8, gridH + 8, new Color(60, 48, 36, 240), 8, new Color(150, 120, 80), 3);
+                const occ = occupancy(haul, section);
+                for (let y = 0; y < sec.h; y++) {
+                    for (let x = 0; x < sec.w; x++) {
+                        const node = makeNode('Cell', grid, cell - 4, cell - 4);
+                        node.setPosition(-gridW / 2 + x * cell + cell / 2, gridH / 2 - y * cell - cell / 2);
+                        drawPanel(node.addComponent(Graphics), cell - 4, cell - 4, new Color(90, 74, 56, 230), 6);
+                        if (occ[y][x]) continue;
+                        node.on(Node.EventType.TOUCH_END, () => {
+                            if (this.selectedPiece === null) return;
+                            const res = camp.placeLoot(this.selectedPiece, section, x, y, this.pieceRotated);
+                            if (!res.ok) this.showToast(res.reason);
+                            else this.selectedPiece = null;
+                            this.render();
+                        });
+                    }
+                }
+                for (const pk of haul.packed) {
+                    if ((pk.section ?? 0) !== section) continue;
+                    const piece = pieceOf(haul, pk.piece);
+                    if (!piece) continue;
+                    const w = pk.rotated ? piece.h : piece.w;
+                    const h = pk.rotated ? piece.w : piece.h;
+                    const node = makeNode('Piece', grid, w * cell - 6, h * cell - 6);
+                    node.setPosition(-gridW / 2 + (pk.x + w / 2) * cell, gridH / 2 - (pk.y + h / 2) * cell);
+                    drawPanel(node.addComponent(Graphics), w * cell - 6, h * cell - 6, pieceColor(piece), 8, TEXT, 2);
+                    addLabel(node, pieceText(config, piece), Math.min(18, Math.floor(cell / 3.2)), TEXT, { width: w * cell - 10, wrap: true });
+                    node.on(Node.EventType.TOUCH_END, () => {
+                        punch(node);
+                        camp.unpackLoot(piece.id);
+                        this.render();
+                    });
+                }
+                rowH = Math.max(rowH, gridH + 40);
             }
+            this.cursorY = rowTop - rowH - 8;
         }
-        for (const pk of haul.packed) {
-            const piece = pieceOf(haul, pk.piece);
-            if (!piece) continue;
-            const w = pk.rotated ? piece.h : piece.w;
-            const h = pk.rotated ? piece.w : piece.h;
-            const node = makeNode('Piece', grid, w * cell - 6, h * cell - 6);
-            node.setPosition(-gridW / 2 + (pk.x + w / 2) * cell, gridH / 2 - (pk.y + h / 2) * cell);
-            drawPanel(node.addComponent(Graphics), w * cell - 6, h * cell - 6, pieceColor(piece), 8, TEXT, 2);
-            addLabel(node, pieceText(config, piece), Math.min(20, Math.floor(cell / 3.4)), TEXT, { width: w * cell - 10, wrap: true });
-            node.on(Node.EventType.TOUCH_END, () => {
-                punch(node);
-                camp.unpackLoot(piece.id);
-                this.render();
-            });
-        }
-        this.cursorY = top - gridH - 16;
 
         // 操作
         const third = (WIDTH - 20) / 3;
@@ -2204,14 +2213,15 @@ export class GameRoot extends Component {
     }
 
     /** 选车：走路 / 每辆车一个按钮，写清楚背包大小、负重、汽油 */
-    private renderVehiclePicker(camp: CampGame, tier: number, squadSize: number): void {
+    private renderVehiclePicker(camp: CampGame, tier: number, squad: string[]): void {
         const { config, state } = camp;
         const owned = ownedVehicles(config, state);
         if (owned.length === 0 && tier === 0) return;
         const auto = pickVehicle(config, state, tier, this.selectedVehicle).vehicle;
         const chosen = this.selectedVehicle === 'walk' ? undefined : this.selectedVehicle ? vehicleDef(config, this.selectedVehicle) : auto;
-        const cap = haulCapacity(config, squadSize, chosen);
-        this.text(`🎒 背包 ${cap.grid[0]}×${cap.grid[1]} 格 · 能背 ${cap.maxWeight} 重 · ⛽汽油 ${propCount(state, FUEL_PROP)} 桶`, 18, ACCENT);
+        const cap = haulSections(config, state, squad, chosen);
+        const cells = cap.sections.reduce((n, sec) => n + sec.w * sec.h, 0);
+        this.text(`🎒 ${cap.sections.map((sec) => `${sec.w}×${sec.h}`).join(' + ')}（共 ${cells} 格）· 能背 ${cap.maxWeight} 重 · ⛽汽油 ${propCount(state, FUEL_PROP)} 桶`, 18, ACCENT);
         const options: { id: string | undefined; label: string; blocker: string | null }[] = [
             { id: undefined, label: '自动', blocker: null },
             { id: 'walk', label: '🚶走路', blocker: tier > 0 ? '太远' : null },
@@ -2253,7 +2263,7 @@ export class GameRoot extends Component {
             return;
         }
         const who = suggestSurveyors(state);
-        this.renderVehiclePicker(camp, d.tier, who.length);
+        this.renderVehiclePicker(camp, d.tier, who);
         const blocker = surveyBlocker(config, state, d.id, who, now, this.selectedVehicle);
         const names = who.map((id) => survivorName(config, state, id)).join('、') || '没有能派的人';
         this.button(blocker ? `勘察（${blocker}）` : `🗺️ 派 ${names} 去勘察，驱散一片迷雾`, WIDTH, () => {

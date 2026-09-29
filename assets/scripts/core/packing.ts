@@ -1,6 +1,7 @@
 // 探索背包：打赢以后，战利品摊在地上，要装进背包才能带回营地。
-//   - 背包是一个格子网（不开车 3×3，车越大格子越多），每件东西占 w×h 格，可以转 90 度
-//   - 还有重量上限：每个人能背 carryPerPerson，车能多装 cargo
+//   - 背包由几块格子区组成（三角洲那样）：每个人背的包（不同的包分区不同，没背包只有两只手 2×2），开车再加一块后备箱；
+//     每件东西占 w×h 格，可以转 90 度，只能放在一块区里
+//   - 还有重量上限：每个人能背 carryPerPerson，背包、车能多装
 //   - 装不下 / 太重的只能留在原地
 // 资源按 packing.bundles 打成一包一包（包的大小随指挥部等级和战利品一起成长，所以包数不变）；
 // 道具一件一件装，大小、重量写在 props.json（没写用默认值）。
@@ -9,7 +10,7 @@
 import { grantResources, hqLevel } from './economy';
 import { addProp, formatProps, propDef } from './props';
 import { addLog, addStat } from './state';
-import { ActionResult, GameConfig, GameState, HaulState, LootPiece, RESOURCE_IDS, ResourceBag, ResourceId } from './types';
+import { ActionResult, GameConfig, GameState, HaulSection, HaulState, LootPiece, RESOURCE_IDS, ResourceBag, ResourceId } from './types';
 
 /** 每种资源一包大概值多少（用来决定先装什么） */
 const RESOURCE_VALUE: Record<ResourceId, number> = { food: 1, wood: 1, parts: 1.4, medicine: 1.8, cans: 2.5 };
@@ -64,12 +65,12 @@ export function packedWeight(haul: HaulState): number {
     return haul.packed.reduce((n, pk) => n + (pieceOf(haul, pk.piece)?.weight ?? 0), 0);
 }
 
-/** 格子被谁占了：返回二维数组，空格为 0 */
-export function occupancy(haul: HaulState, skip?: number): number[][] {
-    const [gw, gh] = haul.grid;
-    const grid = Array.from({ length: gh }, () => new Array<number>(gw).fill(0));
+/** 某个分区的格子被谁占了：返回二维数组，空格为 0 */
+export function occupancy(haul: HaulState, section = 0, skip?: number): number[][] {
+    const sec = haul.sections[section];
+    const grid = Array.from({ length: sec?.h ?? 0 }, () => new Array<number>(sec?.w ?? 0).fill(0));
     for (const pk of haul.packed) {
-        if (pk.piece === skip) continue;
+        if (pk.piece === skip || (pk.section ?? 0) !== section) continue;
         const p = pieceOf(haul, pk.piece);
         if (!p) continue;
         const f = footprint(p, pk.rotated);
@@ -78,25 +79,31 @@ export function occupancy(haul: HaulState, skip?: number): number[][] {
     return grid;
 }
 
-/** 能不能把这件东西放在 (x, y)；返回 null 表示可以 */
-export function placeBlocker(haul: HaulState, pieceId: number, x: number, y: number, rotated: boolean): string | null {
+/** 所有分区一共多少格 */
+export function totalCells(haul: HaulState): number {
+    return haul.sections.reduce((n, s) => n + s.w * s.h, 0);
+}
+
+/** 能不能把这件东西放在第 section 个分区的 (x, y)；返回 null 表示可以 */
+export function placeBlocker(haul: HaulState, pieceId: number, section: number, x: number, y: number, rotated: boolean): string | null {
     const p = pieceOf(haul, pieceId);
     if (!p) return '没有这件东西';
+    const sec = haul.sections[section];
+    if (!sec) return '没有这个格子';
     const f = footprint(p, rotated);
-    const [gw, gh] = haul.grid;
-    if (x < 0 || y < 0 || x + f.w > gw || y + f.h > gh) return '放不下';
-    const grid = occupancy(haul, pieceId);
+    if (x < 0 || y < 0 || x + f.w > sec.w || y + f.h > sec.h) return '放不下';
+    const grid = occupancy(haul, section, pieceId);
     for (let yy = y; yy < y + f.h; yy++) for (let xx = x; xx < x + f.w; xx++) if (grid[yy][xx]) return '位置被占了';
     const already = haul.packed.some((pk) => pk.piece === pieceId);
     if (!already && packedWeight(haul) + p.weight > haul.maxWeight) return '太重了，背不动';
     return null;
 }
 
-export function placePiece(haul: HaulState, pieceId: number, x: number, y: number, rotated: boolean): string | null {
-    const blocker = placeBlocker(haul, pieceId, x, y, rotated);
+export function placePiece(haul: HaulState, pieceId: number, section: number, x: number, y: number, rotated: boolean): string | null {
+    const blocker = placeBlocker(haul, pieceId, section, x, y, rotated);
     if (blocker) return blocker;
     haul.packed = haul.packed.filter((pk) => pk.piece !== pieceId);
-    haul.packed.push({ piece: pieceId, x, y, rotated });
+    haul.packed.push({ piece: pieceId, section, x, y, rotated });
     return null;
 }
 
@@ -104,31 +111,33 @@ export function removePiece(haul: HaulState, pieceId: number): void {
     haul.packed = haul.packed.filter((pk) => pk.piece !== pieceId);
 }
 
-/** 找第一个能放下的位置（先试不转，再试转 90 度）；放下了返回 null */
+/** 找第一个能放下的位置（按分区顺序，先试不转，再试转 90 度）；放下了返回 null */
 export function autoPlace(haul: HaulState, pieceId: number): string | null {
     const p = pieceOf(haul, pieceId);
     if (!p) return '没有这件东西';
     if (!haul.packed.some((pk) => pk.piece === pieceId) && packedWeight(haul) + p.weight > haul.maxWeight) return '太重了，背不动';
-    const [gw, gh] = haul.grid;
-    for (const rotated of p.w === p.h ? [false] : [false, true]) {
-        for (let y = 0; y < gh; y++) {
-            for (let x = 0; x < gw; x++) {
-                if (placePiece(haul, pieceId, x, y, rotated) === null) return null;
+    for (let section = 0; section < haul.sections.length; section++) {
+        const sec = haul.sections[section];
+        for (const rotated of p.w === p.h ? [false] : [false, true]) {
+            for (let y = 0; y < sec.h; y++) {
+                for (let x = 0; x < sec.w; x++) {
+                    if (placePiece(haul, pieceId, section, x, y, rotated) === null) return null;
+                }
             }
         }
     }
     return '背包里没有地方了';
 }
 
-/** 自动整理：清空重新装，贵重、占地小的先装 */
+/** 自动整理：清空重新装，贵重、占地小的先装；大件先找大格子 */
 export function autoPack(config: GameConfig, haul: HaulState): void {
     haul.packed = [];
     const order = [...haul.pieces].sort((a, b) => pieceValue(config, b) / (b.w * b.h) - pieceValue(config, a) / (a.w * a.h) || b.w * b.h - a.w * a.h);
     for (const p of order) autoPlace(haul, p.id);
 }
 
-export function newHaul(config: GameConfig, state: GameState, title: string, at: number, pieces: LootPiece[], grid: [number, number], maxWeight: number): HaulState {
-    const haul: HaulState = { id: state.nextId++, title, at, pieces, packed: [], grid, maxWeight };
+export function newHaul(config: GameConfig, state: GameState, title: string, at: number, pieces: LootPiece[], sections: HaulSection[], maxWeight: number): HaulState {
+    const haul: HaulState = { id: state.nextId++, title, at, pieces, packed: [], sections, maxWeight };
     autoPack(config, haul);
     return haul;
 }

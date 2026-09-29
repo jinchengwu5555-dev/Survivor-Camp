@@ -3,8 +3,8 @@ import { CampGame } from '../assets/scripts/core/CampGame';
 import { expeditionBlocker, getLocation } from '../assets/scripts/core/combat';
 import { districtAt, districtDef, districtExplored } from '../assets/scripts/core/districts';
 import { autoPack, carryHome, makePieces, newHaul, occupancy, packedWeight, placePiece } from '../assets/scripts/core/packing';
-import { propCount } from '../assets/scripts/core/props';
-import { ownedVehicles, pickVehicle } from '../assets/scripts/core/vehicles';
+import { propCount, propDef } from '../assets/scripts/core/props';
+import { haulSections, ownedVehicles, pickVehicle, vehicleDef } from '../assets/scripts/core/vehicles';
 import { loadConfig, MIN, T0 } from './helpers';
 
 function newGame() {
@@ -114,21 +114,22 @@ describe('探索背包', () => {
         const pieces = makePieces(config, state, { food: 60, wood: 50 }, { shotgun: 1 });
         expect(pieces.filter((p) => p.item === 'food')).toHaveLength(3);
         expect(pieces.find((p) => p.item === 'shotgun')).toMatchObject({ w: 1, h: 3 });
-        const haul = newHaul(config, state, '测试', T0, pieces, [3, 3], 100);
+        const haul = newHaul(config, state, '测试', T0, pieces, [{ label: '书包', w: 3, h: 3 }], 100);
         haul.packed = [];
         const wood = pieces.find((p) => p.item === 'wood')!;
-        expect(placePiece(haul, wood.id, 0, 0, false)).toBeNull();
-        expect(placePiece(haul, pieces[0].id, 1, 0, false)).toBe('位置被占了');
-        expect(placePiece(haul, pieces[0].id, 3, 0, false)).toBe('放不下');
+        expect(placePiece(haul, wood.id, 0, 0, 0, false)).toBeNull();
+        expect(placePiece(haul, pieces[0].id, 0, 1, 0, false)).toBe('位置被占了');
+        expect(placePiece(haul, pieces[0].id, 0, 3, 0, false)).toBe('放不下');
+        expect(placePiece(haul, pieces[0].id, 1, 0, 0, false)).toBe('没有这个格子');
         haul.maxWeight = packedWeight(haul);
-        expect(placePiece(haul, pieces[0].id, 2, 0, false)).toBe('太重了，背不动');
+        expect(placePiece(haul, pieces[0].id, 0, 2, 0, false)).toBe('太重了，背不动');
     });
 
     it('自动整理：放得下的都放进去，放不下的留下；带回营地只入库装进去的', () => {
         const game = newGame();
         const { config, state } = game;
         const pieces = makePieces(config, state, { food: 200, parts: 60 }, { mystery_box: 1 });
-        const haul = newHaul(config, state, '测试', T0, pieces, [3, 3], 999);
+        const haul = newHaul(config, state, '测试', T0, pieces, [{ label: '书包', w: 3, h: 3 }], 999);
         autoPack(config, haul);
         state.resources.food = 0;
         const cells = occupancy(haul).flat().filter(Boolean).length;
@@ -153,5 +154,36 @@ describe('探索背包', () => {
         expect(game.currentHaul).toBeUndefined();
         const packedFood = haul.packed.map((pk) => haul.pieces.find((p) => p.id === pk.piece)!).filter((p) => p.item === 'food').reduce((n, p) => n + p.amount, 0);
         expect(state.resources.food).toBeGreaterThanOrEqual(food + packedFood - 50);
+    });
+});
+
+describe('不同种类的背包（三角洲式）', () => {
+    it('每个人的包是一块或几块格子区，没背包只有两只手；开车多一块后备箱', () => {
+        const game = newGame();
+        const { config, state } = game;
+        const ethan = state.survivors.find((s) => s.id === 'ethan')!;
+        ethan.gear = { bag: 'hiking_pack' };
+        const cap = haulSections(config, state, ['ethan', 'toby'], vehicleDef(config, 'bicycle'));
+        expect(cap.sections.map((s) => [s.w, s.h])).toEqual([[3, 4], [2, 2], [2, 2], [2, 2]]);
+        expect(cap.sections[2].label).toContain('两只手');
+        const per = config.districts!.carryPerPerson;
+        expect(cap.maxWeight).toBe(per * 2 + propDef(config, 'hiking_pack')!.bag!.carry + vehicleDef(config, 'bicycle')!.cargo);
+    });
+
+    it('自动整理会用上所有格子区；一件东西不能跨区', () => {
+        const game = newGame();
+        const { config, state } = game;
+        const pieces = makePieces(config, state, { food: 200 }, {});
+        const haul = newHaul(config, state, '测试', T0, pieces, [{ label: 'A', w: 2, h: 2 }, { label: 'B', w: 2, h: 2 }], 999);
+        expect(haul.packed.length).toBe(8);
+        expect(new Set(haul.packed.map((pk) => pk.section))).toEqual(new Set([0, 1]));
+        const long = makePieces(config, state, {}, { shotgun: 1 });
+        const h2 = newHaul(config, state, '测试', T0, long, [{ label: 'A', w: 2, h: 2 }, { label: 'B', w: 2, h: 2 }], 999);
+        expect(h2.packed).toHaveLength(0);
+    });
+
+    it('开局伊森背着书包', () => {
+        const game = CampGame.newGame(loadConfig({ soloStart: true }), T0, 1);
+        expect(game.state.survivors[0].gear?.bag).toBe('school_bag');
     });
 });
