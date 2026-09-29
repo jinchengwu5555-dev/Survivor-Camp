@@ -190,6 +190,15 @@ export interface BuildingDef {
     levels: BuildingLevelDef[];
     /** 可选：手写等级之后按公式自动生成更多等级 */
     scaling?: BuildingScaling;
+    /** 升级阶段：到了 level 级换一个样子（篝火 → 烤架 → 厨房），按 level 从小到大写 */
+    stages?: BuildingStage[];
+}
+
+export interface BuildingStage {
+    level: number;
+    name: string;
+    icon: string;
+    description?: string;
 }
 
 export interface SurvivorDef {
@@ -673,6 +682,8 @@ export interface SurvivorState {
     sleep?: number;
     /** 守夜安排：auto 轮班（默认）/ always 固定守夜 / never 不守夜 */
     watch?: WatchMode;
+    /** 最近几次心情变化的原因（见 core/mood.ts） */
+    moodNotes?: { at: number; text: string; amount: number }[];
 }
 
 export type WatchMode = 'auto' | 'always' | 'never';
@@ -773,6 +784,8 @@ export interface GameState {
     seen?: SeenState;
     /** 上一晚的守夜情况（见 core/watch.ts） */
     lastNight?: NightState;
+    /** 心情跨档的次数（统计用） */
+    moodShifts?: number;
 }
 
 export interface NightState {

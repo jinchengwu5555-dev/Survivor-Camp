@@ -18,6 +18,7 @@ import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
 import { formatProps, rollDrops } from './props';
 import { combatMultiplier } from './talents';
 import { passNight, rollRaid, watchersText } from './watch';
+import { changeMoodAll } from './mood';
 import {
     ActionResult,
     BattleReport,
@@ -342,7 +343,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         }
     } else {
         addStat(state, 'expeditions_lost');
-        for (const s of state.survivors) if (squad.includes(s.id)) s.mood = Math.max(0, s.mood - 5);
+        changeMoodAll(state, -5, `在${loc.name}吃了败仗`, at, (s) => squad.includes(s.id));
     }
     // 打赢了队友会把倒下的人背回来，只有打输撤退时才会有人回不来
     const { dead, injured } = resolveFallen(config, state, fallen, at, `在${loc.name}牺牲了`, result === 'lose');
@@ -458,7 +459,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         for (const id of RESOURCE_IDS) if (raid.reward[id]) reward[id] = Math.round(raid.reward[id]! * mult);
         loot = grantResources(config, state, reward);
         found = formatProps(config, rollDrops(state, raid.drops));
-        for (const s of state.survivors) s.mood = Math.min(100, s.mood + 3);
+        changeMoodAll(state, 3, '守夜守住了', at);
     } else {
         addStat(state, 'raids_lost');
         state.raidRelief += config.balance.raidScaling.reliefPerLoss;
@@ -470,7 +471,7 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
                 lost[id] = amount;
             }
         }
-        for (const s of state.survivors) s.mood = Math.max(0, s.mood - 10);
+        changeMoodAll(state, -10, '尸群冲破了栅栏', at);
     }
     const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了');
     // 栅栏被冲破：尸群冲进营地，有人被咬死

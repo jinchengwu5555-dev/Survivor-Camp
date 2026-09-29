@@ -9,7 +9,7 @@
 
 import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, UIOpacity, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
-import { upgradeBlocker } from '../core/buildings';
+import { buildingLabel, buildingStage, nextBuildingStage, upgradeBlocker } from '../core/buildings';
 import {
     barricadeHp,
     battleRegistry,
@@ -53,6 +53,7 @@ import { traderPresent } from '../core/trader';
 import { combatMultiplier, sleepFactor, talentsOf, workMultiplier } from '../core/talents';
 import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearStatsText } from '../core/gear';
 import { campStats } from '../core/campStats';
+import { moodFactors, moodTier } from '../core/mood';
 import { planWatch, raidChanceTonight, WATCH_MODE_NAMES, watchersNeeded, watchersText } from '../core/watch';
 import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
@@ -70,7 +71,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.3 装备+守夜+数值';
+const GAME_VERSION = 'v1.4 心情+设施阶段';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -332,7 +333,12 @@ export class GameRoot extends Component {
         const { config, state } = camp;
         for (const b of Object.values(state.buildings)) {
             const before = this.seenLevels[b.id] ?? b.level;
-            if (b.level > before) this.effect(`⬆️ ${getBuildingDef(config, b.id)?.name} 升到 ${b.level} 级！`, WIN, 30);
+            if (b.level > before) {
+                const bdef = getBuildingDef(config, b.id);
+                const stage = bdef?.stages?.find((st) => st.level === b.level);
+                if (bdef && stage && b.level > 1) this.effect(`✨ ${bdef.name}变成了${stage.icon}${stage.name}！`, WIN, 32);
+                else this.effect(`⬆️ ${bdef ? buildingLabel(bdef, b.level) : ''} 升到 ${b.level} 级！`, WIN, 30);
+            }
             this.seenLevels[b.id] = b.level;
         }
         for (const r of state.reports) {
@@ -862,7 +868,7 @@ export class GameRoot extends Component {
             if (b.level === 0) sprite.addComponent(UIOpacity).opacity = 110;
         } else {
             drawPanel(g, bw, bh, b.level === 0 ? new Color(70, 70, 70, 160) : new Color(96, 84, 66, 235), 14, b.level === 0 ? DIM : new Color(150, 130, 100), 2);
-            addLabel(node, def.icon ?? '🏠', Math.round(46 * scale), TEXT, { width: bw }).node.setPosition(0, 8);
+            addLabel(node, buildingStage(def, b.level).icon, Math.round(46 * scale), TEXT, { width: bw }).node.setPosition(0, 8);
         }
 
         // 名字 + 等级
@@ -870,7 +876,7 @@ export class GameRoot extends Component {
         const plate = makeNode('Plate', node, plateW, 30);
         plate.setPosition(0, -bh / 2 + 4);
         drawPanel(plate.addComponent(Graphics), plateW, 30, new Color(20, 22, 20, 210), 15);
-        addLabel(plate, b.level > 0 ? `${def.name} Lv${b.level}` : `${def.name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
+        addLabel(plate, b.level > 0 ? `${buildingStage(def, b.level).name} Lv${b.level}` : `${buildingStage(def, 0).name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
 
         // 状态角标：升级倒计时 / 可以升级 / 引导
         if (upgrading) {
@@ -1251,7 +1257,12 @@ export class GameRoot extends Component {
     private renderBuildingDetail(camp: CampGame, def: BuildingDef, now: number): void {
         const { config, state } = camp;
         const b = state.buildings[def.id];
-        this.text(`${def.icon ?? ''} ${def.name} Lv${b.level}：${def.description}`, 22);
+        const stage = buildingStage(def, b.level);
+        this.text(`${stage.icon} ${stage.name}（${def.name} Lv${b.level}）`, 26, ACCENT);
+        this.text(`${stage.description ?? ''} ${def.description}`, 20);
+        const upcoming = nextBuildingStage(def, b.level);
+        if (upcoming) this.text(`⬆️ 升到 ${upcoming.level} 级会变成 ${upcoming.icon}${upcoming.name}`, 20, WIN);
+        if (def.stages?.length) this.text(`阶段：${def.stages.map((st) => `${b.level >= st.level ? '' : '🔒'}${st.icon}${st.name}(${st.level})`).join(' → ')}`, 18, DIM);
         const current = b.level > 0 ? def.levels[b.level - 1] : undefined;
         const next = def.levels[b.level];
         if (current) this.text(`现在：${levelSummary(config, current) || '—'}`, 20, DIM);
@@ -1449,7 +1460,7 @@ export class GameRoot extends Component {
             addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }).node.setPosition(textX, -12);
             const talents = talentsOf(config, state, s.id).map((t) => t.icon + t.name).join(' ');
             const gear = gearOf(config, state, s.id).map((g) => g.icon).join('');
-            addLabel(node, `😊${Math.round(s.mood)} ${sleepText(s.sleep)}${watchers.includes(s.id) ? ' 🌙' : ''} ${gear}`, 16, (s.sleep ?? 100) < 50 ? LOSE : TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
+            addLabel(node, `${moodTier(s.mood).icon}${Math.round(s.mood)} ${sleepText(s.sleep)}${watchers.includes(s.id) ? ' 🌙' : ''} ${gear}`, 16, (s.sleep ?? 100) < 50 ? LOSE : TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
             addLabel(node, talents, 15, DIM, { width: textW, align: 'left' }).node.setPosition(textX, -58);
             node.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
@@ -1517,7 +1528,7 @@ export class GameRoot extends Component {
         const hw = WIDTH - 180;
         addLabel(head, `${info?.name ?? id}${info?.isHero ? ' ⭐' : ''}`, 34, ACCENT, { width: hw, align: 'left' }).node.setPosition(hx, 42);
         addLabel(head, `${info?.title ?? ''}   专长：${SPECIALTY_NAMES[info?.specialty ?? ''] ?? '—'}`, 20, TEXT, { width: hw, align: 'left' }).node.setPosition(hx, 6);
-        addLabel(head, `${this.survivorStatus(camp, id, now)}   😊 心情 ${Math.round(s.mood)}   ${sleepText(s.sleep)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
+        addLabel(head, `${this.survivorStatus(camp, id, now)}   ${moodTier(s.mood).icon} ${moodTier(s.mood).name} ${Math.round(s.mood)}   ${sleepText(s.sleep)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
         const unitId = info?.battleUnit;
         if (unitId && battleRegistry(config).hasUnit(unitId)) {
             const base = statsAtLevel(battleRegistry(config).unit(unitId), survivorBattleLevel(config, state));
@@ -1536,6 +1547,7 @@ export class GameRoot extends Component {
         this.text(`📖 ${info?.bio ?? ''}`, 20, DIM);
         this.gap(10);
 
+        this.renderMood(camp, id, now);
         this.renderGearSlots(camp, id);
         this.renderWatchMode(camp, id);
 
@@ -1578,6 +1590,31 @@ export class GameRoot extends Component {
             camp.assign(id, null, camp.now);
             this.render();
         }, LEFT, !s.assignment ? 'highlight' : 'normal', 22, 50);
+    }
+
+    /** 个人档案里的心情：档位、效果、最近为什么变了、正在影响心情的事 */
+    private renderMood(camp: CampGame, id: string, now: number): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        const tier = moodTier(s.mood);
+        this.text(`${tier.icon} 心情：${tier.name} ${Math.round(s.mood)}/100（${tier.effect}）`, 22, tier.work < 1 ? LOSE : ACCENT);
+        // 心情条：五档的分界线
+        const barTop = this.cursorY - 4;
+        const bar = makeNode('MoodBar', this.content!, WIDTH, 14);
+        bar.setPosition(0, barTop - 7);
+        const g = bar.addComponent(Graphics);
+        drawPanel(g, WIDTH, 14, new Color(50, 50, 50, 220), 7);
+        g.fillColor = tier.work < 1 ? LOSE : WIN;
+        g.roundRect(-WIDTH / 2, -7, (WIDTH * Math.max(2, s.mood)) / 100, 14, 7);
+        g.fill();
+        this.cursorY = barTop - 22;
+        for (const f of moodFactors(config, state, s)) this.text(`　${f}`, 18, DIM);
+        const notes = [...(s.moodNotes ?? [])].reverse();
+        if (notes.length) this.text('最近：', 18, DIM);
+        for (const n of notes) {
+            this.text(`　${n.amount > 0 ? '⬆️' : '⬇️'} ${n.text} ${n.amount > 0 ? '+' : ''}${n.amount}（${formatTime(realSeconds(config, Math.max(0, now - n.at)))}前）`, 18, n.amount > 0 ? WIN : LOSE);
+        }
+        this.gap(10);
     }
 
     /** 个人档案里的装备：三个位置，穿着的可以脱下，背包里同位置的装备可以换上 */

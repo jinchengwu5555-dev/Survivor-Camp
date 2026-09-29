@@ -1,6 +1,6 @@
 [
     {
-        "id": "hq",
+        "id": "hq", "stages": [{"level": 1, "name": "经理办公室", "icon": "📋", "description": "超市经理的小办公室，墙上钉着一张镇地图。"}, {"level": 5, "name": "指挥中心", "icon": "🏢", "description": "打通了隔壁的会议室，有了对讲机和值班表。"}, {"level": 10, "name": "营地总部", "icon": "🏛️", "description": "整层楼都是指挥部，大家在这里开会、分配物资。"}, {"level": 18, "name": "要塞司令部", "icon": "🏰", "description": "加固过的指挥所，屋顶有探照灯和无线电天线。"}],
         "name": "指挥部",
         "icon": "🏪",
         "map": { "x": 0, "y": 170, "scale": 1.35 },
@@ -14,7 +14,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "storageGrowth": 1.6 }
     },
     {
-        "id": "wall",
+        "id": "wall", "stages": [{"level": 1, "name": "木栅栏", "icon": "🪵", "description": "木桩和货架拼成的一圈栅栏。"}, {"level": 4, "name": "加固木墙", "icon": "🧱", "description": "厚木板层层钉牢，外面挖了一道浅沟。"}, {"level": 8, "name": "铁皮墙", "icon": "🛡️", "description": "拆了车皮和广告牌焊成的铁皮墙。"}, {"level": 13, "name": "水泥围墙", "icon": "🏯", "description": "浇筑的水泥墙，顶上拉着铁丝网。"}],
         "name": "栅栏",
         "icon": "🪵",
         "map": { "x": 60, "y": -245, "scale": 1.1 },
@@ -29,7 +29,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "safetyGrowth": 1.12 }
     },
     {
-        "id": "kitchen",
+        "id": "kitchen", "stages": [{"level": 1, "name": "篝火", "icon": "🔥", "description": "几块砖头围一堆火，架口锅就能煮东西。"}, {"level": 3, "name": "烤架", "icon": "🍖", "description": "焊了个铁架子，能同时烤肉、烧水。"}, {"level": 6, "name": "厨房", "icon": "🍳", "description": "超市熟食区改成的厨房，有灶台和案板。"}, {"level": 12, "name": "食堂", "icon": "🍲", "description": "长桌、大锅、排班表，全营地一起开饭。"}, {"level": 20, "name": "中央厨房", "icon": "🏭", "description": "能腌、能熏、能做罐头的大厨房。"}],
         "name": "厨房",
         "icon": "🍳",
         "map": { "x": -230, "y": 45 },
@@ -44,7 +44,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 3 }
     },
     {
-        "id": "scrapyard",
+        "id": "scrapyard", "stages": [{"level": 1, "name": "废品堆", "icon": "🗑️", "description": "停车场角落堆着能用的破烂。"}, {"level": 4, "name": "拆解棚", "icon": "🔩", "description": "搭了遮雨棚，有工作台和一套扳手。"}, {"level": 8, "name": "废料场", "icon": "🏗️", "description": "分门别类的废料场，拆车、锯木两不误。"}, {"level": 15, "name": "回收工厂", "icon": "🏭", "description": "有了发电机和切割机，一天能拆好几辆车。"}],
         "name": "废料场",
         "icon": "🔩",
         "map": { "x": 230, "y": 45 },
@@ -59,7 +59,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 4 }
     },
     {
-        "id": "infirmary",
+        "id": "infirmary", "stages": [{"level": 1, "name": "急救箱", "icon": "🩹", "description": "一个急救箱和一张干净的桌子。"}, {"level": 3, "name": "药房柜台", "icon": "💊", "description": "超市药房的柜台，药品按类摆好。"}, {"level": 7, "name": "医务室", "icon": "🏥", "description": "隔出了病床和消毒区。"}, {"level": 15, "name": "野战医院", "icon": "🚑", "description": "能做手术的小医院，还有自己的药材园。"}],
         "name": "医务室",
         "icon": "💊",
         "map": { "x": -230, "y": -95 },
@@ -74,7 +74,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 6 }
     },
     {
-        "id": "dorm",
+        "id": "dorm", "stages": [{"level": 1, "name": "睡袋", "icon": "⛺", "description": "仓库里铺开的一排睡袋。"}, {"level": 3, "name": "行军床", "icon": "🛏️", "description": "每人一张行军床，终于不用睡地上了。"}, {"level": 6, "name": "宿舍", "icon": "🏠", "description": "用货架隔出的小房间，门上贴着名字。"}],
         "name": "宿舍",
         "icon": "🛏️",
         "map": { "x": 0, "y": 35 },
@@ -88,7 +88,7 @@
         "scaling": { "maxLevel": 8, "costGrowth": 1.5, "timeGrowth": 1.32, "bedsPerLevel": 1 }
     },
     {
-        "id": "training",
+        "id": "training", "stages": [{"level": 1, "name": "沙袋", "icon": "🥊", "description": "吊在房梁上的一个旧沙袋。"}, {"level": 5, "name": "训练场", "icon": "🎯", "description": "轮胎、木桩、靶子，每天早上都有人练。"}, {"level": 12, "name": "格斗馆", "icon": "🏋️", "description": "像样的训练场馆，老手带新人。"}],
         "name": "训练场",
         "icon": "🥊",
         "map": { "x": 230, "y": -95 },
@@ -102,7 +102,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "battleLevelPerLevel": 1 }
     },
     {
-        "id": "workshop",
+        "id": "workshop", "stages": [{"level": 1, "name": "工具台", "icon": "🔧", "description": "一张结实的桌子和一套工具。"}, {"level": 2, "name": "工坊", "icon": "🛠️", "description": "德里克的修车铺搬进了后仓，什么都能做。"}],
         "name": "工坊",
         "icon": "🔧",
         "map": { "x": 0, "y": -105 },
@@ -115,7 +115,7 @@
         ]
     },
     {
-        "id": "cellar",
+        "id": "cellar", "stages": [{"level": 1, "name": "地洞", "icon": "🕳️", "description": "在后院挖的地洞，凉快一点。"}, {"level": 4, "name": "地窖", "icon": "🧊", "description": "冷库改的地窖，食物坏得慢。"}, {"level": 8, "name": "冷库", "icon": "❄️", "description": "发电机带着的冷库，肉能放一个月。"}],
         "name": "地窖",
         "icon": "🧊",
         "map": { "x": -230, "y": -240 },

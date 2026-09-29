@@ -49,6 +49,8 @@ describe('轮流守夜', () => {
         game.setWatch('martha', 'always', T0);
         let t = state.nextRaidAt;
         for (let night = 0; night < 4; night++) {
+            state.resources.food = 10_000;
+            state.survivors.find((s) => s.id === 'martha')!.mood = 100;
             game.tick(t);
             t = state.nextRaidAt;
         }

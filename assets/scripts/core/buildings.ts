@@ -1,6 +1,6 @@
 // 建造 / 升级，以及幸存者的工作分配。
 
-import { ActionResult, GameConfig, GameState } from './types';
+import { ActionResult, BuildingDef, BuildingStage, GameConfig, GameState } from './types';
 import { canAfford, getBuildingDef, hqLevel, pay, workerSlots } from './economy';
 import { addLog, addStat } from './state';
 
@@ -55,8 +55,11 @@ export function completeUpgrades(config: GameConfig, state: GameState, now: numb
         if (b.upgradeEndsAt === null || b.upgradeEndsAt > now) continue;
         b.level += 1;
         b.upgradeEndsAt = null;
-        const name = getBuildingDef(config, b.id)?.name ?? b.id;
-        addLog(state, now, b.level === 1 ? `${name}建好了。` : `${name}升到了 ${b.level} 级。`);
+        const def = getBuildingDef(config, b.id);
+        const name = def?.name ?? b.id;
+        const stage = def?.stages?.find((st) => st.level === b.level);
+        if (stage && b.level > 1) addLog(state, now, `✨ ${name}升级成了${stage.icon}${stage.name}！${stage.description ?? ''}`);
+        else addLog(state, now, b.level === 1 ? `${def ? buildingLabel(def, 1) : name}建好了。` : `${def ? buildingLabel(def, b.level) : name}升到了 ${b.level} 级。`);
     }
 }
 
@@ -76,4 +79,24 @@ export function assignSurvivor(config: GameConfig, state: GameState, survivorId:
     if (used >= slots) return { ok: false, reason: '岗位已满' };
     s.assignment = buildingId;
     return { ok: true };
+}
+
+/** 这个等级是哪个阶段（篝火 / 烤架 / 厨房……）；没写 stages 的建筑用自己的名字和图标 */
+export function buildingStage(def: BuildingDef, level: number): BuildingStage {
+    const stages = def.stages ?? [];
+    let stage: BuildingStage = { level: 0, name: def.name, icon: def.icon ?? '🏠', description: def.description };
+    for (const s of stages) if (level >= s.level) stage = s;
+    if (level <= 0 && stages.length > 0) stage = stages[0];
+    return stage;
+}
+
+/** 下一个阶段（升到几级会变样）；已经是最后一个阶段时返回 undefined */
+export function nextBuildingStage(def: BuildingDef, level: number): BuildingStage | undefined {
+    return (def.stages ?? []).find((s) => s.level > level);
+}
+
+/** 界面上显示的名字，比如“🔥篝火 Lv2” */
+export function buildingLabel(def: BuildingDef, level: number): string {
+    const st = buildingStage(def, level);
+    return `${st.icon}${st.name}`;
 }

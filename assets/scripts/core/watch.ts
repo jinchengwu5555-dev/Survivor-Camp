@@ -6,6 +6,7 @@
 //   3. 不是每晚都有尸潮：按 raidChance 掷骰子（第一次尸潮必来）。人手不够时，尸潮来了栅栏更容易被冲破。
 
 import { isOnExpedition } from './combat';
+import { changeMood, isBrokenDown } from './mood';
 import { currentDay } from './state';
 import { nextRandom } from './rng';
 import { survivorName } from './roster';
@@ -20,7 +21,7 @@ export function watchersNeeded(config: GameConfig, state: GameState): number {
 }
 
 function canWatch(state: GameState, s: SurvivorState): boolean {
-    return !s.injured && !isOnExpedition(state, s.id) && (s.watch ?? 'auto') !== 'never';
+    return !s.injured && !isBrokenDown(s) && !isOnExpedition(state, s.id) && (s.watch ?? 'auto') !== 'never';
 }
 
 /** 今晚会是谁守夜（界面预览和晚上结算用同一个规则） */
@@ -53,6 +54,8 @@ export function passNight(config: GameConfig, state: GameState, at: number): { w
         for (const s of state.survivors) {
             const sleep = s.sleep ?? 100;
             s.sleep = watchers.includes(s.id) ? Math.max(0, sleep - cfg.watchCost) : Math.min(100, sleep + cfg.restGain);
+            // 累垮了心情也会变差
+            if (s.sleep < cfg.tiredBelow / 2) changeMood(state, s, -4, '守夜太累', at);
         }
     }
     const needed = watchersNeeded(config, state);

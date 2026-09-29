@@ -5,9 +5,11 @@
 //   scout        侦察来回时间倍率
 //   moodRecovery 心情恢复速度倍率
 // 天赋定义在 talents.json。
-// 这里的 work / combat / scout 倍率是“这个人”的总倍率：天赋 × 装备（gear.ts）× 精力（守夜太累会打折扣，watch.ts）。
+// 这里的 work / combat / scout 倍率是“这个人”的总倍率：
+//   天赋 × 装备（gear.ts）× 精力（守夜太累会打折扣，watch.ts）× 心情档位（mood.ts）。
 
 import { gearCombat, gearScout, gearWork } from './gear';
+import { moodTier } from './mood';
 import { GameConfig, GameState, SurvivorState, TalentDef } from './types';
 
 /** 精力的影响：精力不低于 tiredBelow 时没影响，越低越差，精力 0 时只剩 minFactor */
@@ -40,7 +42,7 @@ export function workMultiplier(config: GameConfig, state: GameState, survivorId:
         if (w && (!w.building || w.building === buildingId)) mult *= w.mult;
     }
     const s = state.survivors.find((x) => x.id === survivorId);
-    return mult * gearWork(config, state, survivorId, buildingId) * sleepFactor(config, s);
+    return mult * gearWork(config, state, survivorId, buildingId) * sleepFactor(config, s) * (s ? moodTier(s.mood).work : 1);
 }
 
 export function combatMultiplier(config: GameConfig, state: GameState, survivorId: string): { atk: number; hp: number } {
@@ -51,8 +53,9 @@ export function combatMultiplier(config: GameConfig, state: GameState, survivorI
         hp *= t.effects.combat?.hp ?? 1;
     }
     const g = gearCombat(config, state, survivorId);
-    const tired = sleepFactor(config, state.survivors.find((x) => x.id === survivorId));
-    return { atk: atk * g.atk * tired, hp: hp * g.hp };
+    const s = state.survivors.find((x) => x.id === survivorId);
+    const tired = sleepFactor(config, s);
+    return { atk: atk * g.atk * tired * (s ? moodTier(s.mood).atk : 1), hp: hp * g.hp };
 }
 
 function product(config: GameConfig, state: GameState, survivorId: string, key: 'recovery' | 'scout' | 'moodRecovery'): number {

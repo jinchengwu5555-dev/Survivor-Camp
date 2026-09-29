@@ -54,6 +54,10 @@ export function validateConfig(config: GameConfig): string[] {
     for (const b of config.buildings) {
         if (b.levels.length === 0) errors.push(`建筑 ${b.id} 没有等级数据`);
         if (b.startLevel < 0 || b.startLevel > b.levels.length) errors.push(`建筑 ${b.id} 的 startLevel 超出范围`);
+        (b.stages ?? []).forEach((st, i, all) => {
+            if (i === 0 && st.level !== 1) errors.push(`建筑 ${b.id} 的第一个阶段要从 1 级开始`);
+            if (i > 0 && st.level <= all[i - 1].level) errors.push(`建筑 ${b.id} 的阶段等级要从小到大`);
+        });
         b.levels.forEach((lv, i) => {
             const where = `建筑 ${b.id} 第 ${i + 1} 级`;
             checkBag(where, lv.cost);

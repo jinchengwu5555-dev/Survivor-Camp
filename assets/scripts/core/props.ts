@@ -3,7 +3,8 @@
 
 import { completeUpgrades } from './buildings';
 import { finishExpeditionNow, formatBag } from './combat';
-import { clampMood, grantResources, hqLevel } from './economy';
+import { grantResources, hqLevel } from './economy';
+import { changeMoodAll } from './mood';
 import { nextRandom, pickWeighted } from './rng';
 import { addWanderer } from './roster';
 import { addLog, addStat, healSurvivorState } from './state';
@@ -105,7 +106,7 @@ export function useProp(config: GameConfig, state: GameState, id: string, now: n
             message = '小队回来了';
             break;
         case 'mood':
-            for (const s of state.survivors) s.mood = clampMood(s.mood + (def.amount ?? 0));
+            changeMoodAll(state, def.amount ?? 0, `分享了${def.name}`, now);
             message = `所有人心情 +${def.amount ?? 0}`;
             break;
         case 'heal':

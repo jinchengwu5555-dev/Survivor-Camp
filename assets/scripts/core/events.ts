@@ -1,7 +1,8 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
-import { addResource, bedCount, canAfford, clampMood, hqLevel, pay } from './economy';
+import { addResource, bedCount, canAfford, hqLevel, pay } from './economy';
+import { changeMood } from './mood';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
 import { addWanderer, checkGameOver, injureSurvivor, resolveFallen, survivorInfo, survivorName as rosterName } from './roster';
@@ -159,7 +160,7 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
     const outcome = pickWeighted(state, choice.outcomes);
     if (!outcome) return { ok: true, effectsText: describeChanges(config, state, before) };
     addLog(state, now, `【${event.title}】${outcome.text}`);
-    for (const effect of outcome.effects) applyEffect(config, state, effect, now);
+    for (const effect of outcome.effects) applyEffect(config, state, effect, now, `事件：${event.title}`);
     return { ok: true, outcomeText: outcome.text, effectsText: describeChanges(config, state, before) };
 }
 
@@ -179,7 +180,8 @@ function resolveSurvivor(config: GameConfig, state: GameState, target: string): 
     return pickOne(state, pool)?.id ?? null;
 }
 
-export function applyEffect(config: GameConfig, state: GameState, effect: Effect, now: number): void {
+/** reason：心情变化记在谁的账上（事件标题等），会显示在个人档案里 */
+export function applyEffect(config: GameConfig, state: GameState, effect: Effect, now: number, reason = '发生了一些事'): void {
     switch (effect.type) {
         case 'resource':
             addResource(config, state, effect.resource, effect.amount);
@@ -188,7 +190,7 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             const target = effect.target ?? 'all';
             const id = target === 'all' ? null : resolveSurvivor(config, state, target);
             const targets = target === 'all' ? state.survivors : state.survivors.filter((s) => s.id === id);
-            for (const s of targets) s.mood = clampMood(s.mood + effect.amount);
+            for (const s of targets) changeMood(state, s, effect.amount, reason, now);
             break;
         }
         case 'addSurvivor': {
