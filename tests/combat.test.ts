@@ -88,6 +88,7 @@ describe('探索', () => {
     it('打输了：倒下的人受伤，过一段时间自然痊愈', () => {
         const game = newGame();
         game.state.flags.push('cleared_hardware_store');
+        game.state.buildings.hq.level = 3;
         game.explore('clinic', T0, ['sophie']);
         game.tick(T0 + 20 * MIN);
         expect(game.state.reports[0].result).toBe('lose');
@@ -102,7 +103,8 @@ describe('探索', () => {
     it('第一次打下警长办公室触发剧情，第二次不再触发', () => {
         const game = newGame();
         game.state.flags.push('cleared_clinic');
-        const later = dayStart(4);
+        game.state.buildings.hq.level = 5;
+        const later = dayStart(6);
         game.state.lastTickAt = later;
         game.state.nextRaidAt = Number.MAX_SAFE_INTEGER;
         game.state.buildings.training.level = 3; // 训练满级后必胜，避免测试依赖随机结果

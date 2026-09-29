@@ -19,6 +19,8 @@ import { formatProps, rollDrops } from './props';
 import { combatMultiplier } from './talents';
 import { passNight, rollRaid, watchersText } from './watch';
 import { changeMoodAll } from './mood';
+import { takeDroppedGear } from './gear';
+import { locationName } from './names';
 import { carryHome, makePieces, newHaul } from './packing';
 import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
 import { tierAt } from './districts';
@@ -309,7 +311,7 @@ export function startExpedition(config: GameConfig, state: GameState, locationId
         seed: randomSeed(state),
         vehicle: v?.id,
     });
-    addLog(state, now, `小队${v ? `开着${v.icon}${v.name}` : '步行'}出发前往${loc.name}。`);
+    addLog(state, now, `小队${v ? `开着${v.icon}${v.name}` : '步行'}出发前往${locationName(config, state, loc)}。`);
     return { ok: true };
 }
 
@@ -355,9 +357,14 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         addStat(state, 'expeditions_won');
         addStat(state, `clear_${loc.id}`);
         // 战利品要装进背包才能带回来（见 packing.ts）
-        const pieces = makePieces(config, state, expeditionLoot(config, state, loc), rollDrops(state, loc.drops, false));
+        const drops = rollDrops(state, loc.drops, false);
+        // 以前死在这里的人留下的装备
+        const recovered = takeDroppedGear(state, loc.id);
+        for (const [id, n] of Object.entries(recovered)) drops[id] = (drops[id] ?? 0) + n;
+        if (Object.keys(recovered).length) addLog(state, at, `小队在${locationName(config, state, loc)}找到了战友留下的装备：${formatProps(config, recovered)}。`);
+        const pieces = makePieces(config, state, expeditionLoot(config, state, loc), drops);
         const cap = haulCapacity(config, squad.length, vehicleDef(config, ex.vehicle));
-        const haul = newHaul(config, state, loc.name, at, pieces, cap.grid, cap.maxWeight);
+        const haul = newHaul(config, state, locationName(config, state, loc), at, pieces, cap.grid, cap.maxWeight);
         if (live) {
             state.pendingHauls = [...(state.pendingHauls ?? []), haul];
             packNote = '战利品摊了一地，等你装背包。';
@@ -376,10 +383,10 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         }
     } else {
         addStat(state, 'expeditions_lost');
-        changeMoodAll(state, -5, `在${loc.name}吃了败仗`, at, (s) => squad.includes(s.id));
+        changeMoodAll(state, -5, `在${locationName(config, state, loc)}吃了败仗`, at, (s) => squad.includes(s.id));
     }
     // 打赢了队友会把倒下的人背回来，只有打输撤退时才会有人回不来
-    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${loc.name}牺牲了`, result === 'lose');
+    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${locationName(config, state, loc)}牺牲了`, result === 'lose', loc.id);
     let rescued = '';
     if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) {
         const w = addWanderer(config, state, at);
@@ -389,13 +396,13 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const summary =
         (result === 'win'
             ? live
-                ? `探索${loc.name}成功！${packNote}`
-                : `探索${loc.name}成功！带回 ${formatBag(config, loot) || '一些杂物'}。${found ? `还找到了${found}。` : ''}${packNote}`
-            : `探索${loc.name}失败，小队狼狈撤回。`) +
+                ? `探索${locationName(config, state, loc)}成功！${packNote}`
+                : `探索${locationName(config, state, loc)}成功！带回 ${formatBag(config, loot) || '一些杂物'}。${found ? `还找到了${found}。` : ''}${packNote}`
+            : `探索${locationName(config, state, loc)}失败，小队狼狈撤回。`) +
         casualtyText(config, state, injured, dead) +
         rescued +
         usedText(itemsUsed);
-    addReport(state, { kind: 'expedition', title: loc.name, at, result, setup, loot, lost: {}, injured, dead, summary });
+    addReport(state, { kind: 'expedition', title: locationName(config, state, loc), at, result, setup, loot, lost: {}, injured, dead, summary });
 }
 
 // ---------- 尸潮夜袭 ----------

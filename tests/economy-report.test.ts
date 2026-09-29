@@ -12,6 +12,7 @@ import { expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { availableLocations, clearedFlag, expeditionBlocker, raidEnemyBonus, suggestSquad } from '../assets/scripts/core/combat';
 import { suggestSurveyors } from '../assets/scripts/core/districts';
+import { locationName } from '../assets/scripts/core/names';
 import { buildVehicleBlocker } from '../assets/scripts/core/vehicles';
 import { economyRates, hqLevel, morale, workerSlots } from '../assets/scripts/core/economy';
 import { upgradeBlocker } from '../assets/scripts/core/buildings';
@@ -89,9 +90,9 @@ function session(game: CampGame, now: number): void {
     const squad = suggestSquad(config, state).filter((id) => !state.survivors.find((x) => x.id === id)?.assignment);
     if (state.expeditions.length === 0 && squad.length >= 3) {
         const locs = availableLocations(config, state, now)
-            .filter((l) => !lost.has(l.name) || training > lost.get(l.name)!)
+            .filter((l) => !lost.has(locationName(config, state, l)) || training > lost.get(locationName(config, state, l))!)
             .filter((l) => expeditionBlocker(config, state, l.id, squad, now) === null);
-        const lastResult = (id: string) => [...state.reports].reverse().find((r) => r.kind === 'expedition' && r.title === config.locations.find((l) => l.id === id)?.name)?.result;
+        const lastResult = (id: string) => [...state.reports].reverse().find((r) => r.kind === 'expedition' && r.title === locationName(config, state, id))?.result;
         const fresh = locs.find((l) => !state.flags.includes(clearedFlag(l.id)) && lastResult(l.id) !== 'lose');
         const farm = locs.filter((l) => lastResult(l.id) === 'win').sort((a, b) => lootValue(b.loot) - lootValue(a.loot))[0];
         const target = fresh ?? farm ?? locs[0];

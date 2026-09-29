@@ -3,6 +3,7 @@
 import { GameConfig, GameState, RESOURCE_IDS, SurvivorState } from './types';
 import { emptyBag } from './economy';
 import { newClock } from './clock';
+import { rollNames } from './names';
 
 export const SAVE_VERSION = 6;
 const MAX_LOG = 50;
@@ -42,6 +43,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         ...emptyV5Fields(config),
     };
     syncBuildings(config, state);
+    rollNames(config, state, seed);
     return state;
 }
 

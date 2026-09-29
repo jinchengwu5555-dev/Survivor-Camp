@@ -10,6 +10,8 @@
 
 import { clearedFlag } from './combat';
 import { conditionMet } from './events';
+import { hqLevel } from './economy';
+import { locationName } from './names';
 import { currentDay, hasFlag } from './state';
 import { GameConfig, GameState, LocationDef, MapPoint } from './types';
 
@@ -48,9 +50,10 @@ export function unlockHint(config: GameConfig, state: GameState, loc: LocationDe
     for (const flag of c.flags ?? []) {
         if (hasFlag(state, flag)) continue;
         const pre = config.locations.find((l) => clearedFlag(l.id) === flag);
-        parts.push(pre ? `先打下${pre.name}` : '剧情推进后');
+        parts.push(pre ? `先打下${locationName(config, state, pre)}` : '剧情推进后');
     }
     if (c.minDay && currentDay(config, state, now) < c.minDay) parts.push(`第 ${c.minDay} 天以后`);
+    if (c.minHq && hqLevel(state) < c.minHq) parts.push(`指挥部 ${c.minHq} 级`);
     return parts.join(' · ') || '条件满足后';
 }
 

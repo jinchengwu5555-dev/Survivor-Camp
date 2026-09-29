@@ -1467,8 +1467,8 @@
         "weight": 30,
         "once": true,
         "conditions": {
-            "minDay": 8,
-            "minHq": 6
+            "minDay": 20,
+            "minHq": 8
         },
         "choices": [
             {
@@ -1576,7 +1576,9 @@
             ],
             "notFlags": [
                 "cleared_raider_camp"
-            ]
+            ],
+            "minHq": 11,
+            "minDay": 30
         },
         "choices": [
             {

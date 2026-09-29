@@ -4,6 +4,7 @@
 import { upgradeBlocker } from './buildings';
 import { getBuildingDef } from './economy';
 import { getLocation } from './combat';
+import { locationName } from './names';
 import { currentDay } from './state';
 import { currentEpisode, objectiveDone } from './story';
 import { GameConfig, GameState, Objective } from './types';
@@ -41,8 +42,8 @@ function objectiveHint(config: GameConfig, state: GameState, obj: Objective): Gu
     if (obj.type === 'flag' && obj.flag.startsWith('cleared_')) {
         const loc = getLocation(config, obj.flag.slice('cleared_'.length));
         if (loc) {
-            if (state.expeditions.some((e) => e.location === loc.id)) return { text: `小队正在前往${loc.name}，等他们回来` };
-            return { text: `去「探索」页，派小队搜刮${loc.name}`, target: `explore:${loc.id}`, tab: 'explore' };
+            if (state.expeditions.some((e) => e.location === loc.id)) return { text: `小队正在前往${locationName(config, state, loc)}，等他们回来` };
+            return { text: `去「探索」页，派小队搜刮${locationName(config, state, loc)}`, target: `explore:${loc.id}`, tab: 'explore' };
         }
     }
     return { text: obj.text };

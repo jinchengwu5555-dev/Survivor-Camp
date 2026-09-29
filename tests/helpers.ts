@@ -25,6 +25,7 @@ import chatter from '../assets/resources/config/chatter.json';
 import districts from '../assets/resources/config/districts.json';
 import vehicles from '../assets/resources/config/vehicles.json';
 import packing from '../assets/resources/config/packing.json';
+import names from '../assets/resources/config/names.json';
 import { GameConfig } from '../assets/scripts/core/types';
 import { expandConfig } from '../assets/scripts/core/configExpand';
 import { KeyValueStorage } from '../assets/scripts/core/save';
@@ -32,7 +33,7 @@ import { KeyValueStorage } from '../assets/scripts/core/save';
 /** 还没展开成长公式的原始配置（深拷贝） */
 export function loadRawConfig(): GameConfig {
     return JSON.parse(
-        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, props, scouting, talents, chatter, districts, vehicles, packing, units, skills, statuses }),
+        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, props, scouting, talents, chatter, districts, vehicles, packing, names, units, skills, statuses }),
     ) as GameConfig;
 }
 

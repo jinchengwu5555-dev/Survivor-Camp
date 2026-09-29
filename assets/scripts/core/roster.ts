@@ -1,6 +1,6 @@
 // 营地人员：幸存者资料（有名有姓的角色 + 随机流浪者）、流浪者加入、战死与营地覆灭。
 
-import { dropGear } from './gear';
+import { dropGear, dropGearAt } from './gear';
 import { changeMoodAll } from './mood';
 import { bedCount } from './economy';
 import { nextRandom, pickOne } from './rng';
@@ -95,12 +95,16 @@ export function injureSurvivor(config: GameConfig, state: GameState, s: Survivor
     s.recoverAt = now + config.balance.injuryRecoveryMinutes * siteInjuryRecovery(config, state) * recoveryMultiplier(config, state, s.id) * 60_000;
 }
 
-/** 有人死了：从营地、探索小队里移除，记下剧情标记 dead_<id> */
-export function killSurvivor(config: GameConfig, state: GameState, id: string, now: number, cause: string): string | null {
+/**
+ * 有人死了：从营地、探索小队里移除，记下剧情标记 dead_<id>。
+ * where = 死在哪个探索地点：身上的装备掉在那里，下次打下那里才能捡回来；不写就是死在营地附近，装备留在营地。
+ */
+export function killSurvivor(config: GameConfig, state: GameState, id: string, now: number, cause: string, where?: string): string | null {
     const s = state.survivors.find((x) => x.id === id);
     if (!s) return null;
     const name = survivorName(config, state, id);
-    dropGear(state, s);
+    if (where) dropGearAt(state, s, where);
+    else dropGear(state, s);
     state.survivors = state.survivors.filter((x) => x.id !== id);
     for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
     setFlag(state, `dead_${id}`);
@@ -123,6 +127,7 @@ export function resolveFallen(
     now: number,
     cause: string,
     canDie = true,
+    where?: string,
 ): { dead: string[]; injured: string[] } {
     const dead: string[] = [];
     const injured: string[] = [];
@@ -131,7 +136,7 @@ export function resolveFallen(
         const s = state.survivors.find((x) => x.id === id);
         if (!s) continue;
         if (nextRandom(state) < chance) {
-            const name = killSurvivor(config, state, id, now, cause);
+            const name = killSurvivor(config, state, id, now, cause, where);
             if (name) dead.push(name);
         } else {
             injureSurvivor(config, state, s, now);

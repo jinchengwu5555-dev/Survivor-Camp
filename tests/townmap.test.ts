@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../assets/scripts/core/townMap';
+import { locationName } from '../assets/scripts/core/names';
 import { activeScoutSpots, isScouting, scoutKind, updateScoutSpots } from '../assets/scripts/core/scouting';
 import { idleSurvivors } from '../assets/scripts/core/workers';
 import { availableFighters } from '../assets/scripts/core/combat';
@@ -31,11 +32,11 @@ describe('镇地图', () => {
         expect(locationStatus(config, state, loc(game, 'hardware_store'), T0)).toBe('rumor');
         expect(locationStatus(config, state, loc(game, 'school'), T0)).toBe('hidden');
         expect(prerequisiteOf(config, loc(game, 'school'))?.id).toBe('park');
-        expect(unlockHint(config, state, loc(game, 'hardware_store'), T0)).toBe('先打下加油站便利店');
+        expect(unlockHint(config, state, loc(game, 'hardware_store'), T0)).toBe(`先打下${locationName(config, state, 'gas_station')}`);
         state.flags.push('cleared_gas_station');
         expect(locationStatus(config, state, loc(game, 'gas_station'), T0)).toBe('cleared');
         expect(locationStatus(config, state, loc(game, 'school'), T0)).toBe('rumor');
-        expect(unlockHint(config, state, loc(game, 'motel'), T0)).toBe('第 3 天以后');
+        expect(unlockHint(config, state, loc(game, 'motel'), T0)).toBe('第 3 天以后 · 指挥部 2 级');
     });
 
     it('越探索，迷雾散开得越多', () => {
@@ -108,5 +109,19 @@ describe('侦察点的出现时机', () => {
             expect(game.state.scoutSpots.some((s) => s.kind === 'airdrop')).toBe(false);
         }
         expect(config.scouting.kinds.find((k) => k.id === 'wreck')!.reward.wood).toBeUndefined();
+    });
+});
+
+describe('每局随机地名', () => {
+    it('不同种子开局，地名不一样；名字保留地点类型；同一局一直不变', () => {
+        const config = loadConfig();
+        const seen = new Set<string>();
+        for (let seed = 1; seed <= 12; seed++) {
+            const game = CampGame.newGame(config, T0, seed);
+            seen.add(locationName(config, game.state, 'gas_station'));
+            expect(locationName(config, game.state, 'gas_station')).toContain('加油站');
+            expect(config.names!.towns).toContain(game.state.names!.town);
+        }
+        expect(seen.size).toBeGreaterThan(2);
     });
 });

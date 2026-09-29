@@ -65,6 +65,7 @@ describe('交通工具', () => {
         expect(pickVehicle(config, state, 2).blocker).toContain('太远了');
         expect(pickVehicle(config, state, 1, 'walk').blocker).toContain('太远了');
         state.flags.push('cleared_warehouse', 'cleared_radio_tower');
+        state.buildings.hq.level = 12;
         expect(expeditionBlocker(config, state, 'military_checkpoint', ['ethan', 'toby'], T0)).toContain('太远了');
     });
 

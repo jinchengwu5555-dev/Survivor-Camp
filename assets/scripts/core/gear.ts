@@ -74,6 +74,23 @@ export function dropGear(state: GameState, s: SurvivorState): void {
     s.gear = {};
 }
 
+/** 死在外面：装备掉在那个地点（state.droppedGear），下次打下那里放进战利品里 */
+export function dropGearAt(state: GameState, s: SurvivorState, locationId: string): void {
+    const items = GEAR_SLOTS.flatMap((slot) => (s.gear?.[slot] ? [s.gear[slot]!] : []));
+    s.gear = {};
+    if (items.length === 0) return;
+    state.droppedGear = state.droppedGear ?? {};
+    const spot = (state.droppedGear[locationId] = state.droppedGear[locationId] ?? {});
+    for (const id of items) spot[id] = (spot[id] ?? 0) + 1;
+}
+
+/** 捡回掉在某个地点的装备（从 droppedGear 里拿走），返回道具 id → 数量 */
+export function takeDroppedGear(state: GameState, locationId: string): Record<string, number> {
+    const got = state.droppedGear?.[locationId] ?? {};
+    if (state.droppedGear) delete state.droppedGear[locationId];
+    return got;
+}
+
 /** 能在工坊打造的装备 */
 export function craftableGear(config: GameConfig): PropDef[] {
     return config.props.filter((p) => p.type === 'gear' && p.craft);

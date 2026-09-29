@@ -13,6 +13,7 @@ import { isRevealed, revealers } from './townMap';
 import { ActionResult, DistrictDef, GameConfig, GameState, MapPoint, RESOURCE_IDS, ResourceBag } from './types';
 import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
 import { isBrokenDown } from './mood';
+import { districtName } from './names';
 
 export function districtDef(config: GameConfig, id: string): DistrictDef | undefined {
     return (config.districts?.districts ?? []).find((d) => d.id === id);
@@ -93,7 +94,7 @@ export function startSurvey(config: GameConfig, state: GameState, districtId: st
         startedAt: now,
         returnsAt: now + d.surveyMinutes * (v?.speed ?? 1) * 60_000,
     });
-    addLog(state, now, `${squad.map((id) => survivorName(config, state, id)).join('、')}${v ? `开着${v.icon}${v.name}` : ''}出发去勘察${d.icon}${d.name}。`);
+    addLog(state, now, `${squad.map((id) => survivorName(config, state, id)).join('、')}${v ? `开着${v.icon}${v.name}` : ''}出发去勘察${d.icon}${districtName(state, d)}。`);
     return { ok: true };
 }
 
@@ -147,7 +148,7 @@ export function resolveSurveys(config: GameConfig, state: GameState, now: number
         addStat(state, 'surveys_done');
         const gotText = Object.entries(got).filter(([, n]) => n).map(([id, n]) => `${config.resources.find((r) => r.id === id)?.icon ?? id}${n}`).join(' ');
         const foundText = Object.entries(found).map(([id, n]) => `${config.props.find((p) => p.id === id)?.icon ?? ''}${config.props.find((p) => p.id === id)?.name ?? id}${n > 1 ? `×${n}` : ''}`).join('、');
-        addLog(state, at, `🗺 勘察${d.icon}${d.name}回来了：${point ? '地图上又亮了一片。' : '没发现新地方。'}${gotText ? `带回 ${gotText}。` : ''}${foundText ? `还找到了${foundText}。` : ''}${hurt}`);
+        addLog(state, at, `🗺 勘察${d.icon}${districtName(state, d)}回来了：${point ? '地图上又亮了一片。' : '没发现新地方。'}${gotText ? `带回 ${gotText}。` : ''}${foundText ? `还找到了${foundText}。` : ''}${hurt}`);
         // 整个区都探索完了
         state.districtsCompleted = state.districtsCompleted ?? [];
         if (!state.districtsCompleted.includes(d.id) && districtExplored(config, state, d, at) >= 1) {
@@ -155,7 +156,7 @@ export function resolveSurveys(config: GameConfig, state: GameState, now: number
             addStat(state, 'districts_completed');
             if (d.complete?.resources) grantResources(config, state, d.complete.resources);
             for (const [id, n] of Object.entries(d.complete?.props ?? {})) addProp(state, id, n);
-            addLog(state, at, `🎉 ${d.icon}${d.name}全部探索完了！大家在这里找到了一批藏起来的物资。`);
+            addLog(state, at, `🎉 ${d.icon}${districtName(state, d)}全部探索完了！大家在这里找到了一批藏起来的物资。`);
         }
     }
 }

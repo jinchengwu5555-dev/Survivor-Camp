@@ -192,6 +192,8 @@ export interface BuildingDef {
     scaling?: BuildingScaling;
     /** 升级阶段：到了 level 级换一个样子（篝火 → 烤架 → 厨房），按 level 从小到大写 */
     stages?: BuildingStage[];
+    /** 什么时候能建：指挥部等级、营地人数（没写 = 一开始就能建） */
+    unlock?: { hq?: number; survivors?: number };
 }
 
 export interface BuildingStage {
@@ -484,6 +486,8 @@ export interface GameConfig {
     vehicles?: VehicleDef[];
     /** 探索背包：资源怎么分包、占几格、多重（老配置没有） */
     packing?: PackingConfig;
+    /** 每局随机地名的名字池（老配置没有） */
+    names?: NamesConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -809,6 +813,10 @@ export interface GameState {
     surveys?: SurveyState[];
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
+    /** 这一局的随机地名（见 core/names.ts；老存档没有，用配置里的默认名字） */
+    names?: { town: string; districts: Record<string, string>; locations: Record<string, string> };
+    /** 死在外面的人留下的装备：地点 id → 道具 id → 数量（见 core/gear.ts） */
+    droppedGear?: Record<string, Record<string, number>>;
     /** 探索回来、等玩家装背包的战利品（见 core/packing.ts） */
     pendingHauls?: HaulState[];
 }
@@ -903,6 +911,14 @@ export interface VehicleDef {
     comesWith?: string;
     /** 自己造：指挥部、工坊等级和资源 */
     obtain?: { hq: number; workshopLevel: number; cost: ResourceBag };
+}
+
+export interface NamesConfig {
+    towns: string[];
+    /** 分区 id → 候选名字 */
+    districts: Record<string, string[]>;
+    /** 探索地点 id → 候选名字 */
+    locations: Record<string, string[]>;
 }
 
 export interface PackingConfig {

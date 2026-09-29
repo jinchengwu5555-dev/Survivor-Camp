@@ -9,7 +9,7 @@
 
 import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, UIOpacity, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
-import { buildingLabel, buildingStage, nextBuildingStage, upgradeBlocker } from '../core/buildings';
+import { buildingLabel, buildingLockReason, buildingStage, nextBuildingStage, upgradeBlocker } from '../core/buildings';
 import {
     barricadeHp,
     battleRegistry,
@@ -55,6 +55,7 @@ import { combatMultiplier, sleepFactor, talentsOf, workMultiplier } from '../cor
 import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearStatsText } from '../core/gear';
 import { campStats } from '../core/campStats';
 import { moodFactors, moodTier } from '../core/mood';
+import { districtName, locationName, objectiveText, townName } from '../core/names';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulCapacity, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
 import { occupancy, packedWeight, pieceOf, pieceText } from '../core/packing';
@@ -906,7 +907,9 @@ export class GameRoot extends Component {
         const plate = makeNode('Plate', node, plateW, 30);
         plate.setPosition(0, -bh / 2 + 4);
         drawPanel(plate.addComponent(Graphics), plateW, 30, new Color(20, 22, 20, 210), 15);
-        addLabel(plate, b.level > 0 ? `${buildingStage(def, b.level).name} Lv${b.level}` : `${buildingStage(def, 0).name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
+        const lockReason = buildingLockReason(def, state);
+        addLabel(plate, b.level > 0 ? `${buildingStage(def, b.level).name} Lv${b.level}` : lockReason ? `🔒${buildingStage(def, 0).name}` : `${buildingStage(def, 0).name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
+        if (lockReason) addLabel(node, lockReason.replace('才能建', ''), 15, DIM, { width: bw + 30 }).node.setPosition(0, -bh / 2 - 22);
 
         // 状态角标：升级倒计时 / 可以升级 / 引导
         if (upgrading) {
@@ -953,7 +956,7 @@ export class GameRoot extends Component {
         const { config, state } = camp;
         const ep = currentEpisode(config, state);
         if (ep) {
-            const goals = ep.objectives.map((o) => `${objectiveDone(config, state, o, now) ? '✅' : '⬜'}${o.text}`).join('  ');
+            const goals = ep.objectives.map((o) => `${objectiveDone(config, state, o, now) ? '✅' : '⬜'}${objectiveText(config, state, o)}`).join('  ');
             this.text(`第${ep.season}季第${ep.episode}集「${ep.title}」 ${goals}`, 20, ACCENT);
         } else {
             this.text('第一季完（未完待续）', 20, ACCENT);
@@ -1802,7 +1805,7 @@ export class GameRoot extends Component {
             const plate = makeNode('District', map, 150, 26);
             plate.setPosition(Math.max(-MAP_WIDTH / 2 + 78, x1 + 78), Math.min(TOWN_HEIGHT / 2 - 60, y2 - 16));
             drawPanel(plate.addComponent(Graphics), 150, 26, this.selectedDistrict === d.id ? COLORS.highlight : new Color(20, 22, 20, 190), 13);
-            addLabel(plate, `${locked ? '🔒' : d.icon}${d.name} ${explored}%`, 15, locked ? DIM : TEXT, { width: 146, height: 24 });
+            addLabel(plate, `${locked ? '🔒' : d.icon}${districtName(state, d)} ${explored}%`, 15, locked ? DIM : TEXT, { width: 146, height: 24 });
             plate.on(Node.EventType.TOUCH_END, () => {
                 punch(plate);
                 this.selectedDistrict = d.id;
@@ -1834,8 +1837,9 @@ export class GameRoot extends Component {
             const color = rumor ? new Color(70, 70, 70, 230) : status === 'cleared' ? new Color(80, 130, 90, 240) : new Color(170, 110, 50, 240);
             const ex = state.expeditions.find((e) => e.location === loc.id);
             const restock = restockSecondsLeft(state, loc.id, now);
-            const sub = rumor ? '？？？' : ex ? '小队在路上' : restock > 0 ? `🔄 ${formatTime(realSeconds(config, restock * 1000))}` : status === 'cleared' ? '✅ 可以再去' : '⚔️ 未探索';
-            const node = this.mapMarker(map, loc.map!, rumor ? '❓' : loc.icon ?? '📍', rumor ? '???' : loc.name, color, 28, sub);
+            const fallenGear = state.droppedGear?.[loc.id] ? '💀' : '';
+            const sub = fallenGear + (rumor ? '？？？' : ex ? '小队在路上' : restock > 0 ? `🔄 ${formatTime(realSeconds(config, restock * 1000))}` : status === 'cleared' ? '✅ 可以再去' : '⚔️ 未探索');
+            const node = this.mapMarker(map, loc.map!, rumor ? '❓' : loc.icon ?? '📍', rumor ? '???' : locationName(config, state, loc), color, 28, sub);
             const g = node.getComponent(Graphics)!;
             if (this.selectedLocation === loc.id) {
                 g.lineWidth = 4;
@@ -1896,7 +1900,7 @@ export class GameRoot extends Component {
         const title = makeNode('Title', map, 330, 38);
         title.setPosition(-MAP_WIDTH / 2 + 175, TOWN_HEIGHT / 2 - 26);
         drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
-        addLabel(title, `🗺️ 枫谷镇 · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
+        addLabel(title, `🗺️ ${townName(state)} · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
 
         // 下方：选中地点的详情
         this.cursorY = TOWN_CENTER_Y - TOWN_HEIGHT / 2 - 8;
@@ -1985,8 +1989,10 @@ export class GameRoot extends Component {
             const def = config.props.find((p) => p.id === d.prop);
             return `${def?.icon ?? ''}${def?.name ?? d.prop}`;
         });
-        this.text(`${loc.icon ?? ''} ${loc.name}  ⏱${formatTime(realSeconds(config, loc.durationMinutes * 60_000))}  ${status === 'cleared' ? '✅ 已打下' : '⚔️ 未探索'}`, 24, ACCENT);
+        this.text(`${loc.icon ?? ''} ${locationName(config, state, loc)}  ⏱${formatTime(realSeconds(config, loc.durationMinutes * 60_000))}  ${status === 'cleared' ? '✅ 已打下' : '⚔️ 未探索'}`, 24, ACCENT);
         this.text(loc.description, 18, DIM);
+        const lostGear = state.droppedGear?.[loc.id];
+        if (lostGear) this.text(`💀 牺牲的战友把装备留在了这里：${formatProps(config, lostGear)}（打下这里才能捡回来）`, 18, LOSE);
         this.text(`战利品 ${formatBag(config, expeditionLoot(config, state, loc))}${drops.length ? `   可能找到：${drops.join('、')}` : ''}`, 18);
         const ex = state.expeditions.find((e) => e.location === loc.id);
         if (ex) {
@@ -1998,12 +2004,12 @@ export class GameRoot extends Component {
         } else {
             const tier = locationTier(config, loc);
             const d = districtAt(config, loc.map);
-            this.text(`${d ? `${d.icon}${d.name} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
+            this.text(`${d ? `${d.icon}${districtName(state, d)} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
             this.renderVehiclePicker(camp, tier, squad.length);
             const guided = this.isGuided(`explore:${loc.id}`);
             this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
                 const res = camp.explore(loc.id, camp.now, undefined, this.selectedVehicle);
-                if (res.ok) this.effect(`🚶 小队出发前往${loc.name}`, ACCENT);
+                if (res.ok) this.effect(`🚶 小队出发前往${locationName(config, state, loc)}`, ACCENT);
                 else this.showToast(res.reason);
                 this.render();
             }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
@@ -2154,7 +2160,7 @@ export class GameRoot extends Component {
     private renderDistrictCard(camp: CampGame, d: DistrictDef, now: number): void {
         const { config, state } = camp;
         const explored = districtExplored(config, state, d, now);
-        this.text(`${d.icon} ${d.name}  已探索 ${Math.round(explored * 100)}%${state.districtsCompleted?.includes(d.id) ? ' ✅' : ''}`, 24, ACCENT);
+        this.text(`${d.icon} ${districtName(state, d)}  已探索 ${Math.round(explored * 100)}%${state.districtsCompleted?.includes(d.id) ? ' ✅' : ''}`, 24, ACCENT);
         this.text(d.description, 18, DIM);
         this.text(`要${TIER_NAMES[d.tier]}才能到 · 勘察一趟 ${formatTime(realSeconds(config, d.surveyMinutes * 60_000))} · 受伤概率 ${Math.round(d.danger * 100)}%`, 18, d.tier > maxTierOwned(config, state) ? LOSE : TEXT);
         const reward = [formatBag(config, d.complete?.resources ?? {}), formatProps(config, d.complete?.props ?? {})].filter(Boolean).join(' ');
@@ -2170,7 +2176,7 @@ export class GameRoot extends Component {
         const names = who.map((id) => survivorName(config, state, id)).join('、') || '没有能派的人';
         this.button(blocker ? `勘察（${blocker}）` : `🗺️ 派 ${names} 去勘察，驱散一片迷雾`, WIDTH, () => {
             const res = camp.survey(d.id, camp.now, who, this.selectedVehicle);
-            if (res.ok) this.effect(`🗺️ 出发勘察${d.name}`, ACCENT);
+            if (res.ok) this.effect(`🗺️ 出发勘察${districtName(state, d)}`, ACCENT);
             else this.showToast(res.reason);
             this.render();
         }, LEFT, blocker ? 'disabled' : 'normal', 22, 52);

@@ -14,6 +14,8 @@ export function upgradeBlocker(config: GameConfig, state: GameState, buildingId:
     const b = state.buildings[buildingId];
     if (!def || !b) return '建筑不存在';
     if (b.upgradeEndsAt !== null) return '正在升级中';
+    const locked = buildingLockReason(def, state);
+    if (locked) return locked;
     const next = def.levels[b.level];
     if (!next) return '已达到最高等级';
     if (next.requiresHq && hqLevel(state) < next.requiresHq) return `需要指挥部 ${next.requiresHq} 级`;
@@ -80,6 +82,18 @@ export function assignSurvivor(config: GameConfig, state: GameState, survivorId:
     if (used >= slots) return { ok: false, reason: '岗位已满' };
     s.assignment = buildingId;
     return { ok: true };
+}
+
+/**
+ * 建筑还没开放的原因（按 unlock 的指挥部等级、营地人数，一步步开放）；已经开放返回 null。
+ * 已经建起来的建筑永远算开放（比如人死了，医务室不会因为人数不够又锁上）。
+ */
+export function buildingLockReason(def: BuildingDef, state: GameState): string | null {
+    if ((state.buildings[def.id]?.level ?? 0) > 0 || !def.unlock) return null;
+    const parts: string[] = [];
+    if (def.unlock.hq && hqLevel(state) < def.unlock.hq) parts.push(`指挥部 ${def.unlock.hq} 级`);
+    if (def.unlock.survivors && state.survivors.length < def.unlock.survivors) parts.push(`营地有 ${def.unlock.survivors} 个人`);
+    return parts.length ? `需要${parts.join('、')}才能建` : null;
 }
 
 /** 这个等级是哪个阶段（篝火 / 烤架 / 厨房……）；没写 stages 的建筑用自己的名字和图标 */

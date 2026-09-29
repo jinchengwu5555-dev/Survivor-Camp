@@ -55,7 +55,7 @@
         "map": { "x": 215, "y": 195 },
         "description": "爆发那天挤满了病人。现在，那些病人还在里面。",
         "durationMinutes": 20,
-        "conditions": { "flags": ["cleared_hardware_store"] },
+        "conditions": { "flags": ["cleared_hardware_store"], "minHq": 3},
         "enemies": [
             { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "fatty", "level": 3 }, { "unit": "walker", "level": 3 },
             { "unit": "runner", "level": 3, "spawnAt": 10 }, { "unit": "frenzied", "level": 2, "spawnAt": 10 }, { "unit": "fatty", "level": 3, "spawnAt": 10 }
@@ -73,7 +73,7 @@
         "map": { "x": -40, "y": 230 },
         "description": "伊森工作了十五年的地方。军械柜里也许还有东西……还有他桌上的那张照片。",
         "durationMinutes": 30,
-        "conditions": { "minDay": 3, "flags": ["cleared_clinic"] },
+        "conditions": { "minDay": 6, "flags": ["cleared_clinic"], "minHq": 5},
         "enemies": [
             { "unit": "armored", "level": 2 }, { "unit": "armored", "level": 2 }, { "unit": "walker", "level": 3 },
             { "unit": "walker", "level": 3 }, { "unit": "walker", "level": 3 }, { "unit": "brute", "spawnAt": 25 }
@@ -92,7 +92,7 @@
         "map": { "x": 265, "y": -120 },
         "description": "孩子们早就被接走了，体育馆却成了行尸的窝。教室里还有桌椅木料、美术课的工具，储藏室里说不定有零食。",
         "durationMinutes": 12,
-        "conditions": { "flags": ["cleared_park"] },
+        "conditions": { "flags": ["cleared_park"], "minHq": 2},
         "enemies": [
             { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 },
             { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "fatty", "level": 2, "spawnAt": 12 }
@@ -109,7 +109,7 @@
         "map": { "x": -275, "y": -290 },
         "description": "出镇公路边的汽车旅馆，霓虹招牌还在一闪一闪。逃难的人在这里落过脚，房间里留下了不少行李。",
         "durationMinutes": 14,
-        "conditions": { "minDay": 3, "flags": ["cleared_gas_station"] },
+        "conditions": { "minDay": 3, "flags": ["cleared_gas_station"], "minHq": 2},
         "enemies": [
             { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "fatty", "level": 2 },
             { "unit": "runner", "level": 2, "spawnAt": 8 }, { "unit": "walker", "level": 3, "spawnAt": 8 }
@@ -126,7 +126,7 @@
         "map": { "x": 60, "y": 320 },
         "description": "镇子北边山顶上的信号塔。从塔上能看到很远的地方——还有塔下那群守着发电机的铁甲尸。",
         "durationMinutes": 35,
-        "conditions": { "flags": ["cleared_sheriff_office"] },
+        "conditions": { "flags": ["cleared_sheriff_office"], "minHq": 7},
         "enemies": [
             { "unit": "armored", "level": 3 }, { "unit": "armored", "level": 3 }, { "unit": "walker", "level": 4 }, { "unit": "walker", "level": 4 },
             { "unit": "walker", "level": 4 }, { "unit": "brute", "level": 2, "spawnAt": 20 }, { "unit": "frenzied", "level": 2, "spawnAt": 20 }
@@ -204,11 +204,7 @@
         },
         "description": "小河上的木码头，拴着几条小船。河里有鱼，船屋里有渔具——还有几具泡得发胀的东西在水边晃。",
         "durationMinutes": 9,
-        "conditions": {
-            "flags": [
-                "cleared_hardware_store"
-            ]
-        },
+        "conditions": { "flags": ["cleared_hardware_store"], "minHq": 2},
         "enemies": [
             {
                 "unit": "walker",
@@ -259,11 +255,7 @@
         },
         "description": "镇西的伐木场，堆满了还没运走的原木。电锯还挂在墙上，就是不知道那些穿着工作服的家伙还认不认得你。",
         "durationMinutes": 16,
-        "conditions": {
-            "flags": [
-                "cleared_motel"
-            ]
-        },
+        "conditions": { "flags": ["cleared_motel"], "minHq": 4},
         "enemies": [
             {
                 "unit": "walker",
@@ -323,11 +315,7 @@
         },
         "description": "镇东的物流仓库，一排排货架直通天花板。尸潮那天，一整个车队的司机都躲进了这里……然后就再也没出来。",
         "durationMinutes": 22,
-        "conditions": {
-            "flags": [
-                "cleared_school"
-            ]
-        },
+        "conditions": { "flags": ["cleared_school"], "minHq": 5},
         "enemies": [
             {
                 "unit": "walker",
@@ -391,12 +379,7 @@
         },
         "description": "出镇的高速路上，几十辆车撞成一团，堵死了逃生的路。每辆车的后备箱都是一个小宝库，但车缝里也藏着东西。",
         "durationMinutes": 18,
-        "conditions": {
-            "minDay": 5,
-            "flags": [
-                "cleared_motel"
-            ]
-        },
+        "conditions": { "minDay": 8, "flags": ["cleared_motel"], "minHq": 6},
         "enemies": [
             {
                 "unit": "armored",
@@ -471,12 +454,7 @@
         },
         "description": "镇东南出口的军方临时检查站。沙袋、铁丝网、翻倒的军车——当兵的早就不在了，可他们的物资和变成丧尸的同僚都还在。",
         "durationMinutes": 40,
-        "conditions": {
-            "flags": [
-                "cleared_warehouse",
-                "cleared_radio_tower"
-            ]
-        },
+        "conditions": { "flags": ["cleared_warehouse", "cleared_radio_tower"], "minHq": 12},
         "enemies": [
             {
                 "unit": "armored",
@@ -535,6 +513,6 @@
             }, { "prop": "shotgun", "chance": 0.4 }, { "prop": "riot_vest", "chance": 0.4 } ],
         "recruitChance": 0.3
     },
-    {"id": "raider_camp", "name": "掠夺者营地", "icon": "🏴", "map": {"x": 185, "y": -200}, "description": "镇南废车场里的另一个营地。他们不种地、不修墙，只靠抢。营地变大以后，你们就成了他们眼里的肥羊——不如先下手。", "durationMinutes": 25, "conditions": {"flags": ["camp_noticed"], "minHq": 6}, "enemies": [{"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider", "level": 8, "spawnAt": 10}, {"unit": "raider_gunner", "level": 8, "spawnAt": 15}, {"unit": "raider", "level": 9, "spawnAt": 25}, {"unit": "raider_gunner", "level": 9, "spawnAt": 30}], "timeLimit": 110, "loot": {"food": 90, "parts": 60, "medicine": 15, "cans": 8}, "drops": [{"prop": "pistol", "chance": 0.5}, {"prop": "shotgun", "chance": 0.2}, {"prop": "leather_jacket", "chance": 0.4}, {"prop": "gasoline", "chance": 0.5}], "recruitChance": 0.5, "firstClearEvent": "raider_camp_cleared"},
-    {"id": "fallen_camp", "name": "陷落的河湾营地", "icon": "⛺", "map": {"x": -305, "y": 55}, "description": "河湾边一个比你们还大的营地，栅栏被冲开了，帐篷里全是行尸。营地变大意味着什么，这里就是答案。", "durationMinutes": 20, "conditions": {"flags": ["camp_noticed"]}, "enemies": [{"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "fatty", "level": 6, "spawnAt": 12}, {"unit": "armored", "level": 5, "spawnAt": 20}, {"unit": "armored", "level": 5, "spawnAt": 28}], "timeLimit": 100, "loot": {"food": 60, "wood": 80, "medicine": 20}, "drops": [{"prop": "flyer", "chance": 0.4}, {"prop": "water", "chance": 0.5}, {"prop": "helmet", "chance": 0.3}, {"prop": "field_kit", "chance": 0.2}], "recruitChance": 0.6}
+    {"id": "raider_camp", "name": "掠夺者营地", "icon": "🏴", "map": {"x": 185, "y": -200}, "description": "镇南废车场里的另一个营地。他们不种地、不修墙，只靠抢。营地变大以后，你们就成了他们眼里的肥羊——不如先下手。", "durationMinutes": 25, "conditions": { "flags": ["camp_noticed"], "minHq": 11, "minDay": 30}, "enemies": [{"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider_gunner", "level": 8}, {"unit": "raider", "level": 8, "spawnAt": 10}, {"unit": "raider_gunner", "level": 8, "spawnAt": 15}, {"unit": "raider", "level": 9, "spawnAt": 25}, {"unit": "raider_gunner", "level": 9, "spawnAt": 30}], "timeLimit": 110, "loot": {"food": 90, "parts": 60, "medicine": 15, "cans": 8}, "drops": [{"prop": "pistol", "chance": 0.5}, {"prop": "shotgun", "chance": 0.2}, {"prop": "leather_jacket", "chance": 0.4}, {"prop": "gasoline", "chance": 0.5}], "recruitChance": 0.5, "firstClearEvent": "raider_camp_cleared"},
+    {"id": "fallen_camp", "name": "陷落的河湾营地", "icon": "⛺", "map": {"x": -305, "y": 55}, "description": "河湾边一个比你们还大的营地，栅栏被冲开了，帐篷里全是行尸。营地变大意味着什么，这里就是答案。", "durationMinutes": 20, "conditions": { "flags": ["camp_noticed"], "minHq": 8}, "enemies": [{"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "walker", "level": 6}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "runner", "level": 6, "spawnAt": 5}, {"unit": "fatty", "level": 6, "spawnAt": 12}, {"unit": "armored", "level": 5, "spawnAt": 20}, {"unit": "armored", "level": 5, "spawnAt": 28}], "timeLimit": 100, "loot": {"food": 60, "wood": 80, "medicine": 20}, "drops": [{"prop": "flyer", "chance": 0.4}, {"prop": "water", "chance": 0.5}, {"prop": "helmet", "chance": 0.3}, {"prop": "field_kit", "chance": 0.2}], "recruitChance": 0.6}
 ]

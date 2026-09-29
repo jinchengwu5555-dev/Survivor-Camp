@@ -59,7 +59,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "slotsEvery": 4 }
     },
     {
-        "id": "infirmary", "stages": [{"level": 1, "name": "急救箱", "icon": "🩹", "description": "一个急救箱和一张干净的桌子。"}, {"level": 3, "name": "药房柜台", "icon": "💊", "description": "超市药房的柜台，药品按类摆好。"}, {"level": 7, "name": "医务室", "icon": "🏥", "description": "隔出了病床和消毒区。"}, {"level": 15, "name": "野战医院", "icon": "🚑", "description": "能做手术的小医院，还有自己的药材园。"}],
+        "id": "infirmary", "unlock": {"survivors": 3}, "stages": [{"level": 1, "name": "急救箱", "icon": "🩹", "description": "一个急救箱和一张干净的桌子。"}, {"level": 3, "name": "药房柜台", "icon": "💊", "description": "超市药房的柜台，药品按类摆好。"}, {"level": 7, "name": "医务室", "icon": "🏥", "description": "隔出了病床和消毒区。"}, {"level": 15, "name": "野战医院", "icon": "🚑", "description": "能做手术的小医院，还有自己的药材园。"}],
         "name": "医务室",
         "icon": "💊",
         "map": { "x": -230, "y": -95 },
@@ -88,7 +88,7 @@
         "scaling": { "maxLevel": 8, "costGrowth": 1.5, "timeGrowth": 1.32, "bedsPerLevel": 1 }
     },
     {
-        "id": "training", "stages": [{"level": 1, "name": "沙袋", "icon": "🥊", "description": "吊在房梁上的一个旧沙袋。"}, {"level": 5, "name": "训练场", "icon": "🎯", "description": "轮胎、木桩、靶子，每天早上都有人练。"}, {"level": 12, "name": "格斗馆", "icon": "🏋️", "description": "像样的训练场馆，老手带新人。"}],
+        "id": "training", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "沙袋", "icon": "🥊", "description": "吊在房梁上的一个旧沙袋。"}, {"level": 5, "name": "训练场", "icon": "🎯", "description": "轮胎、木桩、靶子，每天早上都有人练。"}, {"level": 12, "name": "格斗馆", "icon": "🏋️", "description": "像样的训练场馆，老手带新人。"}],
         "name": "训练场",
         "icon": "🥊",
         "map": { "x": 230, "y": -95 },
@@ -102,7 +102,7 @@
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "battleLevelPerLevel": 1 }
     },
     {
-        "id": "workshop", "stages": [{"level": 1, "name": "工具台", "icon": "🔧", "description": "一张结实的桌子和一套工具。"}, {"level": 2, "name": "工坊", "icon": "🛠️", "description": "德里克的修车铺搬进了后仓，什么都能做。"}],
+        "id": "workshop", "unlock": {"hq": 2, "survivors": 3}, "stages": [{"level": 1, "name": "工具台", "icon": "🔧", "description": "一张结实的桌子和一套工具。"}, {"level": 2, "name": "工坊", "icon": "🛠️", "description": "德里克的修车铺搬进了后仓，什么都能做。"}],
         "name": "工坊",
         "icon": "🔧",
         "map": { "x": 0, "y": -105 },
@@ -115,7 +115,7 @@
         ]
     },
     {
-        "id": "cellar", "stages": [{"level": 1, "name": "地洞", "icon": "🕳️", "description": "在后院挖的地洞，凉快一点。"}, {"level": 4, "name": "地窖", "icon": "🧊", "description": "冷库改的地窖，食物坏得慢。"}, {"level": 8, "name": "冷库", "icon": "❄️", "description": "发电机带着的冷库，肉能放一个月。"}],
+        "id": "cellar", "unlock": {"hq": 4}, "stages": [{"level": 1, "name": "地洞", "icon": "🕳️", "description": "在后院挖的地洞，凉快一点。"}, {"level": 4, "name": "地窖", "icon": "🧊", "description": "冷库改的地窖，食物坏得慢。"}, {"level": 8, "name": "冷库", "icon": "❄️", "description": "发电机带着的冷库，肉能放一个月。"}],
         "name": "地窖",
         "icon": "🧊",
         "map": { "x": -230, "y": -240 },
