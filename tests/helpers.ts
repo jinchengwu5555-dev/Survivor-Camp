@@ -25,6 +25,7 @@ import chatter from '../assets/resources/config/chatter.json';
 import districts from '../assets/resources/config/districts.json';
 import vehicles from '../assets/resources/config/vehicles.json';
 import packing from '../assets/resources/config/packing.json';
+import recruits from '../assets/resources/config/recruits.json';
 import names from '../assets/resources/config/names.json';
 import { GameConfig } from '../assets/scripts/core/types';
 import { expandConfig } from '../assets/scripts/core/configExpand';
@@ -33,13 +34,24 @@ import { KeyValueStorage } from '../assets/scripts/core/save';
 /** 还没展开成长公式的原始配置（深拷贝） */
 export function loadRawConfig(): GameConfig {
     return JSON.parse(
-        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, props, scouting, talents, chatter, districts, vehicles, packing, names, units, skills, statuses }),
+        JSON.stringify({ balance, resources, buildings, survivors, events, episodes, locations, raids, seasons, items, bounties, achievements, sites, wanderers, pickups, daily, trader, props, scouting, talents, chatter, districts, vehicles, packing, names, recruits, units, skills, statuses }),
     ) as GameConfig;
 }
 
-/** 每次返回一份深拷贝，测试之间互不影响；和游戏启动时一样，先展开建筑的成长公式 */
-export function loadConfig(): GameConfig {
-    return expandConfig(loadRawConfig());
+/** 以前的 5 人开局：大部分机制测试沿用它，这样不用每个测试先去招人 */
+export const CLASSIC_START = ['ethan', 'martha', 'derek', 'sophie', 'toby'];
+
+/**
+ * 每次返回一份深拷贝，测试之间互不影响；和游戏启动时一样，先展开建筑的成长公式。
+ * 默认用 5 人开局（CLASSIC_START）测机制；soloStart = true 时和真实游戏一样只有伊森一个人。
+ */
+export function loadConfig(options: { soloStart?: boolean } = {}): GameConfig {
+    const config = expandConfig(loadRawConfig());
+    if (!options.soloStart) {
+        config.balance.startingSurvivors = [...CLASSIC_START];
+        config.recruits = undefined;
+    }
+    return config;
 }
 
 export const T0 = 1_700_000_000_000;

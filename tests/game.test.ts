@@ -114,22 +114,13 @@ describe('建造', () => {
 });
 
 describe('事件', () => {
-    it('开场抉择：不开门会让苏菲难过', () => {
-        const game = CampGame.newGame(loadConfig(), T0, 42);
-        const res = game.choose(1, T0);
-        expect(res.ok).toBe(true);
-        expect(game.state.flags).toContain('left_leo');
-        const sophie = game.state.survivors.find((s) => s.id === 'sophie')!;
-        expect(sophie.mood).toBe(50 - 15 - 5);
+    it('开场：伊森一个人守着超市，选择清点仓库多一点食物', () => {
+        const game = CampGame.newGame(loadConfig({ soloStart: true }), T0, 42);
+        expect(game.state.survivors.map((s) => s.id)).toEqual(['ethan']);
+        const food = game.state.resources.food;
+        expect(game.choose(1, T0).ok).toBe(true);
+        expect(game.state.resources.food).toBeGreaterThan(food);
         expect(game.currentEvent).toBeUndefined();
-    });
-
-    it('开门一定会让里奥加入', () => {
-        for (const seed of [1, 2, 3, 4, 5, 6]) {
-            const game = CampGame.newGame(loadConfig(), T0, seed);
-            game.choose(0, T0);
-            expect(game.state.survivors.some((s) => s.id === 'leo')).toBe(true);
-        }
     });
 
     it('资源不够时不能选需要花费的选项', () => {

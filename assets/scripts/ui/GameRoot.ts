@@ -56,6 +56,7 @@ import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearSt
 import { campStats } from '../core/campStats';
 import { moodFactors, moodTier } from '../core/mood';
 import { districtName, locationName, objectiveText, townName } from '../core/names';
+import { candidateInfo, quirksOf } from '../core/recruits';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulCapacity, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
 import { occupancy, packedWeight, pieceOf, pieceText } from '../core/packing';
@@ -76,7 +77,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.5 分区+车辆+背包格子';
+const GAME_VERSION = 'v1.6 单人开局+招募';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -534,7 +535,7 @@ export class GameRoot extends Component {
 
     /** 正在处理事件（或者在看事件选择的结果） */
     private eventShowing(camp: CampGame): boolean {
-        return !!camp.currentEvent || this.eventResult !== null || !!camp.currentHaul;
+        return !!camp.currentEvent || this.eventResult !== null || !!camp.currentHaul || camp.candidates.length > 0;
     }
 
     /** 有没有打开的面板（事件、页签、建筑详情……）；没有就显示营地地图 */
@@ -977,6 +978,10 @@ export class GameRoot extends Component {
         }
         if (camp.currentHaul) {
             this.renderHaul(camp);
+            return;
+        }
+        if (camp.candidates.length > 0) {
+            this.renderCandidates(camp);
             return;
         }
         if (camp.currentEvent) {
@@ -1614,6 +1619,15 @@ export class GameRoot extends Component {
         for (const t of talents) this.text(`${t.icon} ${t.name}：${t.description}`, 20);
         this.gap(4);
         this.text(`📖 ${info?.bio ?? ''}`, 20, DIM);
+        const quirks = quirksOf(config, s);
+        if (quirks.length) {
+            this.text('🎭 特质', 22, ACCENT);
+            for (const q of quirks) {
+                const shown = !q.hidden || (s.revealed ?? []).includes(q.id);
+                if (shown) this.text(`${q.icon} ${q.name}：${q.description}`, 20, q.good ? WIN : LOSE);
+                else this.text(`❓ 印象：${q.hint}`, 20, DIM);
+            }
+        }
         this.gap(10);
 
         this.renderMood(camp, id, now);
@@ -2013,6 +2027,43 @@ export class GameRoot extends Component {
                 else this.showToast(res.reason);
                 this.render();
             }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
+        }
+    }
+
+    /** 探索时遇到的人：看介绍、专长、天赋和印象，决定留下谁 */
+    private renderCandidates(camp: CampGame): void {
+        const { config, state } = camp;
+        const list = camp.candidates;
+        this.text(`🙋 路上遇到了 ${list.length} 个幸存者`, 28, ACCENT);
+        this.text(`床位 ${state.survivors.length}/${bedCount(config, state)}。留下谁由你决定——有人带着好本事，也有人藏着坏毛病。`, 18, DIM);
+        this.gap(8);
+        for (const c of list) {
+            const info = candidateInfo(config, c);
+            this.text(`${info.name}  ·  ${info.title}  ·  专长：${SPECIALTY_NAMES[info.specialty] ?? '—'}`, 24, ACCENT);
+            this.text(c.intro, 18, TEXT);
+            const talents = info.talents.map((id) => config.talents.find((t) => t.id === id)).filter(Boolean).map((t) => `${t!.icon}${t!.name}`);
+            if (talents.length) this.text(`✨ 天赋：${talents.join('、')}`, 18, WIN);
+            if (info.traits.length) this.text(`🧠 性格：${info.traits.join('、')}`, 18, DIM);
+            for (const q of quirksOf(config, c.survivor)) {
+                if (q.hidden) this.text(`❓ 印象：${q.hint}`, 18, DIM);
+                else this.text(`${q.icon} ${q.name}：${q.description}（${q.hint}）`, 18, q.good ? WIN : LOSE);
+            }
+            if (!(c.survivor.quirks ?? []).length) this.text('❓ 印象：看起来是个普通人', 18, DIM);
+            const half = (WIDTH - 10) / 2;
+            const row = this.cursorY - 6;
+            this.cursorY = row;
+            this.button('✅ 留下', half, () => {
+                const res = camp.decideCandidate(c.id, true, camp.now);
+                if (res.ok) this.effect(`🙋 ${res.message}`, WIN, 28);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, state.survivors.length >= bedCount(config, state) ? 'disabled' : 'highlight', 22, 50);
+            this.cursorY = row;
+            this.button('👋 让他走', half, () => {
+                camp.decideCandidate(c.id, false, camp.now);
+                this.render();
+            }, LEFT + half + 10, 'normal', 22, 50);
+            this.gap(18);
         }
     }
 

@@ -1,0 +1,41 @@
+{
+    "firstCount": [1, 3],
+    "namedChance": 0.6,
+    "goodChance": 0.55,
+    "badChance": 0.5,
+    "intros": {
+        "martha": "{place}的收银台后面，一个六十岁的老太太举着扫把对着你：“再往前一步我就不客气了！”——她叫玛莎，超市的老板娘，死活不肯离开自己的店。",
+        "derek": "{place}后面的车库里传来叮叮当当的声音。一个满手机油的壮汉从车底钻出来：“要是来抢东西的，先问问我的扳手。”他叫德里克，是个汽修工。",
+        "sophie": "一个穿着护理服的女孩缩在{place}的储藏室里，怀里抱着急救箱，手抖个不停。她叫苏菲，护理系学生：“我……我会包扎。”",
+        "toby": "{place}门口，一个骑破自行车的年轻人急刹在你面前：“哇，活人！我叫托比，送外卖的，这镇上哪条小路我都认识！”",
+        "leo": "你在{place}听到呼救声。一个满身是泥的高中生被困在柜台上面，下面三只行尸在抓他的脚。他叫里奥。",
+        "hank": "{place}的屋顶上有人朝你开了一枪——打在你脚边。一个白胡子老头探出头：“离开我的地盘。”……犹豫了一下，他又说：“除非你们有吃的。”他叫汉克，退伍老兵。",
+        "rosa": "{place}的花坛边，一个女人正在往土里埋什么东西。“是种子，”她说，“能种出吃的东西的种子。”她叫罗莎，开花店的。",
+        "nora": "{place}里，一个短发女人正在给一只受伤的狗缝针，头都没抬：“别挡光。”她叫诺拉，兽医。",
+        "joe": "一辆掉漆的皮卡横在{place}门口，喇叭响个不停。司机探出头来：“嘿！你们那儿有地方停车吗？”他叫老乔，跑长途的卡车司机。"
+    },
+    "wandererIntros": [
+        "{place}的角落里躲着一个人，说自己以前是{title}，已经三天没吃东西了。",
+        "你在{place}翻箱倒柜时，一个自称{title}的人从通风管里爬了出来：“别开枪！我没被咬！”",
+        "{place}外面，一个{title}正拿着棒子跟一只行尸周旋，看见你们，他喊：“帮个忙！”",
+        "{place}的地下室里住着一个人，墙上画满了日历。他说他是{title}，“以前是”。",
+        "一个背着大包的{title}在{place}门口跟你们撞了个正着，双方都愣住了。",
+        "{place}里有人留了一张纸条：“我在楼上，我是{title}，我会干活。”楼上确实有人。"
+    ],
+    "quirks": [
+        { "id": "supplies", "name": "带着物资", "icon": "🎒", "good": true, "hint": "背包鼓鼓囊囊的", "description": "加入时带来一些食物和木材。", "onJoin": { "resources": { "food": 50, "wood": 30 } } },
+        { "id": "armed", "name": "带着家伙", "icon": "🏏", "good": true, "hint": "腰里别着东西", "description": "加入时带来一件武器。", "onJoin": { "props": { "bat": 1 } } },
+        { "id": "forager", "name": "会找吃的", "icon": "🍄", "good": true, "hint": "认得路边哪些野菜能吃", "description": "每晚多带回一点食物。", "nightly": { "resources": { "food": 10 }, "text": "{name}在营地附近摘了些野菜和蘑菇。" } },
+        { "id": "cheerful", "name": "开心果", "icon": "🌟", "good": true, "hint": "说话总带着笑", "description": "每晚让大家心情好一点。", "nightly": { "moodAll": 1, "text": "{name}讲了个笑话，大家都笑了。" } },
+        { "id": "tough_skin", "name": "皮糙肉厚", "icon": "💪", "good": true, "hint": "胳膊比你的腿还粗", "description": "打仗时生命 +15%。", "combat": { "hp": 1.15 } },
+        { "id": "diligent", "name": "闲不住", "icon": "🔨", "good": true, "hint": "一看见活就上手", "description": "干活产量 +10%。", "work": { "mult": 1.1 } },
+        { "id": "sick", "name": "生着病", "icon": "🤒", "good": false, "hint": "咳得厉害，脸色发白", "description": "加入时就是伤员，要先养病。", "onJoin": { "injured": true } },
+        { "id": "big_eater", "name": "大胃王", "icon": "🍖", "good": false, "hint": "眼睛一直盯着你的罐头", "description": "每晚多吃掉一些食物。", "nightly": { "resources": { "food": -12 }, "text": "{name}半夜又去厨房找吃的了。" } },
+        { "id": "lazy", "name": "懒散", "icon": "🥱", "good": false, "hint": "站着都能睡着", "description": "干活产量 -25%。", "work": { "mult": 0.75 } },
+        { "id": "coward", "name": "胆小鬼", "icon": "😰", "good": false, "hint": "听到点动静就往后缩", "description": "打仗时攻击 -15%。", "combat": { "atk": 0.85 } },
+        { "id": "thief", "name": "手脚不干净", "icon": "🦝", "good": false, "hidden": true, "hint": "看起来老实巴交", "description": "时不时偷拿仓库里的食物。", "nightly": { "chance": 0.3, "resources": { "food": -30 }, "text": "仓库少了一袋粮食……有人看见{name}半夜在仓库门口转悠。" } },
+        { "id": "drinker", "name": "酒鬼", "icon": "🍺", "good": false, "hidden": true, "hint": "身上有股消毒水的味道", "description": "偷喝医务室的酒精。", "nightly": { "chance": 0.25, "resources": { "medicine": -4 }, "text": "医务室的酒精又少了半瓶，{name}说话舌头都大了。" } },
+        { "id": "troublemaker", "name": "爱挑事", "icon": "💢", "good": false, "hidden": true, "hint": "对谁都很客气", "description": "隔三差五跟人吵架，大家心情变差。", "nightly": { "chance": 0.3, "moodAll": -3, "text": "{name}又跟人吵起来了，整个营地都不痛快。" } },
+        { "id": "snitch", "name": "嘴不严", "icon": "📢", "good": false, "hidden": true, "revealDays": 4, "hint": "很健谈", "description": "到处跟人说营地的事，尸潮和掠夺者更容易找上门（每晚尸潮概率 +10%）。", "raidChance": 0.1, "revealText": "你发现{name}一直在用对讲机跟外面的人聊营地的事……难怪最近尸潮来得这么勤。" }
+    ]
+}

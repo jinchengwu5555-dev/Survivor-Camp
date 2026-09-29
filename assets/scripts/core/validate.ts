@@ -284,6 +284,20 @@ export function validateConfig(config: GameConfig): string[] {
         if (Math.min(w, h) > Math.min(...minGrid) || Math.max(w, h) > Math.max(...minGrid)) errors.push(`道具 ${p.id}：${w}×${h} 放不进 ${minGrid[0]}×${minGrid[1]} 的背包`);
     }
 
+    if (config.recruits) {
+        const r = config.recruits;
+        for (const id of Object.keys(r.intros)) checkSurvivor('招募介绍', id, []);
+        checkUnique('特质', r.quirks.map((q) => q.id));
+        for (const q of r.quirks) {
+            const where = `特质 ${q.id}`;
+            checkBag(where, q.onJoin?.resources);
+            for (const id of Object.keys(q.onJoin?.props ?? {})) checkProp(where, id);
+            checkBag(where, q.nightly?.resources);
+        }
+        if (!r.quirks.some((q) => q.good) || !r.quirks.some((q) => !q.good)) errors.push('recruits.json：好特质和坏特质都至少要有一个');
+        if (r.firstCount[0] < 1 || r.firstCount[1] < r.firstCount[0]) errors.push('recruits.json：firstCount 写错了');
+    }
+
     const dialogues = config.chatter?.dialogues ?? [];
     checkUnique('闲聊', dialogues.map((d) => d.id));
     for (const d of dialogues) {

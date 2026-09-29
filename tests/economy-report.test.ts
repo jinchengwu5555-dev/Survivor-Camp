@@ -87,8 +87,10 @@ function session(game: CampGame, now: number): void {
     for (const b of PRODUCERS.filter((x) => x !== 'kitchen')) {
         for (const s of idleFor(b).slice(0, workerSlots(config, state, b))) game.assign(s.id, b, now);
     }
-    const squad = suggestSquad(config, state).filter((id) => !state.survivors.find((x) => x.id === id)?.assignment);
-    if (state.expeditions.length === 0 && squad.length >= 3) {
+    // 人少的时候干活的人也得出去（开局只有伊森一个人）
+    const fewPeople = state.survivors.length < 4;
+    const squad = suggestSquad(config, state).filter((id) => fewPeople || !state.survivors.find((x) => x.id === id)?.assignment);
+    if (state.expeditions.length === 0 && squad.length >= Math.min(3, state.survivors.length)) {
         const locs = availableLocations(config, state, now)
             .filter((l) => !lost.has(locationName(config, state, l)) || training > lost.get(locationName(config, state, l))!)
             .filter((l) => expeditionBlocker(config, state, l.id, squad, now) === null);
@@ -128,7 +130,7 @@ function onlineSession(game: CampGame, start: number): void {
 }
 
 it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
-    const game = CampGame.newGame(loadConfig(), T0, 3);
+    const game = CampGame.newGame(loadConfig({ soloStart: true }), T0, 3);
     const { config, state } = game;
     const lines = ['真实天  游戏天  季节  指挥部  其余建筑平均  食物   木材   零件  药品  士气  人数  守夜胜/负  尸潮加成(喘息)  死亡  成就'];
     const r = (n: number, w = 5) => String(Math.round(n)).padStart(w);

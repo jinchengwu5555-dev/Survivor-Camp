@@ -8,6 +8,7 @@
 import { isOnExpedition } from './combat';
 import { changeMood, isBrokenDown } from './mood';
 import { currentDay } from './state';
+import { quirkRaidChance } from './recruits';
 import { nextRandom } from './rng';
 import { survivorName } from './roster';
 import { GameConfig, GameState, SurvivorState, WatchMode } from './types';
@@ -43,7 +44,7 @@ export function planWatch(config: GameConfig, state: GameState): string[] {
 export function raidChanceTonight(config: GameConfig, state: GameState, now: number): number {
     const c = config.balance.raidChance;
     if (!c || state.raidCount === 0) return 1;
-    return Math.min(c.max, c.base + c.perDay * currentDay(config, state, now));
+    return Math.min(1, Math.min(c.max, c.base + c.perDay * currentDay(config, state, now)) + quirkRaidChance(config, state));
 }
 
 /** 过一夜：守夜的人累，其他人恢复；返回守夜的人和人手够不够 */

@@ -1,12 +1,13 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, WatchMode } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
 import { updateChatter } from './chatter';
 import { resolveSurveys, startSurvey, suggestSurveyors } from './districts';
 import { buildVehicle, checkVehicleOwners } from './vehicles';
 import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './packing';
+import { autoDecideCandidates, decideCandidate } from './recruits';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -94,6 +95,8 @@ export class CampGame {
         checkVehicleOwners(this.config, s, now);
         // 没有界面在看（比如模拟器），等着装的背包自动装好带回来
         if (!this.liveRaids) for (const h of [...(s.pendingHauls ?? [])]) confirmHaul(this.config, s, h.id, now);
+        // 没有界面在看，遇到的人自动决定留不留
+        if (!this.liveRaids && (s.candidates ?? []).length) autoDecideCandidates(this.config, s, now);
         // 没有界面在看（比如模拟器），留着的尸潮直接自动打完
         if (!this.liveRaids && s.pendingRaid) new LiveRaid(this.config, s, s.pendingRaid).finish();
         maybeRunRaid(this.config, s, now, this.liveRaids);
@@ -207,6 +210,16 @@ export class CampGame {
     /** 在工坊修一辆车 */
     buildVehicle(vehicleId: string, now: number): ActionResult {
         return this.act(now, () => buildVehicle(this.config, this.state, vehicleId, now));
+    }
+
+    /** 探索时遇到、等着决定留不留的人 */
+    get candidates(): CandidateState[] {
+        return this.state.candidates ?? [];
+    }
+
+    /** 留下 / 让他走 */
+    decideCandidate(candidateId: number, keep: boolean, now: number): ActionResult {
+        return this.act(now, () => decideCandidate(this.config, this.state, candidateId, keep, now));
     }
 
     /** 当前要装的背包（探索回来的战利品） */

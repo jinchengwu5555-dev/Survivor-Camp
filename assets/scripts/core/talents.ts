@@ -10,6 +10,7 @@
 
 import { gearCombat, gearScout, gearWork } from './gear';
 import { moodTier } from './mood';
+import { quirkCombat, quirkWork } from './recruits';
 import { GameConfig, GameState, SurvivorState, TalentDef } from './types';
 
 /** 精力的影响：精力不低于 tiredBelow 时没影响，越低越差，精力 0 时只剩 minFactor */
@@ -42,7 +43,7 @@ export function workMultiplier(config: GameConfig, state: GameState, survivorId:
         if (w && (!w.building || w.building === buildingId)) mult *= w.mult;
     }
     const s = state.survivors.find((x) => x.id === survivorId);
-    return mult * gearWork(config, state, survivorId, buildingId) * sleepFactor(config, s) * (s ? moodTier(s.mood).work : 1);
+    return mult * gearWork(config, state, survivorId, buildingId) * sleepFactor(config, s) * (s ? moodTier(s.mood).work : 1) * quirkWork(config, s);
 }
 
 export function combatMultiplier(config: GameConfig, state: GameState, survivorId: string): { atk: number; hp: number } {
@@ -55,7 +56,8 @@ export function combatMultiplier(config: GameConfig, state: GameState, survivorI
     const g = gearCombat(config, state, survivorId);
     const s = state.survivors.find((x) => x.id === survivorId);
     const tired = sleepFactor(config, s);
-    return { atk: atk * g.atk * tired * (s ? moodTier(s.mood).atk : 1), hp: hp * g.hp };
+    const q = quirkCombat(config, s);
+    return { atk: atk * g.atk * tired * (s ? moodTier(s.mood).atk : 1) * q.atk, hp: hp * g.hp * q.hp };
 }
 
 function product(config: GameConfig, state: GameState, survivorId: string, key: 'recovery' | 'scout' | 'moodRecovery'): number {

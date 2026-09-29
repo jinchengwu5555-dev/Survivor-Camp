@@ -2,21 +2,60 @@
     {
         "id": "s1e1_open",
         "title": "门外的呼救",
-        "text": "尸群正沿着主街涌过来。你们刚用货架堵住超市大门，外面就传来拍门声：“求求你们，开门！”\n透过玻璃，你看到一个满身是泥的年轻人，身后不远处就是晃动的黑影。",
+        "text": "尸潮爆发的第一夜。副警长伊森一个人退进了镇上的超市，用货架死死抵住大门。\n门外的嘶吼声一整夜都没停。镇上一定还有别的活人——但首先，得撑过今晚。",
         "weight": 0,
         "once": true,
         "choices": [
             {
-                "text": "开门，把他拉进来",
+                "text": "把货架钉死，堵住大门",
                 "outcomes": [
-                    { "weight": 3, "text": "你们拽开货架，把他拉了进来。他叫里奥，吓坏了，但没被咬。", "effects": [ { "type": "addSurvivor", "survivor": "leo" }, { "type": "flag", "flag": "saved_leo" } ] },
-                    { "weight": 1, "text": "里奥被拉了进来，但一只行尸也挤进了门缝。德里克扑上去把它按住，手臂被抓得鲜血直流。", "effects": [ { "type": "addSurvivor", "survivor": "leo" }, { "type": "injure", "survivor": "derek" }, { "type": "flag", "flag": "saved_leo" } ] }
+                    {
+                        "weight": 1,
+                        "text": "伊森把能搬动的货架都钉在了门后。手磨出了血泡，但门纹丝不动。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 5
+                            }
+                        ]
+                    }
                 ]
             },
             {
-                "text": "不开门，太危险了",
+                "text": "先清点超市里还剩下什么",
                 "outcomes": [
-                    { "weight": 1, "text": "拍门声越来越弱，最后消失了。苏菲整晚没有说话。", "effects": [ { "type": "mood", "target": "sophie", "amount": -15 }, { "type": "mood", "target": "all", "amount": -5 }, { "type": "flag", "flag": "left_leo" } ] }
+                    {
+                        "weight": 1,
+                        "text": "罐头、面粉、几箱瓶装水——够一个人撑一阵子了。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": 30
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "打开对讲机，呼叫女儿的频道",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "只有沙沙的杂音。伊森把对讲机贴在耳边，听了很久很久。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -3
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "quiet_moments"
+                            }
+                        ]
+                    }
                 ]
             }
         ]
@@ -28,52 +67,193 @@
         "weight": 0,
         "once": true,
         "choices": [
-            { "text": "我们还活着。先把日子过下去。", "outcomes": [ { "weight": 1, "text": "大家松了一口气。但伊森知道，尸群还会再来——从今晚起，每隔一段时间就要守一次夜。", "effects": [ { "type": "mood", "target": "all", "amount": 10 }, { "type": "flag", "flag": "raids_started" } ] } ] }
+            {
+                "text": "活下去。先把日子过下去。",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "伊森松了一口气。但他知道，尸群还会再来——从今晚起，就得守夜了。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 10
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "raids_started"
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
     },
     {
         "id": "s1e2_start",
         "title": "空货架",
-        "text": "玛莎清点完仓库，脸色很难看：“照这样吃下去，撑不过一个星期。”\n托比说镇口加油站的便利店还有存货，只是门口有几只行尸。",
+        "text": "伊森清点完仓库：就算只有他一个人，这点存货也撑不了多久。\n镇口的加油站便利店还有存货——说不定，那边还有别的幸存者。",
         "weight": 0,
         "once": true,
         "choices": [
-            { "text": "组织一支搜刮队（去“探索”派出小队）", "outcomes": [ { "weight": 1, "text": "托比兴奋地搓着手：“我带路！”", "effects": [ { "type": "mood", "target": "toby", "amount": 5 } ] } ] },
-            { "text": "先让大家省着吃", "outcomes": [ { "weight": 1, "text": "每人每天只分到半个罐头，营地里怨声载道。但总得有人出去。", "effects": [ { "type": "mood", "target": "all", "amount": -8 } ] } ] }
+            {
+                "text": "出发去搜刮（去“探索”派出小队）",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "伊森检查了一遍配枪，推开了后门。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "先省着吃，再等等",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "一天只吃半个罐头。饿着肚子，连站岗都没力气。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -8
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
     },
     {
         "id": "s1e3_start",
         "title": "旧无线电",
-        "text": "德里克在仓库角落翻出一台老式无线电：“给我点零件，我能让它响起来。”",
+        "text": "仓库角落里有一台老式无线电，外壳摔裂了，但电路板看起来还好。\n换几个零件，也许能听到外面的消息。",
         "weight": 0,
         "once": true,
         "choices": [
             {
-                "text": "给他零件（15 零件）",
-                "cost": { "parts": 15 },
-                "outcomes": [ { "weight": 1, "text": "德里克鼓捣了一整夜，无线电终于亮起了指示灯。", "effects": [ { "type": "flag", "flag": "s1e3_started" }, { "type": "flag", "flag": "radio_fixed" } ] } ]
+                "text": "拆零件修好它（15 零件）",
+                "cost": {
+                    "parts": 15
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "鼓捣了一整夜，无线电终于亮起了指示灯。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "s1e3_started"
+                            },
+                            {
+                                "type": "flag",
+                                "flag": "radio_fixed"
+                            }
+                        ]
+                    }
+                ]
             },
             {
                 "text": "零件要留着修栅栏，以后再说",
-                "outcomes": [ { "weight": 1, "text": "德里克耸耸肩，把无线电塞回了角落。", "effects": [ { "type": "flag", "flag": "s1e3_started" } ] } ]
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "无线电被塞回了角落。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "s1e3_started"
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     },
     {
         "id": "radio_reminder",
         "title": "角落里的无线电",
-        "text": "德里克又把那台无线电搬了出来：“零件够了吗？说不定外面还有人在喊话。”",
+        "text": "那台无线电还躺在仓库角落里。零件够了吗？说不定外面还有人在喊话。",
         "weight": 5,
-        "conditions": { "flags": ["s1e3_started"], "notFlags": ["radio_fixed"] },
+        "conditions": {
+            "flags": [
+                "s1e3_started"
+            ],
+            "notFlags": [
+                "radio_fixed"
+            ]
+        },
         "choices": [
             {
-                "text": "给他零件（15 零件）",
-                "cost": { "parts": 15 },
-                "outcomes": [ { "weight": 1, "text": "无线电终于亮起了指示灯。", "effects": [ { "type": "flag", "flag": "radio_fixed" } ] } ]
+                "text": "拆零件修好它（15 零件）",
+                "cost": {
+                    "parts": 15
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "无线电终于亮起了指示灯。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "radio_fixed"
+                            }
+                        ]
+                    }
+                ]
             },
-            { "text": "再等等", "outcomes": [ { "weight": 1, "text": "德里克叹了口气。", "effects": [] } ] },
-            {"text": "拆掉冷柜的压缩机凑零件", "outcomes": [{"weight": 1, "text": "无线电亮了！可冷柜也彻底坏了，一批肉只能赶紧煮掉吃了。", "effects": [{"type": "flag", "flag": "radio_fixed"}, {"type": "resource", "resource": "food", "amount": -30}]}, {"weight": 1, "text": "“啪”的一声冒出黑烟，德里克的手被电了一下。无线电还是哑的。", "effects": [{"type": "injure", "survivor": "derek"}, {"type": "resource", "resource": "parts", "amount": -5}]}]}
+            {
+                "text": "再等等",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "无线电又被塞回了角落。",
+                        "effects": []
+                    }
+                ]
+            },
+            {
+                "text": "拆掉冷柜的压缩机凑零件",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "无线电亮了！可冷柜也彻底坏了，一批肉只能赶紧煮掉吃了。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "radio_fixed"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": -30
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "“啪”的一声冒出黑烟，手被电了一下。无线电还是哑的。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -3
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": -5
+                            }
+                        ]
+                    }
+                ]
+            }
         ]
     },
     {

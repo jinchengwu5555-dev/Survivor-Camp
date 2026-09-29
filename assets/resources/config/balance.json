@@ -11,7 +11,7 @@
     "dayLengthMinutes": 80,
     "buildQueueSize": 1,
     "startingResources": { "food": 150, "wood": 80, "parts": 20, "medicine": 5, "cans": 10 },
-    "startingSurvivors": ["ethan", "martha", "derek", "sophie", "toby"],
+    "startingSurvivors": ["ethan"],
     "baseStorage": { "food": 200, "wood": 200, "parts": 100, "medicine": 50 },
     "maxSquadSize": 4,
     "locationRestockMinutes": 80,

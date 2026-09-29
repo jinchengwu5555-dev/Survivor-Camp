@@ -488,6 +488,8 @@ export interface GameConfig {
     packing?: PackingConfig;
     /** 每局随机地名的名字池（老配置没有） */
     names?: NamesConfig;
+    /** 招募：第一次探索遇到的人、特质（老配置没有） */
+    recruits?: RecruitsConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -699,6 +701,10 @@ export interface SurvivorState {
     watch?: WatchMode;
     /** 最近几次心情变化的原因（见 core/mood.ts） */
     moodNotes?: { at: number; text: string; amount: number }[];
+    /** 特质（recruits.json 的 quirks）、已经暴露的藏着的特质、加入营地的时间 */
+    quirks?: string[];
+    revealed?: string[];
+    joinedAt?: number;
 }
 
 export type WatchMode = 'auto' | 'always' | 'never';
@@ -813,6 +819,8 @@ export interface GameState {
     surveys?: SurveyState[];
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
+    /** 探索时遇到、等玩家决定留不留的人（见 core/recruits.ts） */
+    candidates?: CandidateState[];
     /** 这一局的随机地名（见 core/names.ts；老存档没有，用配置里的默认名字） */
     names?: { town: string; districts: Record<string, string>; locations: Record<string, string> };
     /** 死在外面的人留下的装备：地点 id → 道具 id → 数量（见 core/gear.ts） */
@@ -911,6 +919,50 @@ export interface VehicleDef {
     comesWith?: string;
     /** 自己造：指挥部、工坊等级和资源 */
     obtain?: { hq: number; workshopLevel: number; cost: ResourceBag };
+}
+
+/** 特质：有好有坏，有的藏着要过一阵才暴露（见 core/recruits.ts） */
+export interface QuirkDef {
+    id: string;
+    name: string;
+    icon: string;
+    good: boolean;
+    /** 藏着的坏毛病：一开始看不到，第一次发作（或 revealDays 天后）才暴露 */
+    hidden?: boolean;
+    revealDays?: number;
+    revealText?: string;
+    /** 见面时玩家看到的印象（藏着的特质也会显示这句，但看不出是好是坏） */
+    hint: string;
+    description: string;
+    onJoin?: { resources?: ResourceBag; props?: Record<string, number>; injured?: boolean };
+    /** 每晚：按 chance 发作一次，改资源、改所有人心情；text 里 {name} 换成名字 */
+    nightly?: { chance?: number; resources?: ResourceBag; moodAll?: number; text: string };
+    work?: { mult: number };
+    combat?: { atk?: number; hp?: number };
+    /** 每晚尸潮概率加多少 */
+    raidChance?: number;
+}
+
+export interface RecruitsConfig {
+    /** 第一次探索回来遇到几个人 [最少, 最多] */
+    firstCount: [number, number];
+    /** 候选人是有名有姓的角色的概率（剩下的是随机流浪者） */
+    namedChance: number;
+    goodChance: number;
+    badChance: number;
+    /** 有名有姓的角色见面时的介绍，{place} 换成地点名 */
+    intros: Record<string, string>;
+    /** 流浪者见面时的介绍，{place} 地点，{title} 以前的职业 */
+    wandererIntros: string[];
+    quirks: QuirkDef[];
+}
+
+/** 等玩家决定留不留的人 */
+export interface CandidateState {
+    id: number;
+    survivor: SurvivorState;
+    intro: string;
+    at: number;
 }
 
 export interface NamesConfig {

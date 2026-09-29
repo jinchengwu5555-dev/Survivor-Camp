@@ -12,7 +12,7 @@ import { addResource, canAfford, currentLevelDef, grantResources, hqLevel, pay, 
 import { conditionMet, discoverSite, queueEvent } from './events';
 import { nextRandom } from './rng';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, setFlag } from './state';
-import { addWanderer, killRandom, resolveFallen, survivorInfo, survivorName } from './roster';
+import { killRandom, resolveFallen, survivorInfo, survivorName } from './roster';
 import { siteRaidLevel } from './siteMods';
 import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
 import { formatProps, rollDrops } from './props';
@@ -20,6 +20,7 @@ import { combatMultiplier } from './talents';
 import { passNight, rollRaid, watchersText } from './watch';
 import { changeMoodAll } from './mood';
 import { takeDroppedGear } from './gear';
+import { firstRecruits, nightQuirks, offerCandidates } from './recruits';
 import { locationName } from './names';
 import { carryHome, makePieces, newHaul } from './packing';
 import { haulCapacity, pickVehicle, useVehicle, vehicleDef } from './vehicles';
@@ -387,11 +388,14 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     }
     // 打赢了队友会把倒下的人背回来，只有打输撤退时才会有人回不来
     const { dead, injured } = resolveFallen(config, state, fallen, at, `在${locationName(config, state, loc)}牺牲了`, result === 'lose', loc.id);
+    // 第一次探索回来一定会遇到人；之后打赢时按 recruitChance 偶尔遇到一个
     let rescued = '';
-    if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) {
-        const w = addWanderer(config, state, at);
-        if (w) rescued = `还救回了流浪者${w.profile!.name}。`;
-    }
+    const place = locationName(config, state, loc);
+    const metBefore = (state.candidates ?? []).length;
+    if (!hasFlag(state, 'first_recruits')) firstRecruits(config, state, place, at);
+    else if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) offerCandidates(config, state, 1, place, at);
+    const met = (state.candidates ?? []).length - metBefore;
+    if (met > 0) rescued = `路上遇到了 ${met} 个幸存者，等你决定留不留。`;
 
     const summary =
         (result === 'win'
@@ -431,6 +435,7 @@ export function maybeRunRaid(config: GameConfig, state: GameState, now: number, 
     state.nextRaidAt = now + config.balance.raidIntervalMinutes * 60_000;
     // 过一夜：轮流守夜（见 watch.ts）
     const { watchers, understaffed } = passNight(config, state, at);
+    nightQuirks(config, state, at);
     const raid = currentRaid(config, state, now);
     if (!raid) return;
     if (!rollRaid(config, state, now)) {
