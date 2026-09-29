@@ -3,6 +3,7 @@
 import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, GearSlot, ResourceBag, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
+import { updateChatter } from './chatter';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -93,6 +94,7 @@ export class CampGame {
         updatePickups(this.config, s, now);
         updateTrader(this.config, s, now);
         updateScoutSpots(this.config, s, now);
+        updateChatter(this.config, s, now);
         this.settle(now);
     }
 

@@ -38,7 +38,7 @@ import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story'
 import { BattleReport, BuildingDef, BuildingLevelDef, GameConfig, GEAR_SLOTS, RESOURCE_IDS, ResourceBag, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
-import { survivorInfo } from '../core/roster';
+import { survivorInfo, survivorName } from '../core/roster';
 import { currentSite } from '../core/siteMods';
 import { relocationBlocker, relocationFoodCost, relocationTargets } from '../core/sites';
 import { expandConfig } from '../core/configExpand';
@@ -90,6 +90,9 @@ const HUD_BOTTOM = 515;
 /** 营地地图 */
 const MAP_TOP = HUD_BOTTOM;
 const MAP_BOTTOM = -150;
+/** 闲聊气泡在营地地图上显示多久（游戏分钟） */
+const CHAT_SHOW_MINUTES = 4;
+const CHAT_KIND_ICON: Record<string, string> = { chat: '💬', gossip: '🤫', joke: '😂', warm: '💛', worry: '😟', quarrel: '💢' };
 const MAP_WIDTH = 720;
 const MAP_HEIGHT = MAP_TOP - MAP_BOTTOM;
 const MAP_CENTER_Y = (MAP_TOP + MAP_BOTTOM) / 2;
@@ -715,7 +718,23 @@ export class GameRoot extends Component {
             const pill = makeNode('Raid', map, 460, 40);
             pill.setPosition(-110, MAP_HEIGHT / 2 - 28);
             drawPanel(pill.addComponent(Graphics), 460, 40, new Color(40, 16, 16, 210), 20, left <= 15 ? LOSE : undefined, 2);
-            addLabel(pill, `🧟 ${formatTime(left)} 后${name}来袭`, left <= 15 ? 22 : 19, LOSE, { width: 440 });
+            const chance = Math.round(raidChanceTonight(config, state, now) * 100);
+            addLabel(pill, `🌙 ${formatTime(left)} 后入夜：${chance}% 会有${name}`, left <= 15 ? 21 : 18, LOSE, { width: 440 });
+        }
+
+        // 营地闲聊：最近一段对话显示成气泡
+        const talk = (state.chatter ?? [])[(state.chatter ?? []).length - 1];
+        if (talk && now - talk.at < CHAT_SHOW_MINUTES * 60_000) {
+            const lines = talk.lines.slice(0, 4);
+            const h = 16 + lines.length * 28;
+            const bubble = makeNode('Chat', map, 640, h);
+            bubble.setPosition(0, MAP_HEIGHT / 2 - 64 - h / 2);
+            drawPanel(bubble.addComponent(Graphics), 640, h, new Color(250, 246, 232, 225), 14, new Color(120, 100, 70), 2);
+            const tag = CHAT_KIND_ICON[talk.kind] ?? '💬';
+            lines.forEach((l, i) => {
+                const who = survivorName(config, state, l.who);
+                addLabel(bubble, `${i === 0 ? tag : '　'} ${who}：${l.text}`, 18, new Color(50, 40, 30), { width: 620, align: 'left' }).node.setPosition(0, h / 2 - 22 - i * 28);
+            });
         }
 
         // 已发现的其他营地地点
@@ -993,6 +1012,16 @@ export class GameRoot extends Component {
                 addLabel(node, row.label, 20, DIM, { width: WIDTH / 2 - 10, align: 'left' }).node.setPosition(-WIDTH / 4, 0);
                 addLabel(node, row.value, 20, row.warn ? LOSE : TEXT, { width: WIDTH / 2 + 60, align: 'right' }).node.setPosition(WIDTH / 4 - 30, 0);
                 this.cursorY = top - 34;
+            }
+        }
+        // 最近的闲聊
+        const chats = [...(camp.state.chatter ?? [])].reverse();
+        if (chats.length) {
+            this.gap(8);
+            this.text(`💬 营地里的闲聊（已听过 ${camp.state.chatterSeen?.length ?? 0}/${camp.config.chatter?.dialogues.length ?? 0} 段）`, 22, ACCENT);
+            for (const c of chats) {
+                for (const l of c.lines) this.text(`${survivorName(camp.config, camp.state, l.who)}：${l.text}`, 18, TEXT);
+                this.gap(8);
             }
         }
     }

@@ -252,6 +252,20 @@ export function validateConfig(config: GameConfig): string[] {
     }
     for (const loc of config.locations) if (!loc.map) errors.push(`地点 ${loc.id}：没有写镇地图坐标 map`);
 
+    const dialogues = config.chatter?.dialogues ?? [];
+    checkUnique('闲聊', dialogues.map((d) => d.id));
+    for (const d of dialogues) {
+        const where = `闲聊 ${d.id}`;
+        if (d.who.length < 1) errors.push(`${where}：至少要有一个说话的人`);
+        for (const id of d.who) if (id !== 'any') checkSurvivor(where, id, []);
+        for (const id of d.conditions?.hasSurvivors ?? []) checkSurvivor(where, id, []);
+        if (!['chat', 'gossip', 'joke', 'warm', 'worry', 'quarrel'].includes(d.kind)) errors.push(`${where}：未知类型 ${d.kind}`);
+        if (d.lines.length === 0) errors.push(`${where}：没有台词`);
+        for (const [i] of d.lines) if (i < 0 || i >= d.who.length) errors.push(`${where}：说话人序号 ${i} 超出 who 的范围`);
+        const usesX = d.lines.some(([, text]) => text.includes('{x}'));
+        if (usesX && !d.about) errors.push(`${where}：台词里有 {x} 但没写 about`);
+    }
+
     checkUnique('道具', config.props.map((x) => x.id));
     for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
     for (const p of config.props) {

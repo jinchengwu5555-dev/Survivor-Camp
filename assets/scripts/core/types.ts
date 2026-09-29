@@ -476,6 +476,8 @@ export interface GameConfig {
     props: PropDef[];
     talents: TalentDef[];
     scouting: ScoutingConfig;
+    /** 营地闲聊（老配置没有） */
+    chatter?: ChatterConfig;
     units: UnitDef[];
     skills: SkillDef[];
     statuses: StatusDef[];
@@ -786,6 +788,39 @@ export interface GameState {
     lastNight?: NightState;
     /** 心情跨档的次数（统计用） */
     moodShifts?: number;
+    /** 营地闲聊：说过的对话 id、最近的几段、下一段的时间（见 core/chatter.ts） */
+    chatterSeen?: string[];
+    chatter?: ChatterEntry[];
+    nextChatAt?: number;
+}
+
+export type ChatterKind = 'chat' | 'gossip' | 'joke' | 'warm' | 'worry' | 'quarrel';
+
+export interface ChatterDialogueDef {
+    id: string;
+    /** 说话的人：幸存者 id 或 "any" */
+    who: string[];
+    /** 八卦对象："any" = 随便一个不在说话的人，台词里写 {x} */
+    about?: 'any';
+    kind: ChatterKind;
+    /** [说话人在 who 里的序号, 台词] */
+    lines: [number, string][];
+    conditions?: Condition;
+}
+
+export interface ChatterConfig {
+    /** 平均多少游戏分钟聊一段 */
+    intervalMinutes: number;
+    /** 每种对话给说话人的心情变化 */
+    moodByKind: Partial<Record<ChatterKind, number>>;
+    dialogues: ChatterDialogueDef[];
+}
+
+export interface ChatterEntry {
+    at: number;
+    id: string;
+    kind: ChatterKind;
+    lines: { who: string; text: string }[];
 }
 
 export interface NightState {
