@@ -79,7 +79,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.7 多种背包';
+const GAME_VERSION = 'v1.8 设置+闲聊扩充';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -161,7 +161,7 @@ const SPECIALTY_NAMES: Record<string, string> = {
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | null;
+type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -210,6 +210,8 @@ export class GameRoot extends Component {
     private selectedSurvivor: string | null = null;
     /** 刚做完的事件选择：结果卡片（点“继续”后才看下一个事件） */
     private eventResult: { title: string; choice: string; text: string; effects: string } | null = null;
+    /** 设置菜单里“重新开始”按了第一下，等第二下确认 */
+    private confirmRestart = false;
     /** 探索页选中的分区（选中时下方显示分区详情和“勘察”） */
     private selectedDistrict: string | null = null;
     /** 出发时选的车：undefined = 自动挑，'walk' = 走路 */
@@ -607,7 +609,20 @@ export class GameRoot extends Component {
         const site = currentSite(config, state);
         const line = (text: string, size: number, color: Color, y: number) =>
             addLabel(bar, text, size, color, { width: WIDTH, align: 'left' }).node.setPosition(0, y - centerY);
-        line(GAME_VERSION, 14, DIM, 630);
+        line(`${GAME_VERSION}${camp.paused ? '   ⏸ 已暂停' : ''}`, 14, camp.paused ? LOSE : DIM, 630);
+        // 右上角：设置（暂停、重新开始、玩法说明）
+        const gear = makeNode('Settings', bar, 70, 30);
+        gear.setPosition(WIDTH / 2 - 35, 640 - centerY);
+        drawPanel(gear.addComponent(Graphics), 70, 30, this.sheet === 'settings' ? COLORS.highlight : COLORS.button, 8, ACCENT, 2);
+        addLabel(gear, camp.paused ? '▶' : '⚙️', 18, TEXT, { width: 66 });
+        gear.on(Node.EventType.TOUCH_END, () => {
+            punch(gear);
+            this.tab = 'camp';
+            this.sheet = this.sheet === 'settings' ? null : 'settings';
+            this.confirmRestart = false;
+            this.resetScroll();
+            this.render();
+        });
         line(`第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天   ${site?.icon ?? ''}${site?.name ?? ''}`, 26, ACCENT, 603);
         line(this.resourceLine(config, camp, now), 20, TEXT, 570);
         line(`士气 ${Math.round(morale(state))}  安全 ${safety(config, state)}  人数 ${state.survivors.length}/${bedCount(config, state)}  战斗 Lv${survivorBattleLevel(config, state)}  🏆${this.records.bestDays} 天`, 18, DIM, 538);
@@ -1008,6 +1023,8 @@ export class GameRoot extends Component {
                 camp.markSeen('props');
             } else if (this.sheet === 'stats') {
                 this.renderCampStats(camp, now);
+            } else if (this.sheet === 'settings') {
+                this.renderSettings(camp, now);
             } else {
                 this.renderSites(camp, now);
                 camp.markSeen('sites');
@@ -1022,6 +1039,51 @@ export class GameRoot extends Component {
         // 打开的页签：里面的新内容记为已读（红点下一次刷新时消失）
         if (this.tab !== 'camp' && this.tab !== 'rank') camp.markSeen(this.tab as BadgeGroup);
         if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
+    }
+
+    /** 设置：暂停 / 继续、重新开始（要按两次确认）、玩法说明、版本 */
+    private renderSettings(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        this.text('⚙️ 设置', 28, ACCENT);
+        this.text(`${townName(state)} · 第 ${currentDay(config, state, now)} 天 · ${state.survivors.length} 人 · ${GAME_VERSION}`, 18, DIM);
+        this.gap(10);
+        this.button(camp.paused ? '▶ 继续游戏' : '⏸ 暂停游戏（时间停住，尸潮也不会来）', WIDTH, () => {
+            camp.setPaused(!camp.paused, Date.now());
+            this.save();
+            this.render();
+        }, LEFT, camp.paused ? 'highlight' : 'normal', 24, 56);
+        this.gap(10);
+        this.button(this.confirmRestart ? '⚠️ 真的要放弃这个营地吗？再点一次确认' : '🔄 重新开始（放弃现在的营地，开一局新的）', WIDTH, () => {
+            if (!this.confirmRestart) {
+                this.confirmRestart = true;
+                this.render();
+                return;
+            }
+            this.confirmRestart = false;
+            this.setCamp(this.newRun(config, Date.now()));
+            this.runRecorded = false;
+            this.newBest = false;
+            this.tab = 'camp';
+            this.sheet = null;
+            this.selectedSurvivor = null;
+            this.selectedLocation = null;
+            this.selectedDistrict = null;
+            this.save();
+            this.effect('🏕️ 新的营地，新的小镇', ACCENT, 30);
+            this.render();
+        }, LEFT, this.confirmRestart ? 'highlight' : 'normal', 22, 56);
+        if (this.confirmRestart) {
+            this.gap(6);
+            this.button('算了，不重新开始', WIDTH, () => {
+                this.confirmRestart = false;
+                this.render();
+            }, LEFT, 'normal', 22, 48);
+        }
+        this.gap(14);
+        this.text('📖 玩法说明', 24, ACCENT);
+        for (const line of HELP_LINES) this.text(line, 18);
+        this.gap(10);
+        this.text(`🏆 最长纪录 ${this.records.bestDays} 天 · 已经建过 ${this.records.runs} 个营地`, 18, DIM);
     }
 
     /** 营地数值总览（HUD 右下角“📊 数值”） */
@@ -2403,6 +2465,17 @@ export class GameRoot extends Component {
         this.cursorY -= px;
     }
 }
+
+const HELP_LINES = [
+    '· 时间只在你在线时走，离线时营地暂停，只攒一点挂机收益。',
+    '· 开局只有伊森一个人。去“探索”派人搜刮，第一次回来会遇到别的幸存者，留谁由你决定。',
+    '· 每个人有专长、天赋、特质（有好有坏，有的坏毛病藏着）、心情和精力。',
+    '· 晚上要有人轮流守夜；不是每晚都有尸潮，来了就亲手守住栅栏。',
+    '· 打赢探索后要把战利品装进背包，装不下的只能留下。背包、车越大，能带的越多。',
+    '· 地图分区勘察能驱散迷雾；远的区要自行车、摩托或汽车才能去。',
+    '· 黄金只在前期值钱，早点花掉。',
+    '· 人会死，全死光营地就覆灭。比的是你能坚持多少天。',
+];
 
 /** 背包里每种东西一个颜色 */
 function pieceColor(p: LootPiece): Color {

@@ -16,6 +16,8 @@ export interface ClockState {
     maxRealAt: number;
     /** 累计在线的真实毫秒数（排行榜校验用） */
     onlineMs: number;
+    /** 玩家按了暂停：游戏时间不走，也不算离线收益 */
+    paused?: boolean;
 }
 
 export interface ClockStep {
@@ -33,7 +35,9 @@ export function advanceClock(config: GameConfig, state: GameState, realNow: numb
     const { onlineTimeScale, onlineGapSeconds } = config.balance.clock;
     const gap = realNow - c.lastRealAt;
     let offlineMs = 0;
-    if (gap > 0 && gap <= onlineGapSeconds * 1000) {
+    if (c.paused) {
+        // 暂停中：时间不走；暂停期间也不算离线（不然暂停挂着就能白拿离线收益）
+    } else if (gap > 0 && gap <= onlineGapSeconds * 1000) {
         c.gameTime += gap * onlineTimeScale;
         c.onlineMs += gap;
     } else if (gap > 0) {

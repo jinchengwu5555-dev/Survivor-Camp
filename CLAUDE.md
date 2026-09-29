@@ -18,6 +18,7 @@
 - 天赋在 `talents.json` + `core/talents.ts`（产量、战斗、伤愈、侦察、心情），新增效果时同步 `TalentDef` 和 `validate.ts`。随机事件至少 3 个有取舍的选项；选项提示由 `choiceHints()` 自动算，选完的得失由 `resolveChoice` 的 `effectsText` 给出，不要手写。
 - 装备是 `type: "gear"` 的背包道具（`core/gear.ts`），各人倍率统一走 `talents.ts` 的 `workMultiplier` / `combatMultiplier` / `scoutMultiplier`（天赋 × 装备 × 精力 × 心情档位），不要在别处另乘。改心情一律用 `mood.ts` 的 `changeMood` / `changeMoodAll` 并写上原因。
 - 地图分区在 `districts.json` + `core/districts.ts`（勘察驱散迷雾），交通工具在 `vehicles.json` + `core/vehicles.ts`（决定能去哪个区、背包多大）。探索战利品要装背包（`core/packing.ts`）：界面模式进 `state.pendingHauls` 让玩家摆，测试和模拟自动装。营地闲聊在 `chatter.json` + `core/chatter.ts`（不重复）。建筑升级阶段写在 `buildings.json` 的 `stages`。守夜轮班和“今晚有没有尸潮”在 `core/watch.ts`；营地数值面板读 `core/campStats.ts`。
+- 开局只有伊森（`balance.startingSurvivors`），招募和特质在 `recruits.json` + `core/recruits.ts`；测试默认 5 人开局，测单人开局用 `loadConfig({ soloStart: true })`。地名每局随机（`core/names.ts`），显示地名一律用 `locationName()` / `districtName()` / `townName()`，不要直接读 `loc.name`。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。

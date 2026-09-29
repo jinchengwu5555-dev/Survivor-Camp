@@ -1,6 +1,6 @@
 [
     {
-        "id": "supermarket", "map": { "x": 0, "y": -60 }, "name": "枫谷超市", "icon": "🏪",
+        "id": "supermarket", "map": { "x": 0, "y": -60 }, "name": "街角超市", "icon": "🏪",
         "description": "玛莎的超市。货架当栅栏，仓库当宿舍，一切从这里开始。",
         "pros": "什么都有一点", "cons": "没什么特别",
         "modifiers": {},

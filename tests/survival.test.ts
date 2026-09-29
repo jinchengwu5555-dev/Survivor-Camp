@@ -122,7 +122,7 @@ describe('营地覆灭', () => {
         const records = emptyRecords();
         expect(recordRun(config, records, state)).toBe(true);
         expect(records).toMatchObject({ bestDays: 8, runs: 1, totalDays: 8, achievements: ['first_blood'] });
-        expect(records.history[0]).toMatchObject({ days: 8, site: '枫谷超市' });
+        expect(records.history[0]).toMatchObject({ days: 8, site: '街角超市' });
 
         const next = newGame();
         carryOverAchievements(records, next.state, T0);

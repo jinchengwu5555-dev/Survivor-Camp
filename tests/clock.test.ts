@@ -108,3 +108,15 @@ describe('离线挂机收益', () => {
         expect(game.online(T0 + 4 * HOUR).offlineReward).toBeNull();
     });
 });
+
+describe('暂停', () => {
+    it('暂停时游戏时间不走，也不发离线收益；继续后正常走', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 1);
+        game.setPaused(true, T0);
+        const t = game.now;
+        expect(game.online(T0 + 5_000).now).toBe(t);
+        expect(game.online(T0 + 3 * 3600_000).offlineReward).toBeNull();
+        game.setPaused(false, T0 + 3 * 3600_000);
+        expect(game.online(T0 + 3 * 3600_000 + 1000).now).toBeGreaterThan(t);
+    });
+});

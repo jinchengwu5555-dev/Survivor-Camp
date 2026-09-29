@@ -1,5 +1,5 @@
 [
-    { "id": "ethan", "name": "伊森", "title": "副警长", "specialty": "leader", "traits": ["正直", "坚毅"], "talents": ["leadership", "tough"], "isHero": true, "battleUnit": "ethan", "bio": "枫谷镇副警长。尸潮爆发那天，女儿莉莉在镇外的夏令营，从此下落不明。" },
+    { "id": "ethan", "name": "伊森", "title": "副警长", "specialty": "leader", "traits": ["正直", "坚毅"], "talents": ["leadership", "tough"], "isHero": true, "battleUnit": "ethan", "bio": "镇上的副警长。尸潮爆发那天，女儿莉莉在镇外的夏令营，从此下落不明。" },
     { "id": "martha", "name": "玛莎", "title": "超市老板娘", "specialty": "cook", "traits": ["热心肠", "嘴硬"], "talents": ["chef", "optimist"], "isHero": true, "battleUnit": "martha", "bio": "六十岁，超市是她一辈子的心血，死也不肯离开。" },
     { "id": "derek", "name": "德里克", "title": "汽修工", "specialty": "mechanic", "traits": ["暴躁", "讲义气"], "talents": ["tinkerer", "brawler"], "isHero": true, "battleUnit": "derek", "bio": "他的弟弟在第一夜被咬了，他一直没告诉大家……" },
     { "id": "sophie", "name": "苏菲", "title": "护理系学生", "specialty": "medic", "traits": ["胆小", "善良"], "talents": ["healer", "quick_healer"], "isHero": true, "battleUnit": "sophie", "bio": "以前连血都不敢看，现在是营地唯一懂医术的人。" },

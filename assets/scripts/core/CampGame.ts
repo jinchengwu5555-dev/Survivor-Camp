@@ -50,6 +50,17 @@ export class CampGame {
         return game;
     }
 
+    /** 暂停 / 继续：暂停时游戏时间不走（界面的设置菜单用） */
+    setPaused(paused: boolean, realNow: number): void {
+        this.state.clock.paused = paused;
+        this.state.clock.lastRealAt = realNow;
+        this.state.clock.maxRealAt = Math.max(this.state.clock.maxRealAt, realNow);
+    }
+
+    get paused(): boolean {
+        return !!this.state.clock.paused;
+    }
+
     /** 当前游戏时间：界面上的倒计时、各种操作都用它，不要用 Date.now() */
     get now(): number {
         return this.state.clock.gameTime;
