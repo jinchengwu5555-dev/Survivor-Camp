@@ -11,9 +11,30 @@ import { isOnExpedition } from './combat';
 import { changeMood } from './mood';
 import { nextRandom, pickOne } from './rng';
 import { survivorName } from './roster';
+import { seasonAt } from './seasons';
+import { townName } from './names';
 import { ChatterDialogueDef, ChatterEntry, GameConfig, GameState } from './types';
 
 const MAX_RECENT = 12;
+
+const generated = new WeakMap<GameConfig, ChatterDialogueDef[]>();
+
+/** 全部对话：手写的 + 日常寒暄（开场白 × 回答两两组合） */
+export function allDialogues(config: GameConfig): ChatterDialogueDef[] {
+    let list = generated.get(config);
+    if (!list) {
+        list = [...(config.chatter?.dialogues ?? [])];
+        for (const t of config.smalltalk?.topics ?? []) {
+            t.openers.forEach((o, i) =>
+                t.replies.forEach((r, j) =>
+                    list!.push({ id: `st_${t.id}_${i}_${j}`, who: ['any', 'any'], kind: t.kind, season: t.season, lines: [[0, o], [1, r]] }),
+                ),
+            );
+        }
+        generated.set(config, list);
+    }
+    return list;
+}
 
 /** 在营地里、能聊天的人 */
 function present(state: GameState): string[] {
@@ -53,8 +74,10 @@ function castDialogue(state: GameState, d: ChatterDialogueDef, here: string[]): 
 export function availableDialogues(config: GameConfig, state: GameState, now: number): ChatterDialogueDef[] {
     const here = present(state);
     const seen = new Set(state.chatterSeen ?? []);
-    return (config.chatter?.dialogues ?? []).filter((d) => {
+    const season = seasonAt(config, state, now).season.id;
+    return allDialogues(config).filter((d) => {
         if (seen.has(d.id) || !conditionMet(config, state, d.conditions, now)) return false;
+        if (d.season && d.season !== season) return false;
         const named = d.who.filter((r) => r !== 'any');
         const need = d.who.length + (d.about ? 1 : 0);
         return named.every((id) => here.includes(id)) && here.length >= need;
@@ -69,12 +92,19 @@ export function chat(config: GameConfig, state: GameState, now: number): Chatter
         state.chatterSeen = [];
         pool = availableDialogues(config, state, now);
     }
-    const d = pickOne(state, pool);
+    // 手写的对话比寒暄更有料：两边都有的时候，一多半的机会先挑手写的
+    const written = pool.filter((x) => !x.id.startsWith('st_'));
+    const small = pool.filter((x) => x.id.startsWith('st_'));
+    const d = pickOne(state, written.length && (!small.length || nextRandom(state) < 0.55) ? written : small);
     if (!d) return null;
     const cast = castDialogue(state, d, present(state));
     if (!cast) return null;
     const name = (id: string) => survivorName(config, state, id);
-    const fill = (text: string) => (cast.about ? text.split('{x}').join(name(cast.about)) : text);
+    const fill = (text: string) => {
+        let t = cast.about ? text.split('{x}').join(name(cast.about)) : text;
+        t = t.split('{a}').join(name(cast.speakers[0])).split('{b}').join(name(cast.speakers[1] ?? cast.speakers[0]));
+        return t.split('{town}').join(townName(state));
+    };
     const entry: ChatterEntry = {
         at: now,
         id: d.id,

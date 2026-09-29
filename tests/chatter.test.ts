@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { availableDialogues, chat } from '../assets/scripts/core/chatter';
+import { allDialogues, availableDialogues, chat } from '../assets/scripts/core/chatter';
+import { seasonAt } from '../assets/scripts/core/seasons';
 import { loadConfig, MIN, T0 } from './helpers';
 
 function newGame() {
@@ -12,8 +13,23 @@ function newGame() {
 }
 
 describe('营地闲聊', () => {
-    it('台词足够多（至少 100 段）', () => {
-        expect(loadConfig().chatter!.dialogues.length).toBeGreaterThanOrEqual(100);
+    it('台词足够多：手写至少 180 段，加上寒暄组合超过 450 段', () => {
+        const config = loadConfig();
+        expect(config.chatter!.dialogues.length).toBeGreaterThanOrEqual(180);
+        expect(allDialogues(config).length).toBeGreaterThan(450);
+    });
+
+    it('寒暄：{a}{b}换成说话人的名字，季节话题只在那个季节出现', () => {
+        const game = newGame();
+        const { config, state } = game;
+        const season = seasonAt(config, state, T0).season.id;
+        const pool = availableDialogues(config, state, T0);
+        expect(pool.some((d) => d.id.startsWith('st_morning'))).toBe(true);
+        for (const d of pool) if (d.season) expect(d.season).toBe(season);
+        for (let i = 0; i < 60; i++) {
+            const c = chat(config, state, T0)!;
+            for (const l of c.lines) expect(l.text).not.toMatch(/\{[abx]\}|\{town\}/);
+        }
     });
 
     it('能说的对话全部说完之前不会重复；说话的人都在营地、互不相同；{x} 换成了名字', () => {

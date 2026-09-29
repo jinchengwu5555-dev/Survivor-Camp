@@ -486,6 +486,8 @@ export interface GameConfig {
     scouting: ScoutingConfig;
     /** 营地闲聊（老配置没有） */
     chatter?: ChatterConfig;
+    /** 日常寒暄：开场白 × 回答自动组合（老配置没有） */
+    smalltalk?: SmalltalkConfig;
     /** 镇地图分区（老配置没有） */
     districts?: DistrictsConfig;
     /** 交通工具（老配置没有） */
@@ -1014,6 +1016,12 @@ export interface ChatterDialogueDef {
     /** [说话人在 who 里的序号, 台词] */
     lines: [number, string][];
     conditions?: Condition;
+    /** 只在这个季节说 */
+    season?: string;
+}
+
+export interface SmalltalkConfig {
+    topics: { id: string; kind: ChatterKind; season?: string; openers: string[]; replies: string[] }[];
 }
 
 export interface ChatterConfig {

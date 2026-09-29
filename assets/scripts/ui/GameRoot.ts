@@ -54,6 +54,7 @@ import { traderPresent } from '../core/trader';
 import { combatMultiplier, sleepFactor, talentsOf, workMultiplier } from '../core/talents';
 import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearStatsText } from '../core/gear';
 import { campStats } from '../core/campStats';
+import { allDialogues } from '../core/chatter';
 import { moodFactors, moodTier } from '../core/mood';
 import { districtName, locationName, objectiveText, townName } from '../core/names';
 import { candidateInfo, quirksOf } from '../core/recruits';
@@ -1042,7 +1043,7 @@ export class GameRoot extends Component {
         const chats = [...(camp.state.chatter ?? [])].reverse();
         if (chats.length) {
             this.gap(8);
-            this.text(`💬 营地里的闲聊（已听过 ${camp.state.chatterSeen?.length ?? 0}/${camp.config.chatter?.dialogues.length ?? 0} 段）`, 22, ACCENT);
+            this.text(`💬 营地里的闲聊（已听过 ${camp.state.chatterSeen?.length ?? 0}/${allDialogues(camp.config).length} 段）`, 22, ACCENT);
             for (const c of chats) {
                 for (const l of c.lines) this.text(`${survivorName(camp.config, camp.state, l.who)}：${l.text}`, 18, TEXT);
                 this.gap(8);
