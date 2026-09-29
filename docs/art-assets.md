@@ -118,6 +118,8 @@
 | `zombie_brute.png` | 尸群首领（Boss） | 暗红 `#8a3a3a` | 体型是普通丧尸两倍的SD 丧尸首领，肌肉发达，暗红色皮肤，眼睛发红光，穿破烂的屠夫围裙，拳头巨大，气势很足，全身，身体朝左，纯白背景 | chibi zombie boss twice the size of normal zombies, muscular, dark red skin, glowing red eyes, torn butcher's apron, huge fists, imposing, full body, facing left, plain white background |
 | `zombie_frenzied.png` | 狂暴感染者 | 红 `#b04040` | 瘦小敏捷的SD 感染者，皮肤泛红，龇牙咧嘴，四肢着地、半蹲准备扑过来，身边有红色的速度线，全身，身体朝左，纯白背景 | small agile chibi infected, reddish skin, teeth bared, crouched on all fours ready to pounce, red speed lines around it, full body, facing left, plain white background |
 | `enemy_wild_dog.png` | 野狗（变异动物） | 棕 `#8a6a4a` | 一只瘦骨嶙峋的野狗，棕色杂毛，龇着牙、压低身子准备扑咬，眼神凶狠但不血腥，SD 比例，全身，身体朝左，纯白背景 | a scrawny feral dog, patchy brown fur, teeth bared, crouched low ready to lunge, fierce but not gory, SD proportions, full body, facing left, plain white background |
+| `enemy_raider.png` | 掠夺者（活人敌人） | 红褐 `#8a4a3a` | 一个凶悍的掠夺者，剃光头、脸上涂着黑色油彩，穿着钉了铁片的皮背心，手里拎着缠铁丝的球棒，SD 比例，全身，身体朝左，纯白背景 | a fierce raider, shaved head, black face paint, leather vest studded with scrap metal, holding a barbed-wire bat, SD proportions, full body, facing left, plain white background |
+| `enemy_raider_gunner.png` | 掠夺者枪手（活人敌人） | 深褐 `#6a3a2a` | 一个戴黑色面罩的掠夺者，破旧的皮夹克上挂着子弹带，端着一把旧猎枪瞄准，姿态危险，SD 比例，全身，身体朝左，纯白背景 | a masked raider in a worn leather jacket with an ammo belt, aiming an old hunting rifle, menacing stance, SD proportions, full body, facing left, plain white background |
 
 ### 2.2 事件头像 → `sprites/portraits/`
 

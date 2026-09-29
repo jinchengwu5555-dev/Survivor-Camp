@@ -1,6 +1,6 @@
 // 配置表检查：改完 JSON 后跑 `npm test`，写错的 id、引用不存在的事件等都会被报出来。
 
-import { Effect, GameConfig, Objective, PropDrop, RESOURCE_IDS, ResourceBag } from './types';
+import { Effect, GameConfig, GEAR_SLOTS, Objective, PropDrop, RESOURCE_IDS, ResourceBag } from './types';
 import { BattleRegistry } from './battle/registry';
 import { UnitSetup } from './battle/Battle';
 import { BARRICADE_UNIT, DOG_UNIT } from './combat';
@@ -76,6 +76,7 @@ export function validateConfig(config: GameConfig): string[] {
                 break;
             case 'removeSurvivor':
             case 'injure':
+            case 'fall':
                 checkSurvivor(where, e.survivor, ['random']);
                 break;
             case 'heal':
@@ -251,7 +252,14 @@ export function validateConfig(config: GameConfig): string[] {
     for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
     for (const p of config.props) {
         const where = `道具 ${p.id}`;
-        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        if (p.type === 'gear') {
+            if (!p.slot || !GEAR_SLOTS.includes(p.slot)) errors.push(`${where}：装备要写 slot（weapon / armor / tool）`);
+            const g = p.gear;
+            if (!g || !(g.atk || g.hp || g.work || g.scout)) errors.push(`${where}：装备要写 gear 属性`);
+            if (g?.work?.building && !config.buildings.some((b) => b.id === g.work!.building)) errors.push(`${where}：未知建筑 ${g.work.building}`);
+            if (p.craft) checkBag(where, p.craft.cost);
+        }
         checkBag(where, p.reward);
         if (p.type === 'resource' && !p.reward) errors.push(`${where}：资源箱要写 reward`);
         if (p.type === 'speedup' && !(p.minutes && p.minutes > 0)) errors.push(`${where}：加速道具要写 minutes`);

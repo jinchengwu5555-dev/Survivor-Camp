@@ -27,8 +27,28 @@ const PRODUCERS = ['kitchen', 'scrapyard', 'infirmary'];
 
 const lootValue = (bag: Partial<Record<string, number>>) => Object.values(bag).reduce((sum: number, n) => sum + (n ?? 0), 0);
 
+/** 打输过的地点：记下当时训练场的等级，训练场没升级之前不再去送死 */
+const lostAtTraining = new WeakMap<CampGame, Map<string, number>>();
+
 function session(game: CampGame, now: number): void {
     const { config, state } = game;
+    const lost = lostAtTraining.get(game) ?? new Map<string, number>();
+    lostAtTraining.set(game, lost);
+    const training = state.buildings.training?.level ?? 0;
+    for (const r of state.reports) {
+        if (r.kind === 'expedition' && r.result === 'lose' && !lost.has(`${r.title}@${r.at}`)) {
+            lost.set(`${r.title}@${r.at}`, 0);
+            lost.set(r.title, training);
+        }
+    }
+    // 背包里的装备：给还空着这个位置的人穿上
+    for (const def of config.props) {
+        if (def.type !== 'gear' || !def.slot) continue;
+        for (const s of state.survivors) {
+            if ((state.props?.[def.id] ?? 0) <= 0) break;
+            if (!s.gear?.[def.slot]) game.equip(s.id, def.id, now);
+        }
+    }
     // 捡掉营地附近的东西、领每日目标
     for (const p of activePickups(state, now)) game.collectPickup(p.id, now);
     for (const t of state.daily?.tasks ?? []) game.claimDaily(t.id, now);
@@ -66,7 +86,7 @@ function session(game: CampGame, now: number): void {
     }
     const squad = suggestSquad(config, state).filter((id) => !state.survivors.find((x) => x.id === id)?.assignment);
     if (state.expeditions.length === 0 && squad.length >= 2) {
-        const locs = availableLocations(config, state, now);
+        const locs = availableLocations(config, state, now).filter((l) => !lost.has(l.name) || training > lost.get(l.name)!);
         const lastResult = (id: string) => [...state.reports].reverse().find((r) => r.kind === 'expedition' && r.title === config.locations.find((l) => l.id === id)?.name)?.result;
         const fresh = locs.find((l) => !state.flags.includes(clearedFlag(l.id)) && lastResult(l.id) !== 'lose');
         const farm = locs.filter((l) => lastResult(l.id) === 'win').sort((a, b) => lootValue(b.loot) - lootValue(a.loot))[0];

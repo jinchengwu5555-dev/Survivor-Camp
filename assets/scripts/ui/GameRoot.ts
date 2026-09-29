@@ -35,7 +35,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { BattleReport, BuildingDef, BuildingLevelDef, GameConfig, RESOURCE_IDS, ResourceBag } from '../core/types';
+import { BattleReport, BuildingDef, BuildingLevelDef, GameConfig, GEAR_SLOTS, RESOURCE_IDS, ResourceBag, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo } from '../core/roster';
@@ -50,12 +50,15 @@ import { activePickups, pickupKind } from '../core/pickups';
 import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
-import { combatMultiplier, talentsOf, workMultiplier } from '../core/talents';
+import { combatMultiplier, sleepFactor, talentsOf, workMultiplier } from '../core/talents';
+import { craftableGear, forgeBlocker, GEAR_SLOT_NAMES, gearInBag, gearOf, gearStatsText } from '../core/gear';
+import { campStats } from '../core/campStats';
+import { planWatch, raidChanceTonight, WATCH_MODE_NAMES, watchersNeeded, watchersText } from '../core/watch';
 import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
 import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup } from '../core/badges';
-import { formatProps, propBlocker, propCount, propReward } from '../core/props';
+import { formatProps, propBlocker, propCount, propDef, propReward } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
@@ -67,7 +70,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.2 事件多选项+结果卡';
+const GAME_VERSION = 'v1.3 装备+守夜+数值';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -146,7 +149,7 @@ const SPECIALTY_NAMES: Record<string, string> = {
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | 'trader' | 'props' | null;
+type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -585,6 +588,20 @@ export class GameRoot extends Component {
         line(this.resourceLine(config, camp, now), 20, TEXT, 570);
         line(`士气 ${Math.round(morale(state))}  安全 ${safety(config, state)}  人数 ${state.survivors.length}/${bedCount(config, state)}  战斗 Lv${survivorBattleLevel(config, state)}  🏆${this.records.bestDays} 天`, 18, DIM, 538);
 
+        // 右下角：全部数值
+        const statsBtn = makeNode('Stats', bar, 110, 34);
+        statsBtn.setPosition(WIDTH / 2 - 55, 538 - centerY);
+        drawPanel(statsBtn.addComponent(Graphics), 110, 34, this.sheet === 'stats' ? COLORS.highlight : COLORS.button, 8, ACCENT, 2);
+        addLabel(statsBtn, '📊 数值', 18, TEXT, { width: 104 });
+        statsBtn.on(Node.EventType.TOUCH_END, () => {
+            if (this.eventShowing(camp)) return;
+            punch(statsBtn);
+            this.tab = 'camp';
+            this.sheet = this.sheet === 'stats' ? null : 'stats';
+            this.resetScroll();
+            this.render();
+        });
+
         // 右上角：背包
         const totalProps = Object.values(state.props ?? {}).reduce((sum, n) => sum + n, 0);
         const bag = makeNode('Bag', bar, 120, 46);
@@ -939,6 +956,8 @@ export class GameRoot extends Component {
             } else if (this.sheet === 'props') {
                 this.renderProps(camp, now);
                 camp.markSeen('props');
+            } else if (this.sheet === 'stats') {
+                this.renderCampStats(camp, now);
             } else {
                 this.renderSites(camp, now);
                 camp.markSeen('sites');
@@ -955,6 +974,23 @@ export class GameRoot extends Component {
         if (this.toast && Date.now() < this.toastUntil) this.banner(this.toast, COLORS.panelLight);
     }
 
+    /** 营地数值总览（HUD 右下角“📊 数值”） */
+    private renderCampStats(camp: CampGame, now: number): void {
+        this.text('📊 营地数值', 28, ACCENT);
+        for (const group of campStats(camp.config, camp.state, now)) {
+            this.gap(8);
+            this.text(group.title, 22, ACCENT);
+            for (const row of group.rows) {
+                const top = this.cursorY;
+                const node = makeNode('StatRow', this.content!, WIDTH, 32);
+                node.setPosition(0, top - 16);
+                addLabel(node, row.label, 20, DIM, { width: WIDTH / 2 - 10, align: 'left' }).node.setPosition(-WIDTH / 4, 0);
+                addLabel(node, row.value, 20, row.warn ? LOSE : TEXT, { width: WIDTH / 2 + 60, align: 'right' }).node.setPosition(WIDTH / 4 - 30, 0);
+                this.cursorY = top - 34;
+            }
+        }
+    }
+
     /** 背包：每种道具一行，写清楚效果，点“使用” */
     private renderProps(camp: CampGame, now: number): void {
         const { config, state } = camp;
@@ -969,8 +1005,19 @@ export class GameRoot extends Component {
             let effect = def.description;
             if (def.type === 'resource') effect = `打开得到 ${formatBag(config, propReward(config, state, def))}`;
             if (def.type === 'speedup') effect = `正在升级的建筑加速 ${formatTime(realSeconds(config, (def.minutes ?? 0) * 60_000))}（在线时间）`;
+            if (def.type === 'gear') effect = `${GEAR_SLOT_NAMES[def.slot!]}：${gearStatsText(config, def)}。${def.description}`;
             this.text(`${def.icon} ${def.name} ×${count}   ${effect}`, 22);
             const half = (WIDTH - 10) / 2;
+            if (def.type === 'gear') {
+                this.button('去幸存者档案里给人穿上', half, () => {
+                    this.sheet = null;
+                    this.tab = 'survivors';
+                    this.resetScroll();
+                    this.render();
+                }, LEFT, 'normal', 22, 48);
+                this.gap(12);
+                continue;
+            }
             this.button(blocker ? `使用（${blocker}）` : '使用', half, () => {
                 const res = camp.useProp(def.id, camp.now);
                 if (res.ok) this.effect(`${def.icon} ${res.message ?? def.name}`, WIN, 28);
@@ -1325,6 +1372,20 @@ export class GameRoot extends Component {
             }, LEFT, blocker !== null ? 'disabled' : 'normal');
             this.gap(10);
         }
+        // 打造装备：做好放进背包，到幸存者档案里给人穿上
+        this.gap(10);
+        this.text('—— 打造装备（做好放进背包，到幸存者档案里穿上）——', 22, DIM);
+        for (const def of craftableGear(config)) {
+            this.text(`${def.icon}${def.name} ×${propCount(state, def.id)}  ${GEAR_SLOT_NAMES[def.slot!]}：${gearStatsText(config, def)}`, 22);
+            const blocker = forgeBlocker(config, state, def.id);
+            this.button(`打造 ${formatCost(config, def.craft!.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
+                const res = camp.forge(def.id, camp.now);
+                if (res.ok) this.effect(`${def.icon} 打造了${def.name}`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, blocker !== null ? 'disabled' : 'normal');
+            this.gap(10);
+        }
     }
 
     private renderAchievements(camp: CampGame, now: number): void {
@@ -1361,8 +1422,17 @@ export class GameRoot extends Component {
             this.render();
         }, LEFT, idle === 0 ? 'disabled' : this.isGuided('assign') ? 'highlight' : 'normal', 24, 56);
         this.gap(10);
+        // 今晚的守夜安排
+        const watchers = planWatch(config, state);
+        const needed = watchersNeeded(config, state);
+        this.text(
+            `🌙 今晚守夜（需要 ${needed} 人）：${watchersText(config, state, watchers)}${watchers.length < needed ? '  ⚠️人手不够' : ''}   尸潮概率 ${Math.round(raidChanceTonight(config, state, now) * 100)}%`,
+            20,
+            watchers.length < needed ? LOSE : DIM,
+        );
+        this.gap(6);
         const cardW = (WIDTH - 10) / 2;
-        const cardH = 118;
+        const cardH = 132;
         state.survivors.forEach((s, i) => {
             const col = i % 2;
             const row = Math.floor(i / 2);
@@ -1378,7 +1448,9 @@ export class GameRoot extends Component {
             addLabel(node, `${info?.title ?? ''} · ${SPECIALTY_NAMES[info?.specialty ?? ''] ?? ''}`, 16, DIM, { width: textW, align: 'left' }).node.setPosition(textX, 14);
             addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }).node.setPosition(textX, -12);
             const talents = talentsOf(config, state, s.id).map((t) => t.icon + t.name).join(' ');
-            addLabel(node, `😊${Math.round(s.mood)}  ${talents}`, 16, TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
+            const gear = gearOf(config, state, s.id).map((g) => g.icon).join('');
+            addLabel(node, `😊${Math.round(s.mood)} ${sleepText(s.sleep)}${watchers.includes(s.id) ? ' 🌙' : ''} ${gear}`, 16, (s.sleep ?? 100) < 50 ? LOSE : TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
+            addLabel(node, talents, 15, DIM, { width: textW, align: 'left' }).node.setPosition(textX, -58);
             node.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
                 punch(node);
@@ -1445,7 +1517,7 @@ export class GameRoot extends Component {
         const hw = WIDTH - 180;
         addLabel(head, `${info?.name ?? id}${info?.isHero ? ' ⭐' : ''}`, 34, ACCENT, { width: hw, align: 'left' }).node.setPosition(hx, 42);
         addLabel(head, `${info?.title ?? ''}   专长：${SPECIALTY_NAMES[info?.specialty ?? ''] ?? '—'}`, 20, TEXT, { width: hw, align: 'left' }).node.setPosition(hx, 6);
-        addLabel(head, `${this.survivorStatus(camp, id, now)}   😊 心情 ${Math.round(s.mood)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
+        addLabel(head, `${this.survivorStatus(camp, id, now)}   😊 心情 ${Math.round(s.mood)}   ${sleepText(s.sleep)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
         const unitId = info?.battleUnit;
         if (unitId && battleRegistry(config).hasUnit(unitId)) {
             const base = statsAtLevel(battleRegistry(config).unit(unitId), survivorBattleLevel(config, state));
@@ -1464,6 +1536,9 @@ export class GameRoot extends Component {
         this.text(`📖 ${info?.bio ?? ''}`, 20, DIM);
         this.gap(10);
 
+        this.renderGearSlots(camp, id);
+        this.renderWatchMode(camp, id);
+
         // 伤员：可以用药品治疗
         if (s.injured) {
             this.button(`💊 在医务室用药品治疗（${formatCost(config, config.balance.healCost)}）`, WIDTH, () => {
@@ -1477,7 +1552,7 @@ export class GameRoot extends Component {
 
         // 安排工作：每个有岗位的建筑一个按钮，写清楚他在这里的产量倍率
         const away = isOnExpedition(state, id);
-        this.text(away ? '—— 安排工作（人在外面，回来后才能安排）——' : '—— 安排工作（产量倍率 = 专长 × 天赋）——', 22, DIM);
+        this.text(away ? '—— 安排工作（人在外面，回来后才能安排）——' : '—— 安排工作（产量倍率 = 专长 × 天赋 × 装备 × 精力）——', 22, DIM);
         for (const def of config.buildings) {
             const slots = workerSlots(config, state, def.id);
             if (slots <= 0) continue;
@@ -1487,6 +1562,8 @@ export class GameRoot extends Component {
             const perks: string[] = [];
             if (survivorEfficiency(config, { ...s, injured: false }, def) > 1) perks.push('专长对口');
             for (const t of talents) if (t.effects.work && (!t.effects.work.building || t.effects.work.building === def.id)) perks.push(t.name);
+            for (const g of gearOf(config, state, id)) if (g.gear?.work && (!g.gear.work.building || g.gear.work.building === def.id)) perks.push(g.name);
+            if (sleepFactor(config, s) < 1) perks.push('太累了');
             const label = `${here ? '✅ ' : ''}${def.icon ?? ''} ${def.name}  ${workers}/${slots}  产量 ×${mult.toFixed(2)}${perks.length ? `（${perks.join('、')}）` : ''}`;
             const blocked = s.injured || away || (!here && workers >= slots);
             this.button(label, WIDTH, () => {
@@ -1501,6 +1578,55 @@ export class GameRoot extends Component {
             camp.assign(id, null, camp.now);
             this.render();
         }, LEFT, !s.assignment ? 'highlight' : 'normal', 22, 50);
+    }
+
+    /** 个人档案里的装备：三个位置，穿着的可以脱下，背包里同位置的装备可以换上 */
+    private renderGearSlots(camp: CampGame, id: string): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        this.text('🎒 装备（武器加攻击，护甲加生命，工具加干活 / 侦察）', 22, ACCENT);
+        for (const slot of GEAR_SLOTS) {
+            const worn = s.gear?.[slot] ? propDef(config, s.gear[slot]!) : undefined;
+            if (worn) {
+                this.button(`${GEAR_SLOT_NAMES[slot]}：${worn.icon}${worn.name}（${gearStatsText(config, worn)}）  点击脱下`, WIDTH, () => {
+                    camp.unequip(id, slot, camp.now);
+                    this.render();
+                }, LEFT, 'highlight', 20, 46);
+            } else {
+                this.text(`${GEAR_SLOT_NAMES[slot]}：空`, 20, DIM);
+            }
+            this.gap(4);
+            for (const def of gearInBag(config, state, slot)) {
+                this.button(`  ↳ 换上 ${def.icon}${def.name} ×${propCount(state, def.id)}（${gearStatsText(config, def)}）`, WIDTH, () => {
+                    const res = camp.equip(id, def.id, camp.now);
+                    if (res.ok) this.effect(`🎒 装备了${res.message}`, WIN);
+                    else this.showToast(res.reason);
+                    this.render();
+                }, LEFT, 'normal', 20, 42);
+                this.gap(4);
+            }
+        }
+        this.gap(8);
+    }
+
+    /** 个人档案里的守夜安排：轮班 / 固定守夜 / 不守夜 */
+    private renderWatchMode(camp: CampGame, id: string): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        const tonight = planWatch(config, state).includes(id);
+        this.text(`🌙 守夜安排（${sleepText(s.sleep)}${tonight ? '，今晚轮到他守夜' : ''}）`, 22, ACCENT);
+        this.text('守夜的人精力会下降，太累了干活、打仗都会变差。轮班最省心。', 18, DIM);
+        const top = this.cursorY;
+        const w = (WIDTH - 20) / 3;
+        (['auto', 'always', 'never'] as WatchMode[]).forEach((mode, i) => {
+            this.cursorY = top;
+            const current = (s.watch ?? 'auto') === mode;
+            this.button(`${current ? '✅ ' : ''}${WATCH_MODE_NAMES[mode]}`, w, () => {
+                camp.setWatch(id, mode, camp.now);
+                this.render();
+            }, LEFT + i * (w + 10), current ? 'highlight' : 'normal', 22, 48);
+        });
+        this.gap(14);
     }
 
     /** 探索页：枫谷镇地图（迷雾、道路、地点、在路上的小队、侦察点）+ 下方选中地点的详情 */
@@ -1871,6 +1997,12 @@ export class GameRoot extends Component {
     private gap(px: number): void {
         this.cursorY -= px;
     }
+}
+
+/** 精力：😴 越低越累 */
+function sleepText(sleep: number | undefined): string {
+    const v = Math.round(sleep ?? 100);
+    return `${v < 50 ? '🥱' : '⚡'} 精力 ${v}`;
 }
 
 function formatCost(config: GameConfig, cost: ResourceBag): string {

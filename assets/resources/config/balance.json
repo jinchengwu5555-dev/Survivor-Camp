@@ -19,6 +19,8 @@
     "healCost": { "medicine": 5 },
     "raidIntervalMinutes": 80,
     "firstRaidMinutes": 8,
+    "raidChance": { "base": 0.55, "perDay": 0.01, "max": 0.9 },
+    "nightWatch": { "survivorsPerWatcher": 4, "watchCost": 40, "restGain": 35, "tiredBelow": 50, "minFactor": 0.6, "understaffedWallFactor": 0.7 },
     "raidRepair": { "hpRatio": 0.2, "woodPerHp": 0.1, "minWood": 10, "maxUses": 3 },
     "maxDefenders": 5,
     "barricadeHpPerSafety": 30,
@@ -38,7 +40,7 @@
     "hardshipDeathMinutes": 160,
     "startingSite": "supermarket",
     "townMap": { "revealCamp": 200, "revealKnown": 110, "revealCleared": 170, "revealSite": 120 },
-    "startingProps": { "ration_s": 2, "wrench": 3, "coffee": 1, "mystery_box": 1 },
+    "startingProps": { "ration_s": 2, "wrench": 3, "coffee": 1, "mystery_box": 1, "bat": 1 },
     "relocation": { "carryRatio": 0.5, "foodPerSurvivor": 20, "cooldownDays": 3 },
     "hunterRanks": [
         { "name": "见习猎人", "xp": 0 },

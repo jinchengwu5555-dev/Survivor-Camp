@@ -26,5 +26,19 @@
             { "weight": 1, "prop": "flyer" },
             { "weight": 2, "resources": { "cans": 8 } }
         ]
-    }
+    },
+    { "id": "water", "name": "一箱瓶装水", "icon": "💧", "type": "resource", "reward": { "food": 45 }, "description": "干净的饮用水。省下煮水的柴火和食物，打开得到食物。" },
+    { "id": "gasoline", "name": "一桶汽油", "icon": "⛽", "type": "recall", "description": "给皮卡加满油，开车把在外探索的小队立刻接回来。" },
+    { "id": "bat", "name": "棒球棍", "icon": "🏏", "type": "gear", "slot": "weapon", "gear": { "atk": 1.12 }, "craft": { "workshopLevel": 1, "cost": { "wood": 30, "parts": 5 } }, "description": "缠了钉子的铝棒球棍。" },
+    { "id": "fire_axe", "name": "消防斧", "icon": "🪓", "type": "gear", "slot": "weapon", "gear": { "atk": 1.22 }, "craft": { "workshopLevel": 2, "cost": { "wood": 40, "parts": 25 } }, "description": "红色斧柄，劈门劈脑袋都好用。" },
+    { "id": "pistol", "name": "手枪", "icon": "🔫", "type": "gear", "slot": "weapon", "gear": { "atk": 1.3 }, "description": "警用配枪，子弹要省着用。" },
+    { "id": "shotgun", "name": "猎枪", "icon": "🎯", "type": "gear", "slot": "weapon", "gear": { "atk": 1.45 }, "description": "双管猎枪，一枪放倒一片。" },
+    { "id": "leather_jacket", "name": "皮夹克", "icon": "🧥", "type": "gear", "slot": "armor", "gear": { "hp": 1.12 }, "description": "厚牛皮，行尸咬不透。" },
+    { "id": "helmet", "name": "摩托头盔", "icon": "⛑️", "type": "gear", "slot": "armor", "gear": { "hp": 1.18 }, "craft": { "workshopLevel": 1, "cost": { "parts": 20, "wood": 10 } }, "description": "护住脑袋，比什么都重要。" },
+    { "id": "riot_vest", "name": "防暴背心", "icon": "🦺", "type": "gear", "slot": "armor", "gear": { "hp": 1.35 }, "description": "军警用的防护背心，还有几块插板。" },
+    { "id": "crowbar", "name": "撬棍", "icon": "🪛", "type": "gear", "slot": "tool", "gear": { "work": { "building": "scrapyard", "mult": 1.2 }, "atk": 1.05 }, "craft": { "workshopLevel": 1, "cost": { "parts": 15 } }, "description": "拆车、撬门、敲脑袋。废料场产量 +20%。" },
+    { "id": "chef_knife", "name": "主厨刀", "icon": "🔪", "type": "gear", "slot": "tool", "gear": { "work": { "building": "kitchen", "mult": 1.2 } }, "description": "餐厅后厨的好刀。厨房产量 +20%。" },
+    { "id": "stethoscope", "name": "听诊器", "icon": "🩺", "type": "gear", "slot": "tool", "gear": { "work": { "building": "infirmary", "mult": 1.2 } }, "description": "医务室产量 +20%。" },
+    { "id": "work_gloves", "name": "劳保手套", "icon": "🧤", "type": "gear", "slot": "tool", "gear": { "work": { "mult": 1.08 } }, "craft": { "workshopLevel": 1, "cost": { "wood": 10, "parts": 5 } }, "description": "干什么活都顺手，产量 +8%。" },
+    { "id": "hiking_boots", "name": "登山靴", "icon": "🥾", "type": "gear", "slot": "tool", "gear": { "scout": 0.7 }, "description": "侦察来回快 30%。" }
 ]

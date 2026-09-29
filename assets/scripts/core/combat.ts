@@ -17,6 +17,7 @@ import { siteRaidLevel } from './siteMods';
 import { CarriedItem, consumeUsedItems, equipItems } from './crafting';
 import { formatProps, rollDrops } from './props';
 import { combatMultiplier } from './talents';
+import { passNight, rollRaid, watchersText } from './watch';
 import {
     ActionResult,
     BattleReport,
@@ -226,6 +227,7 @@ function battleOutcome(config: GameConfig, state: GameState, battle: Battle, car
         if (u.alive) continue;
         addStat(state, `kill_${u.def.id}`);
         if (u.def.faction === 'zombie') addStat(state, 'zombies_killed');
+        if (u.def.faction === 'raider') addStat(state, 'raiders_killed');
     }
     const fallen = battle.side('ally').filter((u) => !u.alive && u.tag).map((u) => u.tag!);
     return { result, fallen, itemsUsed: consumeUsedItems(state, battle, carried) };
@@ -382,10 +384,20 @@ export function maybeRunRaid(config: GameConfig, state: GameState, now: number, 
     if (state.pendingRaid || now < state.nextRaidAt) return;
     const at = state.nextRaidAt;
     state.nextRaidAt = now + config.balance.raidIntervalMinutes * 60_000;
+    // 过一夜：轮流守夜（见 watch.ts）
+    const { watchers, understaffed } = passNight(config, state, at);
     const raid = currentRaid(config, state, now);
     if (!raid) return;
-    if (live) state.pendingRaid = prepareRaid(config, state, raid, at);
-    else runRaid(config, state, raid, at);
+    if (!rollRaid(config, state, now)) {
+        addStat(state, 'quiet_nights');
+        addLog(state, at, `🌙 平静的一夜，没有尸潮。守夜的是${watchersText(config, state, watchers)}。`);
+        return;
+    }
+    state.lastNight!.raid = true;
+    const wallFactor = understaffed ? config.balance.nightWatch?.understaffedWallFactor ?? 1 : 1;
+    if (understaffed) addLog(state, at, '⚠️ 守夜人手不够，尸群摸到栅栏下才被发现！');
+    if (live) state.pendingRaid = prepareRaid(config, state, raid, at, wallFactor);
+    else runRaid(config, state, raid, at, wallFactor);
 }
 
 /**
@@ -399,22 +411,22 @@ export function scheduleFirstRaid(config: GameConfig, state: GameState, now: num
 }
 
 /** 自动结算一次尸潮（测试、数值模拟、离开界面时用） */
-export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): BattleReport {
-    const pending = prepareRaid(config, state, raid, at);
+export function runRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number, wallFactor = 1): BattleReport {
+    const pending = prepareRaid(config, state, raid, at, wallFactor);
     const battle = new Battle(battleRegistry(config), pending.setup);
     battle.runToEnd();
     return finishRaid(config, state, pending, battle);
 }
 
 /** 准备一次尸潮：选人、带物品、算加成、生成战斗参数。之后可以自动结算，也可以交给玩家亲手打 */
-export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number): PendingRaid {
+export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef, at: number, wallFactor = 1): PendingRaid {
     const defenders = squadOf(config, state, raidDefenders(config, state));
     const level = survivorBattleLevel(config, state);
     const bloodMoon = nextRaidIsBloodMoon(config, state);
     state.raidCount += 1;
     const enemyBonus = raidEnemyBonus(config, state, at);
     const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
-    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), level, randomSeed(state), options);
+    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
     const carried = equipItems(config, state, setup.allies).map((c) => ({ tag: c.tag, item: c.item.id }));
     const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
     return { raid: raid.id, at, title, bloodMoon, enemyBonus, setup, carried, repairs: 0 };

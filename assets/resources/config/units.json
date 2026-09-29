@@ -109,5 +109,7 @@
         "stats": { "maxHp": 130, "atk": 24, "def": 3, "moveSpeed": 2.6, "attackRange": 0.7, "attackInterval": 0.8, "critRate": 0.1, "critDamage": 1.5 },
         "growth": { "maxHp": 9, "atk": 1.4, "def": 0.3 },
         "skills": ["pack_bite"]
-    }
+    },
+    {"id": "raider", "name": "掠夺者", "faction": "raider", "appearance": {"sprite": "enemy_raider", "color": "#8a4a3a", "scale": 1}, "stats": {"maxHp": 300, "atk": 27, "def": 12, "moveSpeed": 1.1, "attackRange": 1, "attackInterval": 1.2, "critRate": 0.08, "critDamage": 1.5}, "growth": {"maxHp": 26, "atk": 2.3, "def": 1.4}, "skills": []},
+    {"id": "raider_gunner", "name": "掠夺者枪手", "faction": "raider", "appearance": {"sprite": "enemy_raider_gunner", "color": "#6a3a2a", "scale": 1}, "stats": {"maxHp": 200, "atk": 30, "def": 6, "moveSpeed": 0.9, "attackRange": 4, "attackInterval": 1.6, "critRate": 0.12, "critDamage": 1.6}, "growth": {"maxHp": 16, "atk": 2.6, "def": 0.6}, "skills": []}
 ]

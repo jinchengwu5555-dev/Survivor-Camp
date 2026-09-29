@@ -60,3 +60,23 @@ describe('选项提示和结果', () => {
         expect(r2.effectsText).toContain('汉克加入');
     });
 });
+
+describe('营救和被发现', () => {
+    it('求救信号是一段过程：冲进去 / 引开尸群之后还要把人带回家', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 3);
+        game.state.eventQueue = ['scout_signal'];
+        game.choose(1, T0);
+        expect(game.state.eventQueue[0]).toBe('rescue_escape');
+        const n = game.state.survivors.length;
+        game.choose(1, T0);
+        expect(game.state.survivors.length).toBe(n + 1);
+    });
+
+    it('营地变大（指挥部 6 级、第 8 天）才会被别的营地盯上，之后镇地图上多出两个营地', () => {
+        const config = loadConfig();
+        const noticed = config.events.find((e) => e.id === 'camp_noticed')!;
+        expect(noticed.conditions?.minHq).toBeGreaterThan(1);
+        const camps = config.locations.filter((l) => l.conditions?.flags?.includes('camp_noticed'));
+        expect(camps.map((l) => l.id).sort()).toEqual(['fallen_camp', 'raider_camp']);
+    });
+});

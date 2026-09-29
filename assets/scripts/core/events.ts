@@ -1,12 +1,13 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
-import { addResource, bedCount, canAfford, clampMood, pay } from './economy';
+import { addResource, bedCount, canAfford, clampMood, hqLevel, pay } from './economy';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
-import { addWanderer, checkGameOver, injureSurvivor, survivorInfo, survivorName as rosterName } from './roster';
+import { addWanderer, checkGameOver, injureSurvivor, resolveFallen, survivorInfo, survivorName as rosterName } from './roster';
 import { getSite } from './siteMods';
 import { addProp, formatProps } from './props';
+import { dropGear } from './gear';
 
 export function getEventDef(config: GameConfig, id: string): GameEventDef | undefined {
     return config.events.find((e) => e.id === id);
@@ -19,6 +20,7 @@ export function conditionMet(config: GameConfig, state: GameState, cond: Conditi
     if (cond.flags && !cond.flags.every((f) => hasFlag(state, f))) return false;
     if (cond.notFlags && cond.notFlags.some((f) => hasFlag(state, f))) return false;
     if (cond.hasSurvivors && !cond.hasSurvivors.every((id) => state.survivors.some((s) => s.id === id))) return false;
+    if (cond.minHq !== undefined && hqLevel(state) < cond.minHq) return false;
     return true;
 }
 
@@ -211,6 +213,8 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             const id = resolveSurvivor(config, state, effect.survivor);
             if (!id) break;
             const name = rosterName(config, state, id);
+            const leaving = state.survivors.find((s) => s.id === id);
+            if (leaving) dropGear(state, leaving);
             state.survivors = state.survivors.filter((s) => s.id !== id);
             for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
             addLog(state, now, `${name}离开了营地。`);
@@ -223,6 +227,12 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             if (!s) break;
             injureSurvivor(config, state, s, now);
             addLog(state, now, `${rosterName(config, state, s.id)}受了重伤。`);
+            break;
+        }
+        case 'fall': {
+            // 在危险里倒下：按死亡概率要么牺牲、要么重伤（新手保护期内不会死）
+            const id = resolveSurvivor(config, state, effect.survivor);
+            if (id) resolveFallen(config, state, [id], now, effect.cause ?? '在营救行动中牺牲了');
             break;
         }
         case 'heal':

@@ -41,8 +41,8 @@ export interface UnitAppearance {
 export interface UnitDef {
     id: string;
     name: string;
-    /** structure = 栅栏这类建筑：会挨打，但不会被队友治疗或加增益；beast = 野狗这类变异动物（不算丧尸击杀） */
-    faction: 'survivor' | 'zombie' | 'structure' | 'beast';
+    /** structure = 栅栏这类建筑：会挨打，但不会被队友治疗或加增益；beast = 野狗这类变异动物（不算丧尸击杀）；raider = 掠夺者（活人） */
+    faction: 'survivor' | 'zombie' | 'structure' | 'beast' | 'raider';
     appearance: UnitAppearance;
     stats: UnitStats;
     /** 每升一级增加的数值 */

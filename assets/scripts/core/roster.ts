@@ -1,5 +1,6 @@
 // 营地人员：幸存者资料（有名有姓的角色 + 随机流浪者）、流浪者加入、战死与营地覆灭。
 
+import { dropGear } from './gear';
 import { bedCount } from './economy';
 import { nextRandom, pickOne } from './rng';
 import { siteDeathChance, siteInjuryRecovery } from './siteMods';
@@ -98,6 +99,7 @@ export function killSurvivor(config: GameConfig, state: GameState, id: string, n
     const s = state.survivors.find((x) => x.id === id);
     if (!s) return null;
     const name = survivorName(config, state, id);
+    dropGear(state, s);
     state.survivors = state.survivors.filter((x) => x.id !== id);
     for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
     setFlag(state, `dead_${id}`);

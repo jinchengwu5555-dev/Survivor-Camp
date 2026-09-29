@@ -1,6 +1,8 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, ResourceBag } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, GameEventDef, GameState, GearSlot, ResourceBag, WatchMode } from './types';
+import { equipGear, forgeGear, unequipGear } from './gear';
+import { setWatchMode } from './watch';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -198,6 +200,25 @@ export class CampGame {
 
     craft(itemId: string, now: number): ActionResult {
         return this.act(now, () => craftItem(this.config, this.state, itemId, now));
+    }
+
+    /** 给某人穿上背包里的装备（同位置的旧装备放回背包） */
+    equip(survivorId: string, propId: string, now: number): ActionResult {
+        return this.act(now, () => equipGear(this.config, this.state, survivorId, propId));
+    }
+
+    unequip(survivorId: string, slot: GearSlot, now: number): ActionResult {
+        return this.act(now, () => unequipGear(this.state, survivorId, slot));
+    }
+
+    /** 工坊打造装备 */
+    forge(propId: string, now: number): ActionResult {
+        return this.act(now, () => forgeGear(this.config, this.state, propId, now));
+    }
+
+    /** 守夜安排：轮班 / 固定守夜 / 不守夜 */
+    setWatch(survivorId: string, mode: WatchMode, now: number): ActionResult {
+        return this.act(now, () => (setWatchMode(this.state, survivorId, mode) ? { ok: true } : { ok: false, reason: '没有这个人' }));
     }
 
     acceptBounty(bountyId: string, now: number): ActionResult {

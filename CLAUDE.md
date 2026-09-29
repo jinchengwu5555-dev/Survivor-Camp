@@ -16,6 +16,7 @@
 - 探索页是枫谷镇地图（`core/townMap.ts` + `ui/GameRoot.ts` 的 `renderExplore`）：新地点要在 `locations.json` 写 `map` 坐标和 `icon`（validate 会检查），前置关系靠条件里的 `cleared_xxx` 自动连成道路。侦察点在 `scouting.json` / `core/scouting.ts`。
 - 背包道具在 `props.json` + `core/props.ts`，各处掉落统一写成 `drops` 掉落表（`rollDrops`）；新增道具类型时同步 `PropType`、`useProp`、`validate.ts` 和 README 的道具表。
 - 天赋在 `talents.json` + `core/talents.ts`（产量、战斗、伤愈、侦察、心情），新增效果时同步 `TalentDef` 和 `validate.ts`。随机事件至少 3 个有取舍的选项；选项提示由 `choiceHints()` 自动算，选完的得失由 `resolveChoice` 的 `effectsText` 给出，不要手写。
+- 装备是 `type: "gear"` 的背包道具（`core/gear.ts`），各人倍率统一走 `talents.ts` 的 `workMultiplier` / `combatMultiplier` / `scoutMultiplier`（天赋 × 装备 × 精力），不要在别处另乘。守夜轮班和“今晚有没有尸潮”在 `core/watch.ts`；营地数值面板读 `core/campStats.ts`。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。

@@ -5,8 +5,18 @@
 //   scout        侦察来回时间倍率
 //   moodRecovery 心情恢复速度倍率
 // 天赋定义在 talents.json。
+// 这里的 work / combat / scout 倍率是“这个人”的总倍率：天赋 × 装备（gear.ts）× 精力（守夜太累会打折扣，watch.ts）。
 
-import { GameConfig, GameState, TalentDef } from './types';
+import { gearCombat, gearScout, gearWork } from './gear';
+import { GameConfig, GameState, SurvivorState, TalentDef } from './types';
+
+/** 精力的影响：精力不低于 tiredBelow 时没影响，越低越差，精力 0 时只剩 minFactor */
+export function sleepFactor(config: GameConfig, s: SurvivorState | undefined): number {
+    const cfg = config.balance.nightWatch;
+    const sleep = s?.sleep ?? 100;
+    if (!cfg || sleep >= cfg.tiredBelow) return 1;
+    return cfg.minFactor + ((1 - cfg.minFactor) * sleep) / cfg.tiredBelow;
+}
 
 export function talentDef(config: GameConfig, id: string): TalentDef | undefined {
     return config.talents.find((t) => t.id === id);
@@ -29,7 +39,8 @@ export function workMultiplier(config: GameConfig, state: GameState, survivorId:
         const w = t.effects.work;
         if (w && (!w.building || w.building === buildingId)) mult *= w.mult;
     }
-    return mult;
+    const s = state.survivors.find((x) => x.id === survivorId);
+    return mult * gearWork(config, state, survivorId, buildingId) * sleepFactor(config, s);
 }
 
 export function combatMultiplier(config: GameConfig, state: GameState, survivorId: string): { atk: number; hp: number } {
@@ -39,7 +50,9 @@ export function combatMultiplier(config: GameConfig, state: GameState, survivorI
         atk *= t.effects.combat?.atk ?? 1;
         hp *= t.effects.combat?.hp ?? 1;
     }
-    return { atk, hp };
+    const g = gearCombat(config, state, survivorId);
+    const tired = sleepFactor(config, state.survivors.find((x) => x.id === survivorId));
+    return { atk: atk * g.atk * tired, hp: hp * g.hp };
 }
 
 function product(config: GameConfig, state: GameState, survivorId: string, key: 'recovery' | 'scout' | 'moodRecovery'): number {
@@ -51,7 +64,7 @@ export function recoveryMultiplier(config: GameConfig, state: GameState, survivo
 }
 
 export function scoutMultiplier(config: GameConfig, state: GameState, survivorId: string): number {
-    return product(config, state, survivorId, 'scout');
+    return product(config, state, survivorId, 'scout') * gearScout(config, state, survivorId);
 }
 
 export function moodRecoveryMultiplier(config: GameConfig, state: GameState, survivorId: string): number {

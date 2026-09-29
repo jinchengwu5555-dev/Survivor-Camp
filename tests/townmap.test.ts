@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../assets/scripts/core/townMap';
-import { activeScoutSpots, isScouting, scoutKind } from '../assets/scripts/core/scouting';
+import { activeScoutSpots, isScouting, scoutKind, updateScoutSpots } from '../assets/scripts/core/scouting';
 import { idleSurvivors } from '../assets/scripts/core/workers';
 import { availableFighters } from '../assets/scripts/core/combat';
 import { loadConfig, MIN, T0 } from './helpers';
@@ -72,10 +72,10 @@ describe('侦察点', () => {
         expect(idleSurvivors(game.state).some((s) => s.id === who)).toBe(false);
         expect(availableFighters(game.config, game.state).some((s) => s.id === who)).toBe(false);
         expect(game.assign(who, 'kitchen', T0)).toEqual({ ok: false, reason: '正在外面侦察' });
-        const wood = game.state.resources.wood;
+        const food = game.state.resources.food;
         game.tick(T0 + (scoutKind(game.config, 'wreck')!.travelMinutes + 1) * MIN);
         expect(game.state.scouts).toHaveLength(0);
-        expect(game.state.resources.wood).toBeGreaterThan(wood);
+        expect(game.state.resources.food).toBeGreaterThan(food);
         expect(game.state.stats.scouts_done).toBe(1);
     });
 
@@ -93,5 +93,20 @@ describe('侦察点', () => {
         game.state.survivors.forEach((s) => (s.injured = true));
         expect(game.sendScout(902, T0)).toEqual({ ok: false, reason: '没有能派出去的人' });
         expect(game.sendScout(12345, T0)).toEqual({ ok: false, reason: '已经没了' });
+    });
+});
+
+describe('侦察点的出现时机', () => {
+    it('空投要到中后期才有；废弃的车里没有木材', () => {
+        const config = loadConfig();
+        const airdrop = config.scouting.kinds.find((k) => k.id === 'airdrop')!;
+        expect(airdrop.conditions?.minDay).toBeGreaterThanOrEqual(8);
+        const game = CampGame.newGame(config, T0, 5);
+        for (let i = 0; i < 30; i++) {
+            game.state.scoutSpots = [];
+            updateScoutSpots(config, game.state, T0 + i * 3 * 60 * MIN);
+            expect(game.state.scoutSpots.some((s) => s.kind === 'airdrop')).toBe(false);
+        }
+        expect(config.scouting.kinds.find((k) => k.id === 'wreck')!.reward.wood).toBeUndefined();
     });
 });

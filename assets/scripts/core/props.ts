@@ -72,6 +72,8 @@ export function propBlocker(config: GameConfig, state: GameState, id: string): s
             return state.expeditions.length > 0 ? null : '没有在外面的小队';
         case 'heal':
             return state.survivors.some((s) => s.injured) ? null : '没有伤员';
+        case 'gear':
+            return '装备要在幸存者档案里给人穿上';
         default:
             return null;
     }

@@ -101,6 +101,23 @@ export interface BalanceDef {
     startingSite: string;
     /** 镇地图的战争迷雾：营地、已解锁地点、已打下的地点、已发现的营地地点周围多大范围可见 */
     townMap: { revealCamp: number; revealKnown: number; revealCleared: number; revealSite: number };
+    /**
+     * 不是每晚都有尸潮：每晚来的概率 = base + perDay × 天数，最多 max。第一次尸潮必来。
+     */
+    raidChance?: { base: number; perDay: number; max: number };
+    /**
+     * 轮流守夜：每 survivorsPerWatcher 个人要 1 个人守夜（至少 1 个）。
+     * 守夜的人精力 -watchCost，其他人睡一觉 +restGain。精力低于 tiredBelow 时干活和攻击打折扣，精力 0 时只剩 minFactor。
+     * 守夜人手不够时，尸潮来了栅栏生命只有 understaffedWallFactor。
+     */
+    nightWatch?: {
+        survivorsPerWatcher: number;
+        watchCost: number;
+        restGain: number;
+        tiredBelow: number;
+        minFactor: number;
+        understaffedWallFactor: number;
+    };
     /** 开局送的背包道具 */
     startingProps?: Record<string, number>;
     /** 搬迁：只能带走 carryRatio 的物资，每人路上吃 foodPerSurvivor 食物，搬完后 cooldownDays 天内不能再搬 */
@@ -202,6 +219,8 @@ export type Effect =
     | { type: 'discoverSite'; site: string }
     | { type: 'removeSurvivor'; survivor: string | 'random' }
     | { type: 'injure'; survivor: string | 'random' }
+    /** 在危险里倒下：按死亡概率牺牲或重伤（新手保护期内只会受伤） */
+    | { type: 'fall'; survivor: string | 'random'; cause?: string }
     | { type: 'heal'; survivor: string | 'all' }
     | { type: 'flag'; flag: string }
     | { type: 'triggerEvent'; event: string }
@@ -219,6 +238,8 @@ export interface Condition {
     notFlags?: string[];
     /** 这些幸存者必须在营地里 */
     hasSurvivors?: string[];
+    /** 指挥部至少几级（营地变大了才会发生的事） */
+    minHq?: number;
 }
 
 export interface EventOutcomeDef {
@@ -486,8 +507,22 @@ export interface PickupConfig {
  *   heal      治好所有伤员
  *   recruit   招来一个流浪者（需要空床位）
  *   chest     从 contents 里随机开出一样（道具或资源）
+ *   gear      装备：在幸存者档案里穿戴（slot + gear 属性），不能直接“使用”
  */
-export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest';
+export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear';
+
+export type GearSlot = 'weapon' | 'armor' | 'tool';
+export const GEAR_SLOTS: GearSlot[] = ['weapon', 'armor', 'tool'];
+
+/** 装备属性：都是倍率 */
+export interface GearStats {
+    atk?: number;
+    hp?: number;
+    /** 干活产量（可以限定建筑） */
+    work?: { building?: string; mult: number };
+    /** 侦察来回时间 */
+    scout?: number;
+}
 
 export interface PropDef {
     id: string;
@@ -499,6 +534,11 @@ export interface PropDef {
     minutes?: number;
     amount?: number;
     contents?: { weight: number; prop?: string; amount?: number; resources?: ResourceBag }[];
+    /** type = gear 时：装在哪个位置、有什么属性 */
+    slot?: GearSlot;
+    gear?: GearStats;
+    /** type = gear 时：工坊能不能打造（需要的工坊等级和资源） */
+    craft?: { workshopLevel: number; cost: ResourceBag };
 }
 
 /** 天赋（talents.json），见 core/talents.ts */
@@ -532,6 +572,8 @@ export interface ScoutKindDef {
     /** 到了以后触发的事件 */
     event?: string;
     text: string;
+    /** 满足条件才会刷出来（比如空投要到中后期） */
+    conditions?: Condition;
 }
 
 export interface ScoutingConfig {
@@ -625,7 +667,15 @@ export interface SurvivorState {
     recoverAt: number | null;
     /** 分配到的建筑 id；null = 空闲 */
     assignment: string | null;
+    /** 身上的装备（道具 id） */
+    gear?: Partial<Record<GearSlot, string>>;
+    /** 精力 0～100（没有 = 100）：守夜会累，睡一晚恢复。太累时干活、打仗都打折扣 */
+    sleep?: number;
+    /** 守夜安排：auto 轮班（默认）/ always 固定守夜 / never 不守夜 */
+    watch?: WatchMode;
 }
+
+export type WatchMode = 'auto' | 'always' | 'never';
 
 export interface LogEntry {
     at: number;
@@ -721,6 +771,16 @@ export interface GameState {
     props?: Record<string, number>;
     /** 界面红点：已经看过的新内容（见 core/badges.ts） */
     seen?: SeenState;
+    /** 上一晚的守夜情况（见 core/watch.ts） */
+    lastNight?: NightState;
+}
+
+export interface NightState {
+    at: number;
+    watchers: string[];
+    needed: number;
+    /** 这一晚有没有尸潮 */
+    raid: boolean;
 }
 
 export interface ScoutSpotState {

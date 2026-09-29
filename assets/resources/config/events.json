@@ -1241,17 +1241,145 @@
     {
         "id": "scout_signal",
         "title": "镜子的反光",
-        "text": "侦察的人循着镜子的反光，找到一座阁楼。一个饿得脱了形的人缩在角落里，手里还攥着那面小镜子。“我……我每天都照一照，就想着也许有人能看见。”",
+        "text": "侦察的人循着镜子的反光，找到一栋两层小楼。阁楼窗口有人在拼命挥手——可楼下的院子里，七八只行尸正围着门打转。",
         "weight": 0,
         "once": false,
         "choices": [
             {
-                "text": "带回营地",
+                "text": "硬冲进去，杀出一条路",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "门被撞开的一瞬间，行尸扑了上来。一番苦战，总算冲上了阁楼。",
+                        "effects": [
+                            {
+                                "type": "triggerEvent",
+                                "event": "rescue_escape"
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "楼梯太窄，有人被堵在拐角，被咬了一口。你们还是把人拉了出来。",
+                        "effects": [
+                            {
+                                "type": "fall",
+                                "survivor": "random",
+                                "cause": "在营救行动中牺牲了"
+                            },
+                            {
+                                "type": "triggerEvent",
+                                "event": "rescue_escape"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "敲锅把尸群引开，再绕进去",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "锅声一响，尸群摇摇晃晃地追了过去。你们从后窗爬了进去。",
+                        "effects": [
+                            {
+                                "type": "triggerEvent",
+                                "event": "rescue_escape"
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "当诱饵的人被逼进死胡同，翻墙时摔伤了。尸群散了，人救了下来。",
+                        "effects": [
+                            {
+                                "type": "injure",
+                                "survivor": "random"
+                            },
+                            {
+                                "type": "triggerEvent",
+                                "event": "rescue_escape"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "先回营地叫人帮忙",
                 "outcomes": [
                     {
                         "weight": 1,
-                        "text": "回去的路上，他一直紧紧跟在后面，好像怕一眨眼你们就会消失。",
+                        "text": "等你们带着人赶回来，阁楼的窗户已经破了，只剩那面小镜子挂在窗框上。",
                         "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -6
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "赶回来时，他还在窗口挥手。人多好办事，这回没人受伤。",
+                        "effects": [
+                            {
+                                "type": "triggerEvent",
+                                "event": "rescue_escape"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "太危险了，放弃",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "你们悄悄退走了。回去的路上，谁也没说话。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -8
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "rescue_escape",
+        "title": "带他回家",
+        "text": "救下来的人叫不出几句完整的话，他的腿伤了，走不快。天快黑了，远处又传来行尸的嘶吼。",
+        "weight": 0,
+        "once": false,
+        "choices": [
+            {
+                "text": "背着他走大路，赶在天黑前回去",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "一路小跑，总算在天黑前看见了营地的栅栏。",
+                        "effects": [
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "大路上撞见一小群行尸，断后的人没能全身而退。",
+                        "effects": [
+                            {
+                                "type": "fall",
+                                "survivor": "random",
+                                "cause": "在营救行动中牺牲了"
+                            },
                             {
                                 "type": "addWanderer"
                             },
@@ -1264,21 +1392,347 @@
                 ]
             },
             {
-                "text": "营地没地方了，留下些吃的",
+                "text": "绕小路，慢慢走",
                 "outcomes": [
                     {
-                        "weight": 1,
-                        "text": "你们把一袋口粮放在他手边，告诉他往南走能找到加油站。他点点头，没有哭。",
+                        "weight": 3,
+                        "text": "小路难走，但一路安静。半夜到了营地，玛莎给他热了一碗汤。",
                         "effects": [
                             {
-                                "type": "resource",
-                                "resource": "food",
-                                "amount": -20
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "绕着绕着迷了路，在一间空车库里熬了一夜，第二天才回来。",
+                        "effects": [
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
                             },
                             {
                                 "type": "mood",
                                 "target": "all",
+                                "amount": -4
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "food",
+                                "amount": -15
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "先给他包扎伤口（5 药品）",
+                "cost": {
+                    "medicine": 5
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "包扎好伤口，他终于能自己走了。进营地时，他说了第一句完整的话：“谢谢。”",
+                        "effects": [
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 4
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "camp_noticed",
+        "title": "被人盯上了",
+        "text": "守夜的人发现，对面山坡上有望远镜的反光，一连三个晚上。营地越来越大，炊烟和灯火已经让整个镇子都知道这里有人了。",
+        "weight": 30,
+        "once": true,
+        "conditions": {
+            "minDay": 8,
+            "minHq": 6
+        },
+        "choices": [
+            {
+                "text": "派人悄悄跟过去",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "跟到了镇南的废车场：那是一伙掠夺者的营地。回来的路上，还看见河湾那边一个大营地的栅栏倒了。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_noticed"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 2
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "跟踪的人被发现了，挨了一枪托才逃回来。好在记住了他们的营地在哪。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_noticed"
+                            },
+                            {
+                                "type": "injure",
+                                "survivor": "random"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "加固栅栏，夜里加派人手（30 木材）",
+                "cost": {
+                    "wood": 30
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "栅栏又高了一截。几天后，有人在河湾边捡到一张地图，上面标着两个别的营地。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_noticed"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 4
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "在山坡上挂一面白旗示好",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "第二天白旗下面多了一袋子弹壳和一张纸条：“废车场，别过来。”",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_noticed"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": 15
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "白旗被人扯了下来。当天夜里，营地后门少了一堆木材。",
+                        "effects": [
+                            {
+                                "type": "flag",
+                                "flag": "camp_noticed"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "wood",
+                                "amount": -40
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "raider_toll",
+        "title": "保护费",
+        "text": "三个掠夺者站在栅栏外，领头的敲了敲门柱：“这条街归我们管。交点吃的，大家相安无事。”",
+        "weight": 6,
+        "conditions": {
+            "flags": [
+                "camp_noticed"
+            ],
+            "notFlags": [
+                "cleared_raider_camp"
+            ]
+        },
+        "choices": [
+            {
+                "text": "交 60 食物，别惹麻烦",
+                "cost": {
+                    "food": 60
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "他们扛着粮食走了。领头的回头笑了笑：“下次见。”",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -4
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "拒绝，让他们滚",
+                "outcomes": [
+                    {
+                        "weight": 2,
+                        "text": "僵持了半天，他们骂骂咧咧地走了。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
                                 "amount": 3
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "当天夜里，有人往栅栏上泼了汽油点火。火扑灭了，木材烧掉一大堆。",
+                        "effects": [
+                            {
+                                "type": "resource",
+                                "resource": "wood",
+                                "amount": -50
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -5
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "开门请他们进来，然后动手",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "打了个措手不及。缴获了他们身上的家伙。",
+                        "effects": [
+                            {
+                                "type": "prop",
+                                "prop": "pistol"
+                            },
+                            {
+                                "type": "resource",
+                                "resource": "parts",
+                                "amount": 20
+                            }
+                        ]
+                    },
+                    {
+                        "weight": 1,
+                        "text": "对方早有防备，枪响了。",
+                        "effects": [
+                            {
+                                "type": "fall",
+                                "survivor": "random",
+                                "cause": "死在了掠夺者的枪下"
+                            },
+                            {
+                                "type": "prop",
+                                "prop": "leather_jacket"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "raider_camp_cleared",
+        "title": "铁丝笼里的人",
+        "text": "掠夺者的营地后面有一排铁丝笼，里面关着几个被抢来的人。他们看着你们，不知道自己是被救了，还是换了一伙主人。",
+        "weight": 0,
+        "once": true,
+        "choices": [
+            {
+                "text": "打开笼子，愿意的跟我们走",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "两个人跟上了你们，其余的往别的方向走了。",
+                        "effects": [
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "addWanderer"
+                            },
+                            {
+                                "type": "stat",
+                                "stat": "rescued_by_scouts"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "打开笼子，分给他们一些食物，各走各的",
+                "cost": {
+                    "food": 30
+                },
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "他们千恩万谢地走了。几天后，营地门口多了一袋山里采的蘑菇和一张字条。",
+                        "effects": [
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": 8
+                            },
+                            {
+                                "type": "prop",
+                                "prop": "ration_s"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "text": "只带走会修东西的",
+                "outcomes": [
+                    {
+                        "weight": 1,
+                        "text": "一个机械工跟你们回了营地。剩下的人盯着你们的背影，一句话也没说。",
+                        "effects": [
+                            {
+                                "type": "addWanderer",
+                                "specialty": "mechanic"
+                            },
+                            {
+                                "type": "mood",
+                                "target": "all",
+                                "amount": -5
                             }
                         ]
                     }

@@ -4,7 +4,7 @@
 
 import { formatBag } from './combat';
 import { grantResources, hqLevel } from './economy';
-import { queueEvent } from './events';
+import { conditionMet, queueEvent } from './events';
 import { formatProps, rollDrops } from './props';
 import { nextRandom, pickWeighted } from './rng';
 import { injureSurvivor, survivorName } from './roster';
@@ -53,7 +53,7 @@ export function updateScoutSpots(config: GameConfig, state: GameState, now: numb
         const at = next;
         next = at + nextInterval(config, state);
         if (state.scoutSpots.length >= cfg.maxActive) continue;
-        const kind = pickWeighted(state, cfg.kinds);
+        const kind = pickWeighted(state, cfg.kinds.filter((k) => conditionMet(config, state, k.conditions, at)));
         const expiresAt = at + cfg.lifetimeMinutes * 60_000;
         if (kind && expiresAt > now) state.scoutSpots.push({ id: state.nextId++, kind: kind.id, ...randomRevealedPoint(config, state, now), expiresAt });
     }
