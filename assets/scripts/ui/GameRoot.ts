@@ -57,6 +57,7 @@ import { campStats } from '../core/campStats';
 import { moodFactors, moodTier } from '../core/mood';
 import { districtName, locationName, objectiveText, townName } from '../core/names';
 import { candidateInfo, quirksOf } from '../core/recruits';
+import { goldBlocker, goldOffer, goldValue } from '../core/gold';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulCapacity, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
 import { occupancy, packedWeight, pieceOf, pieceText } from '../core/packing';
@@ -1049,12 +1050,42 @@ export class GameRoot extends Component {
         }
     }
 
+    /** 黄金：前期能换物资，越往后越不值钱 */
+    private renderGold(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const g = config.balance.gold;
+        if (!g) return;
+        const value = goldValue(config, state, now);
+        const note = value >= 1 ? '镇上还有人认钱' : value > 0 ? `越来越没人要了（现在只值 ${Math.round(value * 100)}%，第 ${g.worthlessDay} 天后一文不值）` : '已经没人要黄金了，它现在只是块金属';
+        this.text(`💰 黄金 ${state.gold ?? 0} 两 · ${note}`, 22, value > 0 ? ACCENT : DIM);
+        if (value <= 0 || (state.gold ?? 0) <= 0) {
+            this.gap(10);
+            return;
+        }
+        const ids = RESOURCE_IDS.filter((id) => (g.rates[id] ?? 0) > 0);
+        const w = (WIDTH - 10 * (ids.length - 1)) / ids.length;
+        const top = this.cursorY;
+        ids.forEach((id, i) => {
+            this.cursorY = top;
+            const icon = config.resources.find((r) => r.id === id)?.icon ?? id;
+            const blocker = goldBlocker(config, state, id, now);
+            this.button(`${g.lot}两→${icon}${goldOffer(config, state, id, now)}`, w, () => {
+                const res = camp.spendGold(id, camp.now);
+                if (res.ok) this.effect(`💰 换到 ${res.message}`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT + i * (w + 10), blocker ? 'disabled' : 'normal', 16, 44);
+        });
+        this.gap(14);
+    }
+
     /** 背包：每种道具一行，写清楚效果，点“使用” */
     private renderProps(camp: CampGame, now: number): void {
         const { config, state } = camp;
         this.text('🎒 背包', 28, ACCENT);
         this.text('探索、守夜、拾荒、每日宝箱、商人和事件都会得到道具。', 20, DIM);
         this.gap(8);
+        this.renderGold(camp, now);
         const owned = config.props.filter((p) => propCount(state, p.id) > 0);
         if (owned.length === 0) this.text('背包是空的。', 22, DIM);
         for (const def of owned) {
@@ -1194,7 +1225,7 @@ export class GameRoot extends Component {
                 const rateText = Math.abs(rate) >= 0.05 ? `(${rate > 0 ? '+' : ''}${rate.toFixed(1)})` : '';
                 return `${r.icon}${amount}${cap === Infinity ? '' : '/' + cap}${rateText}`;
             })
-            .join('  ');
+            .join('  ') + ((state.gold ?? 0) > 0 && goldValue(config, state, now) > 0 ? `  💰${state.gold}` : '');
     }
 
     /** 事件卡：左边是说话人的头像，右边是正文，下面是选项 */

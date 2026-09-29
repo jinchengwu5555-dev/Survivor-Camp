@@ -1,6 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, WatchMode } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
 import { updateChatter } from './chatter';
@@ -8,6 +8,7 @@ import { resolveSurveys, startSurvey, suggestSurveyors } from './districts';
 import { buildVehicle, checkVehicleOwners } from './vehicles';
 import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './packing';
 import { autoDecideCandidates, decideCandidate } from './recruits';
+import { spendGold } from './gold';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -210,6 +211,11 @@ export class CampGame {
     /** 在工坊修一辆车 */
     buildVehicle(vehicleId: string, now: number): ActionResult {
         return this.act(now, () => buildVehicle(this.config, this.state, vehicleId, now));
+    }
+
+    /** 花黄金换资源（越往后越不值钱） */
+    spendGold(resource: ResourceId, now: number): ActionResult {
+        return this.act(now, () => spendGold(this.config, this.state, resource, now));
     }
 
     /** 探索时遇到、等着决定留不留的人 */

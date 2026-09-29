@@ -34,6 +34,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         // 第一个拾荒物来得快一点，开局就有东西可以点
         nextPickupAt: now + config.pickups.intervalMinutes * 30_000,
         props: { ...(b.startingProps ?? {}) },
+        gold: b.gold?.start ?? 0,
         // 第一个侦察点来得快一点
         nextScoutSpotAt: now + config.scouting.intervalMinutes * 30_000,
         reports: [],

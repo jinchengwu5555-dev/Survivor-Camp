@@ -106,6 +106,10 @@ export interface BalanceDef {
      */
     raidChance?: { base: number; perDay: number; max: number };
     /**
+     * 黄金：开局 start 两；每次花 lot 两换 rates 里的资源；fullValueDays 天内全价，之后越来越不值钱，worthlessDay 天后没人要。
+     */
+    gold?: { start: number; lot: number; fullValueDays: number; worthlessDay: number; rates: Partial<Record<ResourceId, number>> };
+    /**
      * 轮流守夜：每 survivorsPerWatcher 个人要 1 个人守夜（至少 1 个）。
      * 守夜的人精力 -watchCost，其他人睡一觉 +restGain。精力低于 tiredBelow 时干活和攻击打折扣，精力 0 时只剩 minFactor。
      * 守夜人手不够时，尸潮来了栅栏生命只有 understaffedWallFactor。
@@ -819,6 +823,8 @@ export interface GameState {
     surveys?: SurveyState[];
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
+    /** 黄金（见 core/gold.ts；老存档没有 = 0） */
+    gold?: number;
     /** 探索时遇到、等玩家决定留不留的人（见 core/recruits.ts） */
     candidates?: CandidateState[];
     /** 这一局的随机地名（见 core/names.ts；老存档没有，用配置里的默认名字） */
