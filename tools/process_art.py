@@ -19,7 +19,14 @@
   2. 去白边：紧挨着背景的浅色半透明像素变透明，消除抠图后的白色毛边。
   3. 给透明像素填上旁边的颜色：避免缩小显示时边缘出现白线。
   4. 裁掉多余的透明边，四周只留一点空白。
-  5. 最长边缩到 512 像素以内。
+  5. 像素风（默认）：缩到这一类图的像素网格大小（比如角色 64×64），颜色压到几十种，
+     半透明的边要么全透明要么不透明——AI 画的“假像素”会变成干净的真像素。
+     游戏里按最近邻放大显示，像素边缘是锐利的。
+     加 --smooth 就按以前的方式处理（最长边 512，平滑缩放），适合非像素风的图。
+
+每一类图的像素网格（PIXEL_GRID）：
+  units 64×64、portraits 64×64、buildings 96×96、icons 32×32、
+  bg 按原图比例把宽度缩到 360、sites 宽 240、ui 不缩
 """
 
 from __future__ import annotations
@@ -42,6 +49,16 @@ BG_MIN_BRIGHTNESS = 175
 BG_MAX_SATURATION = 28
 MAX_SIZE = 512
 PADDING_RATIO = 0.04
+
+# 像素风：每一类图缩到多大的像素网格（宽, 高），以及最多多少种颜色
+PIXEL_GRID: dict[str, tuple[int, int]] = {
+    'units': (64, 64),
+    'portraits': (64, 64),
+    'buildings': (96, 96),
+    'icons': (32, 32),
+}
+PIXEL_BG_WIDTH = {'bg': 360, 'sites': 240}
+PIXEL_COLORS = {'units': 32, 'portraits': 32, 'buildings': 40, 'icons': 24, 'bg': 48, 'sites': 48}
 
 
 def is_background_like(rgb: np.ndarray) -> np.ndarray:
@@ -152,14 +169,51 @@ def fit_size(img: Image.Image) -> Image.Image:
     return img.resize((max(1, round(img.width * scale)), max(1, round(img.height * scale))), Image.LANCZOS)
 
 
-def process(src: Path, dst: Path, keep_background: bool) -> None:
+def quantize(img: Image.Image, colors: int) -> Image.Image:
+    """颜色压到 colors 种（只算不透明的像素），透明度二值化：像素画没有半透明的边"""
+    rgba = np.array(img.convert('RGBA'))
+    alpha = rgba[:, :, 3]
+    solid = alpha >= 128
+    rgb = Image.fromarray(rgba[:, :, :3], 'RGB')
+    pal = rgb.quantize(colors=colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert('RGB')
+    out = np.dstack([np.array(pal), np.where(solid, 255, 0).astype(np.uint8)])
+    return Image.fromarray(out, 'RGBA')
+
+
+def pixelate(img: Image.Image, category: str) -> Image.Image:
+    """把 AI 画的“假像素”缩成真正的像素网格：按块取平均（BOX），再压颜色"""
+    if category in PIXEL_BG_WIDTH:
+        w = PIXEL_BG_WIDTH[category]
+        h = max(1, round(img.height * w / img.width))
+        small = img.convert('RGBA').resize((w, h), Image.BOX)
+    else:
+        gw, gh = PIXEL_GRID.get(category, (64, 64))
+        scale = min(gw / img.width, gh / img.height)
+        size = (max(1, round(img.width * scale)), max(1, round(img.height * scale)))
+        small = img.resize(size, Image.BOX)
+        # 放到 gw×gh 的画布正中（角色脚底对齐画布底部，站在地上不会飘）
+        canvas = Image.new('RGBA', (gw, gh), (0, 0, 0, 0))
+        y = gh - small.height if category == 'units' else (gh - small.height) // 2
+        canvas.paste(small, ((gw - small.width) // 2, y))
+        small = canvas
+    return quantize(small, PIXEL_COLORS.get(category, 32))
+
+
+def process(src: Path, dst: Path, keep_background: bool, category: str, smooth: bool) -> None:
     img = Image.open(src)
     img.load()
-    if keep_background:
-        out = fit_size(img.convert('RGBA'))
+    if smooth:
+        if keep_background:
+            out = fit_size(img.convert('RGBA'))
+        else:
+            out = fit_size(trim_and_pad(bleed_colors(remove_background(img))))
+            out = bleed_colors(out, passes=2)
+    elif category == 'ui':
+        out = img.convert('RGBA')
+    elif keep_background:
+        out = pixelate(img.convert('RGBA'), category)
     else:
-        out = fit_size(trim_and_pad(bleed_colors(remove_background(img))))
-        out = bleed_colors(out, passes=2)
+        out = pixelate(trim_and_pad(remove_background(img)), category)
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.save(dst, 'PNG', optimize=True)
     print(f'✅ {src.relative_to(ROOT)} → {dst.relative_to(ROOT)}  ({out.width}×{out.height})')
@@ -168,6 +222,7 @@ def process(src: Path, dst: Path, keep_background: bool) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description='把 art-raw/ 下的原图处理成游戏用的透明 PNG')
     parser.add_argument('files', nargs='*', help='只处理这些文件（默认处理 art-raw/ 下全部）')
+    parser.add_argument('--smooth', action='store_true', help='不做像素化（非像素风的图用）')
     args = parser.parse_args()
 
     sources = [Path(f).resolve() for f in args.files] if args.files else sorted(p for p in RAW_DIR.rglob('*') if p.suffix.lower() in EXTENSIONS)
@@ -179,7 +234,7 @@ def main() -> int:
         category = rel.parts[0] if len(rel.parts) > 1 else 'units'
         # 背景图（bg）、营地地点图（sites）不需要抠图
         keep_background = category in ('bg', 'sites')
-        process(src, OUT_DIR / category / (src.stem.lower() + '.png'), keep_background)
+        process(src, OUT_DIR / category / (src.stem.lower() + '.png'), keep_background, category, args.smooth)
     return 0
 
 

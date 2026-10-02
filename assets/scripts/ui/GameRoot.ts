@@ -84,7 +84,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.0 打猎+羁绊+站位';
+const GAME_VERSION = 'v2.1 像素风准备';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -926,7 +926,9 @@ export class GameRoot extends Component {
 
         const blocker = upgradeBlocker(config, state, def.id);
         const upgrading = b.upgradeEndsAt !== null;
-        const art = getSprite(`${SPRITE_DIRS.buildings}building_${def.id}`);
+        // 每个升级阶段可以有自己的图（building_kitchen_2 = 第 2 个阶段“烤架”），没有就用 building_kitchen
+        const stageIndex = (def.stages ?? []).filter((st) => b.level >= st.level).length || 1;
+        const art = getSprite(`${SPRITE_DIRS.buildings}building_${def.id}_${stageIndex}`) || getSprite(`${SPRITE_DIRS.buildings}building_${def.id}`);
         const g = node.addComponent(Graphics);
         if (guided) {
             g.lineWidth = 5;

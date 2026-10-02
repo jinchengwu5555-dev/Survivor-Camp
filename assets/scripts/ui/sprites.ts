@@ -2,8 +2,12 @@
 // 有图就用图，没有图就继续用代码画的色块——缺图不会报错，做好一张换一张。
 //
 // 用 ImageAsset 加载再生成 SpriteFrame，不管 Cocos 里图片的导入类型是 texture 还是 sprite-frame 都能用。
+// 美术是像素风：贴图一律用“最近邻”缩放（PIXEL_ART），放大显示时像素边缘保持锐利，不会糊成一片。
 
-import { ImageAsset, Node, resources, Sprite, SpriteFrame, UITransform } from 'cc';
+import { ImageAsset, Node, resources, Sprite, SpriteFrame, Texture2D, UITransform } from 'cc';
+
+/** 像素风：放大缩小都不插值 */
+export const PIXEL_ART = true;
 import { makeNode } from './widgets';
 
 /** null = 确认没有这张图；undefined = 还没查过 / 正在加载 */
@@ -28,7 +32,17 @@ export function getSprite(path: string): SpriteFrame | null | undefined {
     loading.add(path);
     resources.load(path, ImageAsset, (err, image) => {
         loading.delete(path);
-        cache.set(path, err || !image ? null : SpriteFrame.createWithImage(image));
+        if (err || !image) {
+            cache.set(path, null);
+        } else {
+            const frame = SpriteFrame.createWithImage(image);
+            const tex = frame.texture;
+            if (PIXEL_ART && tex instanceof Texture2D) {
+                tex.setFilters(Texture2D.Filter.NEAREST, Texture2D.Filter.NEAREST);
+                tex.setMipFilter(Texture2D.Filter.NONE);
+            }
+            cache.set(path, frame);
+        }
         spriteVersion++;
     });
     return undefined;

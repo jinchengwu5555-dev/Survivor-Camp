@@ -1,265 +1,238 @@
-# 美术资源清单与 AI 提示词
+# 美术资源清单与 AI 提示词（像素风）
 
-《末日营地》目前的画面全部是代码画的色块。画风定为**现代日系动画赛璐璐**：头像和封面是正常比例的日漫立绘，战斗里是日系 SD 小人。这份清单列出需要的图片、格式、文件名和 AI 提示词。
-**做好一批就交给程序接入**，不用等全部做完。
+《末日营地》的美术定为**像素风**：16-bit 年代（超任 / GBA）的像素画，颜色少、描边清楚、没有模糊和渐变。
+这份清单列出游戏现在**真正会用到**的图片、文件名、像素尺寸和提示词。**做好一批就交给程序接入**，不用等全部做完，缺的图游戏会继续用色块代替。
 
----
-
-## 一、通用规范（每张图都要遵守）
-
-| 项目 | 要求 |
-|---|---|
-| 格式 | **PNG**。角色、建筑、图标必须是**透明背景**（带 Alpha 通道）；背景图不需要透明 |
-| 颜色 | sRGB，不要 CMYK |
-| 文件名 | 严格按下表的文件名，全小写英文 + 下划线，例如 `unit_ethan.png` |
-| 放在哪 | `assets/resources/sprites/` 下对应的子文件夹（见每一节的标题） |
-| 图里的文字 | **不要让 AI 生成文字**（中文基本会乱码）。招牌、标题字以后用设计软件加 |
-| 边距 | 角色、建筑四周留 5%～10% 空白，不要贴边、不要被裁切 |
-
-### 统一画风：成熟向日系 SD（已定，以伊森定稿图为准）
-
-**风格参考图**：伊森的定稿战斗小人（`docs/art-reference/ethan_final.png`，拿到透明 PNG 后放进去）。**之后每张图都带上这张做风格参考。**
-
-**风格定义**：**成熟向的日系 SD**——大头小身，但五官偏写实、不夸张（眼睛大小适中，**不要**典型动漫的大眼睛和刺猬头），**按角色年龄画出年纪感**（胡茬、皱纹、白发、疲惫的眼神），人物要有故事感。上色是日系动画的**赛璐璐**：干净的深色线稿，二阶硬边阴影，**身体边缘一圈暖橙色的逆光**；配色是**低饱和的末日色调**（灰绿、锈棕、水泥灰、褪色的天蓝），用营地灯火的**暖橙色**做点缀和逆光。气氛是“末日里的日常”：有危险，但人物温暖、有生活感，**不血腥、不猎奇**。
-
-同一个游戏里分四种用途，每种用自己的前缀，但上色和配色完全一致：
-
-| 前缀 | 用在 | 比例 |
-|---|---|---|
-| **A 日漫立绘** | 事件头像、封面、分享图、小游戏图标 | 正常人物比例（6～7 头身），半身像 |
-| **B 成熟向 SD 小人** | 战斗角色（伊森、丧尸……） | 2.5～3 头身的 SD（日式手游战斗小人的常见做法：立绘正常比例，战斗用 SD） |
-| **C 日漫背景** | 场景背景、营地地点、建筑 | 日本动画的美术背景质感 |
-| **D 日系手游图标** | 资源、物品、技能、拾荒物图标 | 单个物品 |
-
-**前缀 A · 日漫立绘**
-
-> 中文：日系动画风格角色半身立绘，成熟向画风，五官偏写实、眼睛大小适中，按角色年龄画出年纪感，赛璐璐上色，干净的深色线稿，二阶硬边阴影，低饱和的末日配色（灰绿、锈棕、水泥灰），暖橙色的边缘逆光，表情有故事感，高清，
->
-> English: anime style bust portrait, mature character design, semi-realistic facial features, moderate eye size, age-appropriate details, cel shading, clean dark lineart, two-tone hard shadows, desaturated post-apocalyptic palette (grey-green, rust brown, concrete grey), warm orange rim light, expressive storytelling face, high quality,
-
-**前缀 B · 成熟向 SD 小人**
-
-> 中文：成熟向日系 SD 战斗小人，约 2.5～3 头身，头大身小，五官偏写实不夸张，眼睛大小适中，按角色年龄画出年纪感（胡茬、皱纹、白发），赛璐璐上色，干净的深色线稿，二阶硬边阴影，身体边缘一圈暖橙色逆光，低饱和末日配色，3/4 侧身，动作姿势清楚、轮廓分明，全身，角色居中四周留白，纯白色背景，不要画棋盘格，
->
-> English: mature-style Japanese SD battle sprite, about 2.5 to 3 heads tall, big head small body, semi-realistic facial features, moderate eye size, age-appropriate details (stubble, wrinkles, grey hair), cel shading, clean dark lineart, two-tone hard shadows, warm orange rim light along the body edges, desaturated post-apocalyptic palette, three-quarter view, clear action pose, strong silhouette, full body, centered with margins, plain pure white background, no checkerboard pattern,
-
-**前缀 C · 日漫背景**
-
-> 中文：日本动画电影的美术背景风格，精致的手绘质感，柔和的光影和大气透视，末日后的美国小镇，杂草从柏油路缝里长出来，低饱和配色，傍晚的暖光和冷色阴影对比，宁静又略带寂寥，高清，
->
-> English: Japanese anime film background art, detailed hand-painted look, soft lighting and atmospheric perspective, post-apocalyptic small American town, weeds growing through cracked asphalt, desaturated palette, warm evening light against cool shadows, peaceful yet lonely, high quality,
-
-**前缀 D · 日系手游图标**
-
-> 中文：日系手游道具图标，单个物品居中，动画赛璐璐上色，粗而干净的描边，明暗对比清楚，微微俯视，缩小后也能一眼认出，
->
-> English: Japanese mobile game item icon, single object centered, anime cel shading, bold clean outline, clear light and shadow, slight top-down angle, readable at small size,
-
-**反向提示词（负面提示词，能填就填）：**
-
-> 写实，照片，3D 渲染，美漫，厚涂，过大的动漫眼睛，刺猬头，血腥，血浆飞溅，内脏，猎奇，文字，水印，签名，logo，多余的手指，畸形的手，被裁切，多个角色，复杂背景，牛仔帽警长
->
-> realistic, photo, 3d render, american comic style, painterly, oversized anime eyes, spiky anime hair, gore, blood splatter, guts, grotesque, text, watermark, signature, logo, extra fingers, deformed hands, cropped, multiple characters, busy background, cowboy sheriff hat
-
-**用哪个工具**
-
-- **Midjourney**：在提示词最后加 **`--niji 6`**（Midjourney 专门做日漫风的模型）。头像加 `--ar 1:1`，背景加 `--ar 9:16` 或 `--ar 3:2`。
-- **即梦 / 可灵 / 通义万相**：模型或风格选“**动漫**”“二次元”一类，再贴中文提示词。
-- **Stable Diffusion**：用动漫类底模（比如 Animagine XL、Pony 系列的动漫模型），英文提示词效果更好。
-
-- **Gemini**：用自然语言描述效果最好，也很擅长**在原图上修改**（“保持角色不变，只改……”）。⚠️ Gemini 经常把透明棋盘格**画进图里**（假透明），一定要写“纯白色背景，不要画棋盘格”，然后自己抠图。它给的 `.webp` 要转成 PNG。
-
-**不要在提示词里写具体画师或具体动画作品的名字**。一是版权风险，二是画出来会“像别人的游戏”。用上面的风格描述就够了。
-
-**其他可选风格**（不喜欢上面这种再换，一旦定了就全部统一）
-
-| 风格 | 感觉 | 把前缀里的风格描述换成 |
-|---|---|---|
-| 90 年代复古日漫 | 胶片颗粒、复古配色，末日气氛更浓 | 90年代日本动画风格，复古赛璐璐，胶片颗粒感，略微褪色的配色 / 90s retro anime style, vintage cel animation, film grain, faded colors |
-| 日系水彩绘本 | 温柔治愈，偏“末日日常” | 日系水彩插画风格，柔和的线条，透明水彩上色，留白 / Japanese watercolor illustration, soft lines, transparent watercolor, white space |
-
-### 保持角色一致的技巧
-
-1. **先做伊森的头像（前缀 A）**，反复生成直到满意，把这张当作“画风参考图”。然后用它做伊森的 SD 战斗小人（前缀 B），两张都满意了再做其他人。
-2. 之后每张都带上这张参考图：Midjourney 用 `--sref 图片链接`（画风参考），即梦、可灵用“参考图 / 风格参考”。
-3. 同一个角色的战斗图和头像，用 Midjourney 的 `--cref`（角色参考），或者即梦的“角色一致性”功能。
-4. 生成后用 **remove.bg**、即梦的“抠图”或 Photoshop 去掉背景，导出透明 PNG。
-5. 提示词里写“纯白背景”比写“透明背景”更好抠图。AI 一般生成不了真透明图，都要抠。
-
-### ⚠️ 版权红线
-
-不要画成《行尸走肉》里的标志性造型：**牛仔帽 + 卡其色警长制服**、脏辫女武士拿武士刀、带翅膀皮背心的弩手、缠铁丝网的棒球棍，也不要出现监狱、医院门口“死人勿开”的涂鸦。我们的角色都是原创的，按下面的描述来画。
+> 和以前的日系 SD 版本相比：画风换成像素，删掉了幸存者的技能图标（技能已经删了），
+> 除了伊森以外的人在战斗里都用同一个“普通幸存者”小人（`unit_militia`），所以玛莎、德里克这些人**只需要头像**，不用画战斗小人了。
+> 建筑可以按升级阶段各画一张（篝火 → 烤架 → 厨房），没画的阶段用这个建筑的通用图。
 
 ---
 
-## 二、第一批（最重要，先做这批）
+## 一、像素风规范（每张图都要遵守）
 
-### 2.1 战斗角色 → `sprites/units/`
+### 1.1 尺寸：先大图生成，再用脚本缩成真像素
 
-- **尺寸 512×512**，透明背景，**SD 小人全身**（2 头身）、站姿，脚底离画面底边约 8%。
-- 我方角色**身体朝右**（3/4 侧面），丧尸**朝左**。战斗里会缩小到 100 像素左右，所以要轮廓清楚、颜色分明。
-- 衣服的主色尽量用表里的“主色”，和游戏里现在的色块保持一致。
+AI 直接生成小尺寸的图效果很差。**正确做法：让 AI 按下面的提示词生成正常大小的“像素风”图（1024 左右），交给 `tools/process_art.py` 缩成真正的像素网格。** 脚本会按块取色、把颜色压到几十种、去掉半透明的毛边，游戏里再用“最近邻”放大显示，像素是方方正正的。
 
-| 文件名 | 角色 | 主色 | 中文提示词（前面加**前缀 B**） | English (after prefix B) |
+| 类别 | 文件夹 | 最终像素网格 | 颜色数 | 游戏里大概放大 |
 |---|---|---|---|---|
-| `unit_ethan.png` | 伊森 · 副警长（主角） | 蓝 `#4a6fa5` | 30多岁的小镇副警长，棕色短发，下巴有胡茬，眼神坚毅，穿**深蓝色警用夹克**，胸前一枚小星形警徽，腰带上挂手电筒和手枪套，右手握手枪、枪口朝下，站姿沉稳，全身，身体朝右，纯白背景 | small-town deputy in his 30s, short brown hair, stubble, determined eyes, **navy blue police jacket** with a small star badge, flashlight and holster on belt, holding a pistol pointed down, steady stance, full body, facing right, plain white background |
-| `unit_martha.png` | 玛莎 · 超市老板娘 | 红棕 `#c47a5a` | 60岁的胖胖的老奶奶，灰白头发盘成发髻，戴圆框眼镜，穿红棕色碎花连衣裙和超市围裙，双手举着一口大平底锅，表情凶巴巴但很可爱，全身，身体朝右，纯白背景 | plump 60-year-old grandma, grey hair in a bun, round glasses, rust-red floral dress with a grocery store apron, holding a big frying pan with both hands, fierce but adorable face, full body, facing right, plain white background |
-| `unit_derek.png` | 德里克 · 汽修工 | 棕 `#8a5a3a` | 高大强壮的汽修工，寸头，脸上有机油污渍，头上绑头巾，穿棕色连体工装、袖子卷起，一手拿大扳手，一手拿一个点燃的燃烧瓶，脾气暴躁的表情，全身，身体朝右，纯白背景 | big muscular car mechanic, buzz cut, grease smudges on face, bandana, brown coveralls with rolled sleeves, a large wrench in one hand and a lit molotov bottle in the other, grumpy expression, full body, facing right, plain white background |
-| `unit_sophie.png` | 苏菲 · 护理系学生 | 粉 `#e8a0b0` | 20岁左右的女大学生，金色马尾，穿粉色护士服，斜挎一个印红十字的急救包，手里拿着绷带，表情有点害怕但很勇敢，全身，身体朝右，纯白背景 | nursing student around 20, blonde ponytail, pink scrubs, first-aid bag with a red cross across her body, holding bandages, slightly scared but brave, full body, facing right, plain white background |
-| `unit_toby.png` | 托比 · 加油站店员 | 黄 `#e0c050` | 20出头的瘦高小伙子，乱蓬蓬的头发，戴反戴的黄色鸭舌帽，穿加油站的黄色马甲和牛仔裤，手里拿着一卷绳子（做绊索用），咧嘴笑，机灵乐观，全身，身体朝右，纯白背景 | lanky guy in his early 20s, messy hair, backwards yellow cap, yellow gas-station vest and jeans, holding a coil of rope for a tripwire, big grin, clever and cheerful, full body, facing right, plain white background |
-| `unit_hank.png` | 汉克 · 退伍老兵 | 军绿 `#5a6a4a` | 60岁左右的退伍老兵，灰白络腮胡，戴针织帽，穿军绿色旧外套，背着步枪、双手端枪瞄准，眼神锐利沉默，全身，身体朝右，纯白背景 | veteran around 60, grey full beard, knit beanie, worn olive-green army jacket, aiming a hunting rifle, sharp silent eyes, full body, facing right, plain white background |
-| `unit_militia.png` | 普通幸存者（流浪者通用） | 灰绿 `#7a8a7a` | 普通的末日幸存者，性别模糊，戴兜帽，穿打满补丁的灰绿色卫衣，背着小背包，手里握一根铁管，全身，身体朝右，纯白背景 | ordinary survivor, gender-neutral, hood up, patched grey-green hoodie, small backpack, holding a metal pipe, full body, facing right, plain white background |
-| `unit_dog.png` | 罐头 · 营地的狗 | 金黄 `#c8a050` | 一只金黄色的中型土狗，脖子上系红色旧头巾，竖着耳朵，摆出要冲出去的姿势，忠诚勇敢，全身，身体朝右，纯白背景 | medium golden mixed-breed dog, old red bandana on its neck, ears up, ready-to-charge pose, loyal and brave, full body, facing right, plain white background |
-| `barricade.png` | 栅栏 | 旧木色 `#8a7a5a` | 用超市货架、购物车、木板、轮胎和沙袋堆起来的栅栏墙，**侧面视角**，高大竖长，有钉子和铁丝加固，没有人物，纯白背景 | barricade wall made of grocery shelves, shopping carts, wooden planks, tires and sandbags, **side view**, tall and narrow, reinforced with nails and wire, no characters, plain white background |
-| `zombie_walker.png` | 行尸（最普通的丧尸） | 灰绿 `#6a8a5a` | SD 丧尸，灰绿色皮肤，眼睛是空洞的白色圆点，穿破烂的衬衫和牛仔裤，双手向前伸、摇摇晃晃地走，傻傻的有点可怜，不恐怖、不流血，全身，身体朝左，纯白背景 | chibi zombie, grey-green skin, blank white dot eyes, torn shirt and jeans, arms reaching forward, shambling walk, goofy and a bit pitiful, not scary, no blood, full body, facing left, plain white background |
-| `zombie_runner.png` | 奔跑者 | 浅黄绿 `#9aaa6a` | 瘦长的SD 丧尸，浅黄绿色皮肤，穿破旧的运动服和跑鞋，身体前倾、正在狂奔，头发乱飞，全身，身体朝左，纯白背景 | skinny chibi zombie, pale yellow-green skin, torn jogging tracksuit and sneakers, leaning forward mid-sprint, hair flying, full body, facing left, plain white background |
-| `zombie_fatty.png` | 胖子（死后放毒气） | 绿 `#7a9a4a` | 圆滚滚的巨大SD 丧尸，绿色皮肤，肚子鼓得很大，身上冒着淡绿色的毒气泡泡，穿撑破的背心，全身，身体朝左，纯白背景 | huge round chibi zombie, green skin, massively bloated belly, faint green toxic gas bubbles around it, tank top stretched and torn, full body, facing left, plain white background |
-| `zombie_armored.png` | 铁甲尸 | 蓝灰 `#5a6a7a` | SD 丧尸，戴黄色安全帽，身上穿着建筑工人的反光背心，外面绑着铁皮和轮胎当盔甲，看起来很硬，全身，身体朝左，纯白背景 | chibi zombie wearing a yellow hard hat and a construction worker's reflective vest, with scrap metal plates and tire pieces strapped on as armor, looks tough, full body, facing left, plain white background |
-| `zombie_brute.png` | 尸群首领（Boss） | 暗红 `#8a3a3a` | 体型是普通丧尸两倍的SD 丧尸首领，肌肉发达，暗红色皮肤，眼睛发红光，穿破烂的屠夫围裙，拳头巨大，气势很足，全身，身体朝左，纯白背景 | chibi zombie boss twice the size of normal zombies, muscular, dark red skin, glowing red eyes, torn butcher's apron, huge fists, imposing, full body, facing left, plain white background |
-| `zombie_frenzied.png` | 狂暴感染者 | 红 `#b04040` | 瘦小敏捷的SD 感染者，皮肤泛红，龇牙咧嘴，四肢着地、半蹲准备扑过来，身边有红色的速度线，全身，身体朝左，纯白背景 | small agile chibi infected, reddish skin, teeth bared, crouched on all fours ready to pounce, red speed lines around it, full body, facing left, plain white background |
-| `enemy_wild_dog.png` | 野狗（变异动物） | 棕 `#8a6a4a` | 一只瘦骨嶙峋的野狗，棕色杂毛，龇着牙、压低身子准备扑咬，眼神凶狠但不血腥，SD 比例，全身，身体朝左，纯白背景 | a scrawny feral dog, patchy brown fur, teeth bared, crouched low ready to lunge, fierce but not gory, SD proportions, full body, facing left, plain white background |
-| `enemy_raider.png` | 掠夺者（活人敌人） | 红褐 `#8a4a3a` | 一个凶悍的掠夺者，剃光头、脸上涂着黑色油彩，穿着钉了铁片的皮背心，手里拎着缠铁丝的球棒，SD 比例，全身，身体朝左，纯白背景 | a fierce raider, shaved head, black face paint, leather vest studded with scrap metal, holding a barbed-wire bat, SD proportions, full body, facing left, plain white background |
-| `enemy_raider_gunner.png` | 掠夺者枪手（活人敌人） | 深褐 `#6a3a2a` | 一个戴黑色面罩的掠夺者，破旧的皮夹克上挂着子弹带，端着一把旧猎枪瞄准，姿态危险，SD 比例，全身，身体朝左，纯白背景 | a masked raider in a worn leather jacket with an ammo belt, aiming an old hunting rifle, menacing stance, SD proportions, full body, facing left, plain white background |
+| 战斗小人 | `units` | 64×64（角色身高约 48 像素，脚底贴着画布底边） | 32 | 2～3 倍 |
+| 头像 | `portraits` | 64×64（头到胸口） | 32 | 2 倍 |
+| 营地建筑 | `buildings` | 96×96 | 40 | 1.5～2 倍 |
+| 图标（以后用） | `icons` | 32×32 | 24 | 2 倍 |
+| 背景 | `bg` | 宽 360（高按比例） | 48 | 2～4 倍 |
 
-### 2.2 事件头像 → `sprites/portraits/`
+**生成时注意构图**：角色要画得“胖”一点、头大一点（2.5 头身），细节少而大块——缩到 64 像素以后，细线、小装饰、表情纹都会消失。**能在 64×64 里看清的东西才画。**
 
-- **尺寸 512×512**，透明背景，**日漫半身立绘（头到胸口，正常人物比例）**，脸朝右前方，表情自然。游戏里会裁成圆形，所以**脸放在正中间**，四周留足空白。
-- 描述和上面的战斗角色保持一致（同一个人），这里只写半身的重点。
+### 1.2 提示词模板（每张图都套上前缀和后缀）
 
-| 文件名 | 角色 | 中文提示词（前面加**前缀 A**） | English (after prefix A) |
-|---|---|---|---|
-| `portrait_ethan.png` | 伊森 | 半身像，30多岁副警长，棕色短发，胡茬，深蓝色警用夹克，胸前小星形警徽，神情坚毅又带着一点疲惫和思念，纯白背景 | bust portrait, deputy in his 30s, short brown hair, stubble, navy police jacket with small star badge, determined yet tired and longing expression, plain white background |
-| `portrait_martha.png` | 玛莎 | 半身像，60岁胖奶奶，灰白发髻，圆框眼镜，超市围裙，双手叉腰，嘴硬心软的表情，纯白背景 | bust portrait, plump 60-year-old grandma, grey bun, round glasses, grocery apron, hands on hips, tough-talking but kind expression, plain white background |
-| `portrait_derek.png` | 德里克 | 半身像，壮硕的汽修工，寸头，头巾，脸上有机油，皱着眉，好像藏着心事，纯白背景 | bust portrait, burly mechanic, buzz cut, bandana, grease on face, frowning as if hiding a secret, plain white background |
-| `portrait_sophie.png` | 苏菲 | 半身像，金色马尾的护理系女生，粉色护士服，有点紧张地抱着急救包，眼神善良，纯白背景 | bust portrait, nursing student with blonde ponytail, pink scrubs, nervously hugging a first-aid bag, kind eyes, plain white background |
-| `portrait_toby.png` | 托比 | 半身像，反戴黄色鸭舌帽的瘦高小伙，加油站马甲，比着大拇指咧嘴笑，纯白背景 | bust portrait, lanky guy with backwards yellow cap, gas-station vest, thumbs up with a big grin, plain white background |
-| `portrait_leo.png` | 里奥 · 高中生 | 半身像，17岁高中男生，黑色短发，穿红色连帽卫衣和校服外套，背着书包，脸上有泥，眼神冲动勇敢，纯白背景 | bust portrait, 17-year-old high school boy, short black hair, red hoodie under a school jacket, backpack, mud on face, impulsive brave eyes, plain white background |
-| `portrait_hank.png` | 汉克 | 半身像，灰白络腮胡的退伍老兵，针织帽，军绿外套，眯着眼警惕地看着前方，纯白背景 | bust portrait, grey-bearded veteran, knit beanie, olive army jacket, squinting warily ahead, plain white background |
-| `portrait_rosa.png` | 罗莎 · 花店店主 | 半身像，40岁左右的温柔女人，深色卷发，戴草帽，穿园艺围裙，手里捧着一小包种子，头发上别着一朵小花，纯白背景 | bust portrait, gentle woman around 40, dark curly hair, straw hat, gardening apron, holding a small packet of seeds, a little flower in her hair, plain white background |
-| `portrait_nora.png` | 诺拉 · 兽医 | 半身像，45岁左右的冷静女人，短发，戴细框眼镜，穿白大褂，脖子上挂听诊器，嘴角带一点毒舌的冷笑，纯白背景 | bust portrait, calm woman around 45, short hair, thin-framed glasses, white coat, stethoscope around neck, slight sarcastic smirk, plain white background |
-| `portrait_joe.png` | 老乔 · 卡车司机 | 半身像，50多岁的大胡子卡车司机，戴卡车司机网帽，红黑格子衬衫，乐呵呵地在说话，纯白背景 | bust portrait, bearded trucker in his 50s, trucker mesh cap, red-and-black plaid shirt, cheerfully talking, plain white background |
-| `portrait_lily.png` | 莉莉 · 伊森的女儿 | 半身像，12岁女孩，棕色头发扎两个小辫，穿黄色雨衣，双手握着一台旧对讲机，眼神坚强又聪明，纯白背景 | bust portrait, 12-year-old girl, brown hair in two small braids, yellow raincoat, holding an old walkie-talkie with both hands, strong and smart eyes, plain white background |
-| `portrait_narrator.png` | 营地旁白（没人说话时） | 一台放在木箱上的老式收音机 / 对讲机，天线竖起，旁边一盏小油灯发出暖光，没有人物，纯白背景 | an old radio / walkie-talkie on a wooden crate, antenna up, a small oil lamp glowing warmly beside it, no characters, plain white background |
-| `portrait_wanderer_1.png` | 流浪者（随机用） | 半身像，背着大登山包的中年男人，戴毛线帽，胡子拉碴，纯白背景 | bust portrait, middle-aged man with a big hiking backpack, knit cap, scruffy beard, plain white background |
-| `portrait_wanderer_2.png` | 流浪者 | 半身像，围着围巾的年轻女人，短发，脸上贴着创可贴，纯白背景 | bust portrait, young woman with a scarf, short hair, a bandage on her cheek, plain white background |
-| `portrait_wanderer_3.png` | 流浪者 | 半身像，拄着拐杖的白发老爷爷，穿旧西装马甲，纯白背景 | bust portrait, white-haired old man with a walking cane, worn suit vest, plain white background |
-| `portrait_wanderer_4.png` | 流浪者 | 半身像，戴护目镜的少女，穿工装外套，头发扎成高马尾，纯白背景 | bust portrait, teenage girl with goggles on her head, work jacket, high ponytail, plain white background |
+把每张图表格里的“画面描述”放到中间：
 
-### 2.3 营地建筑 → `sprites/buildings/`
+**英文（Midjourney / 即梦 / 可灵 / Stable Diffusion 都能用，效果最好）**
 
-- **尺寸 512×512**，透明背景，**45 度俯视（等距视角）的小建筑**，日漫背景的手绘质感，风格统一，都是“在超市停车场里就地搭建”的感觉。
-- 每个建筑只画 1 张，代表 1 级的样子（以后可以再加高级版本）。
+```
+前缀：16-bit pixel art, SNES / GBA era game sprite, limited color palette, clean 1-pixel dark outline, flat cel shading with 2-3 tones, no anti-aliasing, crisp square pixels, chunky readable shapes,
+（画面描述）
+后缀：centered, plain pure white background, no text, no watermark, no ground shadow
+```
 
-| 文件名 | 建筑 | 中文提示词（前面加**前缀 C**） | English (after prefix C) |
-|---|---|---|---|
-| `building_hq.png` | 指挥部 | 等距视角，小镇超市的经理办公室，门口插着一面小旗子，屋顶有一根收音机天线，窗户透出暖黄的灯光，单独一个建筑，纯白背景 | isometric view, small-town supermarket manager's office, a small flag at the door, radio antenna on the roof, warm yellow light in the windows, single building, plain white background |
-| `building_wall.png` | 栅栏 | 等距视角，一段用货架、购物车、木板和沙袋堆成的防御墙，墙上挂着一盏灯，单独一段，纯白背景 | isometric view, a section of defensive wall made of shelves, shopping carts, planks and sandbags, a lamp hanging on it, single section, plain white background |
-| `building_kitchen.png` | 厨房 | 等距视角，露天野战厨房，用砖头垒的灶台上架着一口冒热气的大锅，旁边有木桌、调料罐和挂着的锅碗瓢盆，纯白背景 | isometric view, open-air field kitchen, a big steaming pot on a brick stove, wooden table, spice jars and hanging pots and pans, plain white background |
-| `building_scrapyard.png` | 废料场 | 等距视角，一个小废料场，堆着拆掉的旧汽车、轮胎、木板和铁皮，有一台小吊车，纯白背景 | isometric view, small scrapyard, piles of dismantled old cars, tires, planks and sheet metal, a small crane, plain white background |
-| `building_infirmary.png` | 医务室 | 等距视角，由药房柜台改建的简易医务室，门口挂着红十字布帘，里面有一张病床和药柜，纯白背景 | isometric view, makeshift infirmary converted from a pharmacy counter, red cross curtain at the entrance, a hospital bed and medicine cabinet inside, plain white background |
-| `building_dorm.png` | 宿舍 | 等距视角，仓库一角铺开的睡袋、行军床和几顶小帐篷，挂着晾衣绳和小彩灯，温馨，纯白背景 | isometric view, a corner of a warehouse with sleeping bags, camp beds and small tents, clothesline and string lights, cozy, plain white background |
-| `building_training.png` | 训练场 | 等距视角，停车场里用轮胎、木桩和稻草人搭的训练场，稻草人身上画着靶心，纯白背景 | isometric view, training ground in a parking lot made of tires, wooden posts and a scarecrow with a target painted on it, plain white background |
-| `building_workshop.png` | 工坊 | 等距视角，小修车铺改成的工坊，卷帘门半开，墙上挂满工具，工作台上有台虎钳和零件，纯白背景 | isometric view, small auto-repair garage turned into a workshop, roll-up door half open, tools hanging on the wall, workbench with a vise and parts, plain white background |
-| `building_cellar.png` | 地窖 | 等距视角，超市冷库改成的地窖，一扇厚重的银色冷库门半开，冒出白色冷气，门边堆着箱子和罐头，纯白背景 | isometric view, supermarket cold storage turned into a cellar, a heavy silver freezer door half open with white cold mist, crates and cans stacked beside it, plain white background |
+**中文**
 
----
+```
+前缀：16 位像素风游戏素材，超任 / GBA 时代风格，有限调色板，清晰的 1 像素深色描边，2～3 阶平涂明暗，无抗锯齿，方正清晰的像素，形状大块好辨认，
+（画面描述）
+后缀：主体居中，纯白背景，没有文字，没有水印，地面没有投影
+```
 
-## 三、第二批（图标和背景）
+**负面提示词（支持的工具填上）**
 
-### 3.1 图标 → `sprites/icons/`
+```
+blurry, anti-aliasing, smooth gradient, soft shading, 3D render, photo, realistic, painterly, airbrush, noise, dithering noise, jpeg artifacts, mixed pixel sizes, half pixels, text, watermark, signature, frame, border
+```
 
-- **尺寸 256×256**，透明背景，**单个物品、正面略俯视**，粗描边，适合缩小到 40 像素还能认出来。
-- 所有图标的提示词都用这个模板：`前缀 D + 【物品描述】，纯白背景`
+Midjourney 建议加：`--style raw --stylize 50`，人物 `--ar 1:1`，背景按下面写的比例。
 
-| 文件名 | 用途 | 物品描述（中文） | English |
-|---|---|---|---|
-| `res_food.png` | 资源：食物 | 一条法棍面包和一个红苹果 | a baguette and a red apple |
-| `res_wood.png` | 资源：木材 | 一捆用绳子绑起来的木头 | a bundle of logs tied with rope |
-| `res_parts.png` | 资源：零件 | 一个齿轮加几颗螺丝螺母 | a gear with a few bolts and nuts |
-| `res_medicine.png` | 资源：药品 | 一个白色药瓶和两粒胶囊 | a white pill bottle with two capsules |
-| `res_cans.png` | 资源：罐头（稀有货币） | 一个闪闪发光的罐头，带金色光芒 | a shiny tin can with a golden glow |
-| `pickup_crate.png` | 拾荒：补给箱 | 一个木制补给箱，箱盖半开，露出食物 | a wooden supply crate with the lid half open, food inside |
-| `pickup_scrap.png` | 拾荒：废铁堆 | 一小堆废铁、铁皮和木板 | a small pile of scrap metal, sheet metal and planks |
-| `pickup_medkit.png` | 拾荒：急救箱 | 一个白底红十字的急救箱 | a white first-aid box with a red cross |
-| `pickup_walker.png` | 拾荒：落单的行尸 | SD 行尸的脑袋，灰绿皮肤，白点眼睛，傻傻的 | a chibi zombie head, grey-green skin, white dot eyes, goofy |
-| `pickup_cans.png` | 拾荒：罐头 | 两个滚在地上的罐头 | two tin cans lying on the ground |
-| `item_molotov.png` | 物品：燃烧瓶 | 一个塞着布条、布条在燃烧的玻璃瓶 | a glass bottle with a burning rag stuffed in it |
-| `item_medkit.png` | 物品：急救包 | 一卷绷带和一个小药盒 | a roll of bandage and a small medicine box |
-| `item_nail_bomb.png` | 物品：钉子炸弹 | 一个插满钉子、有引线的铁罐 | a tin can bristling with nails and a fuse |
-| `item_smoke_bomb.png` | 物品：烟雾弹 | 一个冒着灰白烟雾的土制罐子 | a homemade canister billowing grey-white smoke |
-| `item_spike_trap.png` | 物品：钉板陷阱 | 一块钉满长钉的木板 | a wooden board bristling with long nails |
-| `item_stim_shot.png` | 物品：兴奋剂 | 一支装着黄色药水的注射器 | a syringe filled with yellow liquid |
-| `prop_ration_s.png` / `prop_ration_l.png` | 背包：口粮（小 / 大） | 一小袋压缩饼干 / 一整箱军用口粮 | a small bag of hardtack / a full crate of military rations |
-| `prop_lumber_s.png` / `prop_lumber_l.png` | 背包：木材（小 / 大） | 一捆木板 / 一辆装满木材的小皮卡 | a bundle of planks / a small pickup loaded with lumber |
-| `prop_parts_s.png` / `prop_parts_l.png` | 背包：零件（小 / 大） | 一小盒螺丝零件 / 一个装满零件的铁皮工具箱 | a small box of screws and parts / a metal crate full of parts |
-| `prop_med_box.png` | 背包：药箱 | 一个白色药箱 | a white medicine box |
-| `prop_canned_meat.png` | 背包：午餐肉罐头 | 三个叠在一起的午餐肉罐头 | three stacked cans of luncheon meat |
-| `prop_wrench.png` / `prop_toolbox.png` | 背包：加速（扳手 / 工具箱） | 一把扳手 / 一个红色工具箱，带一个小时钟标记 | a wrench / a red toolbox with a small clock badge |
-| `prop_walkie.png` | 背包：对讲机 | 一台旧对讲机，天线竖起 | an old walkie-talkie with antenna up |
-| `prop_coffee.png` / `prop_chocolate.png` | 背包：咖啡 / 巧克力 | 一罐冒热气的咖啡 / 一块巧克力 | a steaming can of coffee / a chocolate bar |
-| `prop_field_kit.png` | 背包：野战医疗包 | 一个军绿色医疗包 | an olive-green field medical kit |
-| `prop_flyer.png` | 背包：招募传单 | 一张手写的“欢迎幸存者”传单（不要写字，画成涂鸦符号） | a hand-drawn welcome flyer (no readable text, doodle symbols only) |
-| `prop_mystery_box.png` | 背包：神秘补给箱 | 一个带问号贴纸、发着微光的木箱 | a glowing wooden crate with a question-mark sticker |
-| `skill_cover_fire.png` | 技能：伊森·掩护射击 | 一把手枪，枪口冒出火光 | a pistol with a muzzle flash |
-| `skill_hot_soup.png` | 技能：玛莎·热汤 | 一碗冒热气的汤，上面有爱心形状的热气 | a steaming bowl of soup with heart-shaped steam |
-| `skill_molotov.png` | 技能：德里克·燃烧瓶 | 一团橙色的火焰 | a burst of orange flame |
-| `skill_tripwire.png` | 技能：托比·绊索 | 一根绷紧的绳子绊索，上面挂着铃铛 | a taut tripwire rope with a bell hanging on it |
+### 1.3 统一调色板（尽量往这些颜色靠，脚本会再压一次颜色）
 
-### 3.2 背景 → `sprites/bg/`
+末日小镇的配色：**整体偏暗、低饱和，暖色只留给篝火、灯光和伊森的蓝夹克**。
 
-背景**不需要透明**，提示词里**不要写“纯白背景”**。
+| 用途 | 颜色 |
+|---|---|
+| 描边 / 最暗 | `#1e1a22` `#2e2730` |
+| 皮肤 | `#f0c8a0` `#d29870` `#9a6448` |
+| 伊森的蓝 | `#2f4a78` `#4a6fa5` `#8fb0d8` |
+| 丧尸绿 | `#3e5a3a` `#6a8a5a` `#9aaa6a` |
+| 木头 / 泥土 | `#4e3a26` `#8a6a44` `#b8935e` |
+| 灰 / 水泥 / 金属 | `#3c3c44` `#6e6e78` `#a8a8b0` `#dcdcd8` |
+| 血月 / 危险 | `#6e2222` `#b04040` |
+| 篝火 / 灯光 | `#e07030` `#f0b040` `#f8e090` |
 
-| 文件名 | 尺寸 | 中文提示词（前面加**前缀 C**，封面加**前缀 A**） | English (after prefix C / A) |
-|---|---|---|---|
-| `bg_camp.png` | **1440×1330**（接近正方形，营地地图区域的比例） | 营地地图的**地面底图**：45 度俯视的美国小镇超市停车场，超市外墙和大门在画面最上方一条，其余是**开阔、平整的停车场地面**（柏油、停车线、几处杂草和裂缝、零星的轮胎和木箱），黄昏暖光，**不要画帐篷、厨房之类的设施**（设施是单独的建筑图，程序会摆上去），没有人物，没有文字 | camp map **ground layer**: 45-degree top-down view of a small American town supermarket parking lot, store front as a thin strip at the very top, the rest is **open flat parking lot ground** (asphalt, parking lines, some weeds and cracks, a few scattered tires and crates), warm dusk light, **no tents or facilities** (buildings are separate sprites placed by the game), no characters, no text |
-| `bg_battle.png` | **1080×720**（横条） | 游戏战斗背景，**横版侧视**，夜晚的小镇街道，左边是营地的围栏和一盏路灯，右边是一条延伸出去的马路，路边有废弃的汽车和倒下的路牌，天上有月亮，蓝紫色夜色，**画面底部 20% 是平坦的地面**（角色站在上面），没有人物，没有文字 | game battle background, **side-scrolling side view**, small town street at night, camp fence and a street lamp on the left, road stretching to the right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground in the bottom 20%** for characters to stand on, no characters, no text |
-| `bg_town.png` | **1440×1460**（接近正方形，探索页地图区域的比例） | 小镇地图底图：**正上方俯视**的美国小镇，一条小河从左边弯弯曲曲流到右边，主路从左下角的镇口通到中间、再分岔去北边的山和右边，右上和左上是树林，北边是山坡，街区之间有很多空地（地点标记由程序摆上去，**不要画具体的建筑名字和文字**），低饱和的末日配色，杂草丛生，没有人物 | **top-down** map of a small American town, a small river winding from left to right, a main road from the lower-left town entrance to the center then branching north to the hills and to the right, woods in the upper corners, hillside to the north, plenty of open space between blocks (location markers are placed by the game, **no building names or text**), desaturated post-apocalyptic palette, overgrown, no characters |
-| `bg_title.png` | **1080×1920** | 游戏封面，黄昏下的超市营地，几个幸存者的背影围坐在篝火旁（剪影即可），远处天边有尸群的黑色剪影，温暖又有一点不安的氛围，**画面上方 1/3 留空**（放游戏标题），没有文字 | game title screen, supermarket camp at dusk, silhouettes of a few survivors sitting around a campfire seen from behind, a dark silhouette of a zombie horde on the distant horizon, warm yet slightly uneasy mood, **leave the top third empty** for the title, no text |
-| `bg_bloodmoon.png` | 1080×720 | 和 `bg_battle` 同一条街道、同一个构图，但天上是一轮巨大的**血红色月亮**，整体是暗红色调（血月夜的战斗用） | same street and same composition as bg_battle, but a huge **blood-red moon** in the sky, overall dark red tones (for blood moon nights) |
+提示词里可以加一句：`muted post-apocalyptic palette, desaturated, warm light only from fire and lamps`。
+
+### 1.4 保持风格一致
+
+1. **先做伊森的战斗小人和头像**，反复生成到满意，作为“风格参考图”。
+2. 之后每张都带上参考图：Midjourney 用 `--sref 图片链接`，即梦 / 可灵用“风格参考”。同一个人的头像和小人用 `--cref`（角色参考）或“角色一致性”。
+3. 像素图可以直接在 **Aseprite / Piskel**（免费网页版）里手修：缩成 64×64 以后，眼睛、警徽这种关键像素手点几下，效果会好很多。
+4. 背景**一定要纯白**（脚本靠白色背景抠图）。角色要有完整的深色描边，不要白衣服贴白背景。
+
+### 1.5 ⚠️ 版权红线
+
+不要画成《行尸走肉》里的标志性造型：**牛仔帽 + 卡其色警长制服**、脏辫女武士拿武士刀、带翅膀皮背心的弩手、缠铁丝网的棒球棍，也不要出现监狱、医院门口“死人勿开”的涂鸦。参考作品（`docs/reference/`）里的角色、地名同样不能画。我们的角色都是原创的，按下面的描述来画。
 
 ---
 
-## 四、第三批（锦上添花）
+## 二、第一批：战斗小人 → `sprites/units/`（64×64，脚底贴底边）
 
-### 4.1 营地地点 → `sprites/sites/`
+战斗是横版的：**我方朝右，敌人朝左**。全身、侧身 3/4 视角，2.5 头身。
 
-**尺寸 1080×608**（16:9 横图，搬迁界面的卡片用），不需要透明，没有人物、没有文字。
-
-| 文件名 | 地点 | 中文提示词（前面加**前缀 C**） |
-|---|---|---|
-| `site_supermarket.png` | 枫谷超市 | 45 度俯视，小镇超市和它的停车场，门口堆着货架栅栏，黄昏 |
-| `site_garage.png` | 镇口加油站 | 45 度俯视，镇口的小加油站，油罐、汽修间、墙上挂满工具，白天 |
-| `site_farm.png` | 河谷农场 | 45 度俯视，河谷里的农场，红色谷仓、果园和一口水井，四周开阔，傍晚 |
-| `site_clinic.png` | 镇卫生所 | 45 度俯视，小镇卫生所，白墙红十字，窗户用木板钉住，门外远处有几只丧尸的剪影，阴天 |
-| `site_police.png` | 警长办公室 | 45 度俯视，小镇警局，铁门、高墙和一辆旧警车，屋顶有探照灯 |
-| `site_dam.png` | 北岭水坝 | 45 度俯视，山谷里高大的水坝，坝顶有帐篷和灯火，水库波光粼粼，清晨 |
-
-### 4.2 界面素材 → `sprites/ui/`
-
-| 文件名 | 尺寸 | 说明 / 提示词 |
-|---|---|---|
-| `ui_panel.png` | 256×256 | 界面面板底板：旧木板拼成的方形面板，四角有金属包角和铆钉，中间平整干净（会被拉伸），纯白背景 |
-| `ui_button.png` | 256×96 | 按钮底图：墨绿色旧金属牌子，边缘有一点磨损和铆钉，中间平整，纯白背景 |
-| `ui_button_gold.png` | 256×96 | 同上，但是暖金色（引导高亮 / 可领取时用） |
-| `ui_logo.png` | 1024×512 | **游戏标题“末日营地”建议用设计工具做**（稿定设计 / Canva / Photoshop）：粗体卡通字，木牌或铁皮质感，旁边点缀一个小篝火和栅栏。AI 只负责生成装饰部分 |
-
-### 4.3 上架用
-
-| 文件名 | 尺寸 | 说明 |
-|---|---|---|
-| `app_icon.png` | **1024×1024**，不透明 | 小游戏图标：伊森的日漫风头像（前缀 A），背景是黄昏的超市营地和篝火，构图简单，缩小到 60 像素也能看清。上传微信后台时按要求再缩小 |
-| `share_default.png` | **500×400**（5:4） | 微信分享卡片图：几个 SD 小人幸存者站在栅栏后面，远处有尸群，**右侧留空**（以后加“我的营地存活了 N 天”的文字） |
+| 文件名 | 是谁 | 主色 | 画面描述（中文） | 画面描述（英文） |
+|---|---|---|---|---|
+| `unit_ethan.png` | 伊森 · 副警长（主角，唯一的英雄） | 蓝 `#4a6fa5` | 30 多岁的小镇副警长，棕色短发，胡茬，**深蓝色警用夹克**，胸口一个金色小星星（2～3 个像素就够），右手握手枪枪口朝下，站姿沉稳，身后隐约一点橙色火光（呼应“浴火重生”），全身，朝右 | small-town deputy in his 30s, short brown hair, stubble, **navy blue police jacket**, tiny gold star badge, pistol held pointing down in right hand, steady stance, faint orange ember glow behind him (phoenix motif), full body, facing right |
+| `unit_militia.png` | 普通幸存者（除伊森外所有人共用） | 灰绿 `#7a8a7a` | 普通的末日幸存者，看不出男女，戴兜帽，打满补丁的灰绿色卫衣，背一个小背包，手握一根铁管，朝右 | ordinary apocalypse survivor, gender-neutral, hood up, patched grey-green hoodie, small backpack, holding a metal pipe, full body, facing right |
+| `unit_dog.png` | 罐头 · 营地的狗 | 金黄 `#c8a050` | 金黄色中型土狗，脖子上系红色旧头巾，竖耳朵，准备冲出去的姿势，朝右 | medium golden mixed-breed dog, old red bandana, ears up, ready-to-charge pose, facing right |
+| `barricade.png` | 栅栏（守夜时挡在最前面） | 旧木色 `#8a6a44` | 货架、购物车、木板、轮胎、沙袋堆成的栅栏墙，**正侧面**，高而窄，钉子和铁丝加固，没有人物 | barricade wall made of store shelves, shopping carts, planks, tires and sandbags, **flat side view**, tall and narrow, reinforced with nails and wire, no characters |
+| `zombie_walker.png` | 行尸（最普通） | 灰绿 `#6a8a5a` | 灰绿皮肤的丧尸，眼睛是两个白点，破衬衫和牛仔裤，双手前伸摇摇晃晃，傻傻的有点可怜，**不流血**，朝左 | zombie with grey-green skin, two white dot eyes, torn shirt and jeans, arms reaching forward, shambling, goofy and a bit pitiful, **no blood**, full body, facing left |
+| `zombie_runner.png` | 奔跑者 | 浅黄绿 `#9aaa6a` | 瘦长的丧尸，浅黄绿皮肤，破运动服和跑鞋，身体前倾正在狂奔，头发乱飞，朝左 | skinny zombie, pale yellow-green skin, torn tracksuit and sneakers, leaning forward mid-sprint, hair flying, facing left |
+| `zombie_fatty.png` | 胖子（死后放毒气） | 绿 `#7a9a4a` | 圆滚滚的大胖丧尸，肚子鼓得很大，身边飘着几个淡绿色毒气泡泡，撑破的背心，朝左 | huge round zombie, bloated belly, a few pale green toxic gas bubbles around it, stretched torn tank top, facing left |
+| `zombie_armored.png` | 铁甲尸 | 蓝灰 `#5a6a7a` | 戴黄色安全帽、穿反光背心的丧尸，身上绑着铁皮和轮胎当盔甲，看起来很硬，朝左 | zombie in a yellow hard hat and reflective vest, scrap metal plates and tire pieces strapped on as armor, tough, facing left |
+| `zombie_brute.png` | 尸群首领（Boss） | 暗红 `#8a3a3a` | 比普通丧尸大一圈的首领，肌肉发达，暗红皮肤，眼睛发红光（2 个亮红像素），破屠夫围裙，拳头巨大，朝左。**这张可以占满 64×64 画布** | zombie boss bigger than normal zombies, muscular, dark red skin, glowing red pixel eyes, torn butcher apron, huge fists, facing left, **fills the whole canvas** |
+| `zombie_frenzied.png` | 狂暴感染者 | 红 `#b04040` | 瘦小敏捷的感染者，皮肤泛红，龇牙，四肢着地半蹲准备扑过来，身后两三道红色速度线，朝左 | small agile infected, reddish skin, teeth bared, crouched on all fours ready to pounce, two or three red speed lines behind, facing left |
+| `enemy_wild_dog.png` | 野狗 | 棕 `#8a6a4a` | 瘦骨嶙峋的野狗，棕色杂毛，龇牙压低身子准备扑咬，凶但不血腥，朝左 | scrawny feral dog, patchy brown fur, teeth bared, crouched low ready to lunge, fierce but not gory, facing left |
+| `enemy_raider.png` | 掠夺者（活人） | 红褐 `#8a4a3a` | 凶悍的掠夺者，光头，脸上涂黑色油彩，钉了铁片的皮背心，拎着一根钉了铁片的木棒，朝左 | fierce raider, shaved head, black face paint, leather vest studded with scrap metal, holding a wooden club with metal plates, facing left |
+| `enemy_raider_gunner.png` | 掠夺者枪手（活人） | 深褐 `#6a3a2a` | 戴黑面罩的掠夺者，破皮夹克挂着子弹带，端着旧猎枪瞄准，朝左 | masked raider, worn leather jacket with ammo belt, aiming an old hunting rifle, facing left |
 
 ---
 
-## 五、交付方式
+## 三、第一批：头像 → `sprites/portraits/`（64×64）
 
-**最省事的做法：原图直接交，抠图交给脚本。**
+事件卡、幸存者档案、招募界面、墓地都会用。**头到胸口，正面或微侧，表情要大、要看得清**。背景纯白。
+（伊森以外的人在战斗里都用普通幸存者小人，头像是他们唯一的“脸”，值得认真做。）
 
-1. 生成的原图**不用自己抠**，什么格式都行（jfif、webp、jpg、png），白底、假棋盘格都没关系。按文件名命名（后缀不用管），放进项目的 `art-raw/` 下对应的文件夹：`art-raw/units/`、`art-raw/portraits/`、`art-raw/buildings/`。
-2. 用 GitHub Desktop 提交上来，告诉我“图放好了”。我运行 `tools/process_art.py`：自动去背景、去白边、裁掉多余空白、缩放，输出到 `assets/resources/sprites/`，再提交回去。你 Pull 下来就能在游戏里看到。
-   - 电脑上装了 Python 的话也可以自己跑：`pip install pillow numpy`，然后 `python tools/process_art.py`。
-3. **游戏会自动读取** `sprites/units/`、`sprites/portraits/`、`sprites/buildings/` 里的图（v0.6 起）：有图就显示图，没图继续画色块。
-4. **怎么马上看到战斗角色**：进“战报”页，点“🎬 看一场演示战斗”（不影响营地）。
-5. 脚本靠角色的**深色描边**区分角色和背景，所以生成时要保证角色有完整、清楚的描边（我们的画风本来就有）。如果角色边缘本身就是白色又没有描边（比如白衣服贴着白背景），脚本可能会把那一块也抠掉，这种图请换成纯色背景（比如纯绿色）重新生成。
-6. 生成出来不满意、风格对不上的，先别放进去，宁可少几张也要统一。
+| 文件名 | 是谁 | 画面描述（中文） | 画面描述（英文） |
+|---|---|---|---|
+| `portrait_ethan.png` | 伊森（主角） | 30 多岁的副警长，棕色短发，胡茬，深蓝警用夹克，胸口小金星，眼神坚毅又有点疲惫和思念，肩后一点橙色火星 | bust portrait, deputy in his 30s, short brown hair, stubble, navy police jacket, tiny gold star, determined yet tired and longing eyes, a few orange embers behind his shoulder |
+| `portrait_martha.png` | 玛莎 · 超市老板娘 | 60 岁胖奶奶，灰白发髻，圆框眼镜，碎花裙外面套超市围裙，嘴硬心软的表情 | bust portrait, plump 60-year-old grandma, grey hair bun, round glasses, floral dress with grocery apron, tough-talking but kind face |
+| `portrait_derek.png` | 德里克 · 汽修工 | 壮硕的汽修工，寸头，头巾，脸上有机油，皱眉像藏着心事 | bust portrait, burly mechanic, buzz cut, bandana, grease on face, frowning as if hiding something |
+| `portrait_sophie.png` | 苏菲 · 护理系学生 | 金色马尾的女生，粉色护士服，紧张地抱着红十字急救包，眼神善良 | bust portrait, nursing student with blonde ponytail, pink scrubs, nervously hugging a red-cross first-aid bag, kind eyes |
+| `portrait_toby.png` | 托比 · 加油站店员 | 瘦高小伙，反戴黄色鸭舌帽，加油站黄马甲，比大拇指咧嘴笑 | bust portrait, lanky young man, backwards yellow cap, yellow gas-station vest, thumbs up, big grin |
+| `portrait_leo.png` | 里奥 · 高中生 | 17 岁男生，黑色短发，红色连帽卫衣，脸上有泥，眼神冲动勇敢 | bust portrait, 17-year-old boy, short black hair, red hoodie, mud on face, impulsive brave eyes |
+| `portrait_hank.png` | 汉克 · 退伍老兵 | 灰白络腮胡，针织帽，军绿旧外套，眯着眼警惕地看前方 | bust portrait, grey-bearded veteran, knit beanie, worn olive army jacket, squinting warily |
+| `portrait_rosa.png` | 罗莎 · 花店店主 | 40 岁左右温柔的女人，深色卷发，草帽，园艺围裙，手捧一小包种子，头发上别一朵小花 | bust portrait, gentle woman around 40, dark curly hair, straw hat, gardening apron, holding a seed packet, small flower in her hair |
+| `portrait_nora.png` | 诺拉 · 兽医 | 45 岁左右冷静的女人，短发，细框眼镜，白大褂，脖子挂听诊器，嘴角一点冷笑 | bust portrait, calm woman around 45, short hair, thin glasses, white coat, stethoscope, slight sarcastic smirk |
+| `portrait_joe.png` | 老乔 · 卡车司机 | 50 多岁大胡子，卡车司机网帽，红黑格子衬衫，乐呵呵地在说话 | bust portrait, bearded trucker in his 50s, mesh trucker cap, red-black plaid shirt, cheerfully talking |
+| `portrait_lily.png` | 莉莉 · 伊森的女儿 | 12 岁女孩，棕发扎两个小辫，黄色雨衣，双手握一台旧对讲机，眼神坚强 | bust portrait, 12-year-old girl, brown hair in two small braids, yellow raincoat, holding an old walkie-talkie with both hands, strong eyes |
+| `portrait_narrator.png` | 营地旁白（没人说话时） | 木箱上一台老式收音机，天线竖起，旁边一盏小油灯发着暖光，没有人物 | an old radio on a wooden crate, antenna up, a small oil lamp glowing warmly beside it, no characters |
+| `portrait_wanderer_1.png` | 流浪者（随机用） | 背大登山包的中年男人，毛线帽，胡子拉碴 | bust portrait, middle-aged man with a big hiking backpack, knit cap, scruffy beard |
+| `portrait_wanderer_2.png` | 流浪者 | 围围巾的年轻女人，短发，脸上贴着创可贴 | bust portrait, young woman with a scarf, short hair, a bandage on her cheek |
+| `portrait_wanderer_3.png` | 流浪者 | 拄拐杖的白发老爷爷，旧西装马甲 | bust portrait, white-haired old man with a cane, worn suit vest |
+| `portrait_wanderer_4.png` | 流浪者 | 头上架着护目镜的少女，工装外套，高马尾 | bust portrait, teenage girl with goggles on her head, work jacket, high ponytail |
+
+> 流浪者头像越多越好，以后可以继续加 `portrait_wanderer_5.png`、`_6`……（告诉我加了几张，我把数量改一下）。
+
+---
+
+## 四、第二批：营地建筑 → `sprites/buildings/`（96×96）
+
+营地是俯视的，建筑用**像素等距视角（2:1 斜 45 度）**，单独一个建筑、四周纯白。
+
+**先做“通用图”**（每个建筑一张，所有阶段都能用），有空再按升级阶段做“阶段图”：升到那个阶段时游戏会自动换图。
+阶段图的文件名是 `building_<建筑>_<第几阶段>.png`，比如厨房第 2 阶段“烤架”就是 `building_kitchen_2.png`。
+
+前缀里加一句：`isometric pixel art building, 2:1 isometric angle, single building on a small patch of ground,`
+
+### 4.1 通用图
+
+| 文件名 | 建筑 | 画面描述（中文） | 画面描述（英文） |
+|---|---|---|---|
+| `building_hq.png` | 指挥部 | 小镇超市的经理办公室，门口插一面小旗，屋顶一根收音机天线，窗户透出暖黄灯光 | small-town supermarket manager's office, small flag at the door, radio antenna on the roof, warm yellow window light |
+| `building_wall.png` | 栅栏 | 一段货架、木板、沙袋堆成的防御墙，墙头挂一盏小灯 | a section of defensive wall made of shelves, planks and sandbags, a small lamp hanging on top |
+| `building_kitchen.png` | 厨房 | 露天厨房，砖头灶台上一口冒热气的大锅，木桌和挂着的锅碗 | open-air kitchen, big steaming pot on a brick stove, wooden table, hanging pots |
+| `building_scrapyard.png` | 废料场 | 小废料场，拆开的旧汽车、轮胎、木板、铁皮堆成堆 | small scrapyard, piles of dismantled car parts, tires, planks and sheet metal |
+| `building_infirmary.png` | 医务室 | 药房柜台改的医务室，门口挂红十字布帘，一张病床 | makeshift infirmary from a pharmacy counter, red-cross curtain at the door, one hospital bed |
+| `building_dorm.png` | 宿舍 | 仓库一角的睡袋、行军床和小帐篷，晾衣绳和一串小彩灯 | warehouse corner with sleeping bags, camp beds and small tents, clothesline and string lights |
+| `building_training.png` | 训练场 | 轮胎、木桩和画着靶心的稻草人 | training ground with tires, wooden posts and a scarecrow with a painted target |
+| `building_workshop.png` | 工坊 | 小修车铺改的工坊，卷帘门半开，墙上挂满工具，工作台上有台虎钳 | small garage workshop, roll-up door half open, tools on the wall, workbench with a vise |
+| `building_cellar.png` | 地窖 | 地上一扇厚重的地窖门半开，冒出白色冷气，旁边堆着箱子和罐头 | heavy cellar door in the ground half open with white cold mist, crates and cans beside it |
+
+### 4.2 阶段图（可选，做了就会随升级换样子）
+
+| 文件名 | 阶段 | 画面描述（中文） | 画面描述（英文） |
+|---|---|---|---|
+| `building_hq_1.png` | 📋经理办公室 | 超市角落的小办公室，一张桌子一盏台灯，墙上钉着地图 | tiny office corner, one desk and a desk lamp, a map pinned on the wall |
+| `building_hq_2.png` | 🏢指挥中心 | 打通的会议室，长桌、对讲机、值班表黑板 | opened-up meeting room, long table, walkie-talkies, duty roster chalkboard |
+| `building_hq_3.png` | 🏛️营地总部 | 两层的小楼，门口挂营地旗帜，窗户都亮着 | two-story building, camp banner at the entrance, all windows lit |
+| `building_hq_4.png` | 🏰要塞司令部 | 加固的司令部，沙袋围着，屋顶有探照灯和高高的无线电天线 | fortified headquarters, sandbags around it, searchlight and tall radio mast on the roof |
+| `building_wall_1.png` | 🪵木栅栏 | 木桩和货架拼成的矮栅栏 | low fence of wooden stakes and store shelves |
+| `building_wall_2.png` | 🧱加固木墙 | 厚木板层层钉牢的墙，前面一道浅沟 | wall of thick nailed planks with a shallow ditch in front |
+| `building_wall_3.png` | 🛡️铁皮墙 | 车皮和广告牌焊成的铁皮墙，铆钉一排排 | sheet-metal wall welded from car panels and billboards, rows of rivets |
+| `building_wall_4.png` | 🏯水泥围墙 | 灰色水泥墙，顶上拉着铁丝网，一盏探照灯 | grey concrete wall with barbed wire on top and a searchlight |
+| `building_kitchen_1.png` | 🔥篝火 | 几块砖头围着一堆篝火，上面架着一口小锅 | a campfire ringed by bricks with a small pot over it |
+| `building_kitchen_2.png` | 🍖烤架 | 焊出来的铁烤架，上面烤着肉，旁边一桶水 | welded metal grill with meat roasting, a bucket of water beside it |
+| `building_kitchen_3.png` | 🍳厨房 | 熟食区改的厨房，灶台、案板、挂着的锅铲 | kitchen made from a deli counter, stove, cutting board, hanging utensils |
+| `building_kitchen_4.png` | 🍲食堂 | 长桌长凳和两口大锅，排班表挂在柱子上 | dining hall with long tables, benches and two big pots, a schedule on a post |
+| `building_kitchen_5.png` | 🏭中央厨房 | 大厨房，有熏肉架、腌菜缸和一排罐头 | large kitchen with smoking racks, pickling jars and rows of canned food |
+| `building_scrapyard_1.png` | 🗑️废品堆 | 停车场角落的一堆破烂 | a pile of junk in a parking lot corner |
+| `building_scrapyard_2.png` | 🔩拆解棚 | 遮雨棚下的工作台和一套扳手 | workbench and wrenches under a rain shelter |
+| `building_scrapyard_3.png` | 🏗️废料场 | 分门别类的废料堆，一台小吊车 | sorted scrap piles and a small crane |
+| `building_scrapyard_4.png` | 🏭回收工厂 | 有发电机和切割机的小厂房，火花四溅 | small factory with a generator and cutting machine, sparks flying |
+| `building_infirmary_1.png` | 🩹急救箱 | 一张干净的桌子上放着急救箱 | a first-aid kit on a clean table |
+| `building_infirmary_2.png` | 💊药房柜台 | 药房柜台，药瓶按格子摆好 | pharmacy counter with neatly shelved pill bottles |
+| `building_infirmary_3.png` | 🏥医务室 | 隔出来的病床和消毒区，红十字布帘 | partitioned beds and a sterile area, red-cross curtain |
+| `building_infirmary_4.png` | 🚑野战医院 | 一顶大帐篷医院，旁边一小块药材园 | large tent field hospital with a small herb garden beside it |
+| `building_dorm_1.png` | ⛺睡袋 | 地上铺开的一排睡袋 | a row of sleeping bags on the floor |
+| `building_dorm_2.png` | 🛏️行军床 | 一排行军床，床头挂着衣服 | a row of camp beds with clothes hanging at the ends |
+| `building_dorm_3.png` | 🏠宿舍 | 货架隔出来的小房间，门口贴着名字纸条（不要写字，画成小纸片） | small rooms partitioned by shelves, little paper name tags on the doors (no readable text) |
+| `building_training_1.png` | 🥊沙袋 | 房梁上吊着一个旧沙袋 | an old punching bag hanging from a beam |
+| `building_training_2.png` | 🎯训练场 | 轮胎、木桩和画靶心的稻草人 | tires, wooden posts and a target scarecrow |
+| `building_training_3.png` | 🏋️格斗馆 | 铺了垫子的小场馆，武器架上挂着木棍 | small gym with mats and a weapon rack of wooden staves |
+| `building_workshop_1.png` | 🔧工具台 | 一张结实的木桌和一套工具 | a sturdy wooden table with a set of tools |
+| `building_workshop_2.png` | 🛠️工坊 | 修车铺改的工坊，卷帘门半开，墙上挂满工具 | garage workshop, roll-up door half open, wall full of tools |
+| `building_cellar_1.png` | 🕳️地洞 | 后院挖的一个地洞，盖着木板 | a hole dug in the backyard covered with planks |
+| `building_cellar_2.png` | 🧊地窖 | 厚重的地窖门，冒出一点冷气 | heavy cellar door with a little cold mist |
+| `building_cellar_3.png` | ❄️冷库 | 银色冷库门，旁边一台嗡嗡响的发电机 | silver freezer door with a humming generator beside it |
+
+---
+
+## 五、第二批：背景 → `sprites/bg/`（宽 360，脚本自动缩）
+
+背景**不用抠图**，按比例生成就行。前缀把 `game sprite` 换成 `game background, pixel art scene`。
+
+| 文件名 | 生成比例 | 画面描述（中文） | 画面描述（英文） |
+|---|---|---|---|
+| `bg_camp.png` | 约 1:1（1440×1330） | 营地地图的**地面底图**：45 度俯视的小镇超市停车场，超市外墙和大门只占最上面一条，其余是开阔平整的停车场（柏油、停车线、杂草、裂缝、零星轮胎和木箱），黄昏暖光。**不要画帐篷、厨房这些设施**（设施是单独的建筑图），没有人物，没有文字 | camp map **ground layer**, 45-degree top-down pixel art of a small-town supermarket parking lot, store front only as a thin strip at the top, the rest open flat asphalt with parking lines, weeds, cracks, a few tires and crates, warm dusk light, **no tents or facilities**, no characters, no text |
+| `bg_town.png` | 约 1:1（1440×1460） | 小镇地图底图：**正上方俯视**，一条小河从左弯到右，主路从左下镇口通到中间再分岔去北边山坡和右边，四角有树林，北边山坡，街区之间留出很多空地（地点标记由游戏放，**不要画文字和招牌**），低饱和末日配色，杂草丛生 | **top-down** pixel art map of a small town, a river winding left to right, main road from the lower-left entrance to the center then branching north to the hills and east, woods in the corners, hillside to the north, lots of open space between blocks, **no text or signs**, desaturated post-apocalyptic palette, overgrown |
+| `bg_battle.png` | 3:2（1080×720） | 战斗背景，**横版侧视**，夜晚的小镇街道：左边是营地的栅栏和一盏路灯，右边马路延伸出去，路边有废车和倒下的路牌，天上一轮月亮，蓝紫色夜色，**画面底部 20% 是平坦地面**（角色站在上面），没有人物 | **side-scrolling** pixel art battle background, small-town street at night, camp fence and a street lamp on the left, road stretching right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground in the bottom 20%**, no characters |
+| `bg_bloodmoon.png` | 3:2（1080×720） | 和 `bg_battle` 同一条街、同一个构图，但天上是一轮巨大的**血红月亮**，整体暗红色调 | same street and composition as bg_battle, but a huge **blood-red moon**, overall dark red tones |
+| `bg_title.png` | 9:16（1080×1920） | 游戏封面：黄昏下的超市营地，几个幸存者的背影围坐篝火（剪影就行），远处天边尸群的黑色剪影，温暖又有点不安。**上方 1/3 留空**放标题，没有文字 | title screen pixel art, supermarket camp at dusk, silhouettes of a few survivors around a campfire seen from behind, dark silhouette of a zombie horde on the far horizon, warm yet uneasy, **top third left empty** for the title, no text |
+
+---
+
+## 六、以后再做（代码暂时还没接，不急）
+
+这些游戏里现在用的是 emoji，接图要另外改代码。想先做的话，按 32×32 图标的规格生成（前缀加 `pixel art icon, 32x32, single object,`），做好告诉我再接：
+
+- **资源**：食物（法棍 + 苹果）、木材（一捆木头）、零件（齿轮 + 螺丝）、药品（白药瓶 + 胶囊）、罐头（发光的罐头）、黄金（一小块金锭）
+- **背包道具 / 装备**：口粮、木材箱、零件箱、药箱、扳手、工具箱、对讲机、咖啡、巧克力、野战医疗包、招募传单、神秘补给箱、瓶装水、汽油桶、棒球棍、消防斧、手枪、猎枪、猎弓、皮夹克、摩托头盔、防暴背心、撬棍、主厨刀、听诊器、劳保手套、登山靴；背包：腰包、书包、外卖箱、登山包、战术背包
+- **交通工具**（营地车库 / 地图上的小车）：旧自行车、越野摩托、老乔的皮卡、厢式货车
+- **猎物**：老鼠、鸽子、乌鸦、野兔、走失的鸡、松鼠、野鸭、鱼、大鲶鱼、浣熊、鹿、野猪、大雁、野狗
+- **营地**：墓地的墓碑（一块木十字架 + 一块石碑，`grave_cross.png` / `grave_stone.png`）、篝火、侦察点标记、拾荒物
+- **地图标记**：每种探索地点一个小图标（加油站、公园、五金店、诊所、警局、学校、汽车旅馆、信号塔、教堂、码头、伐木场、仓库、车祸现场、军方检查站、掠夺者营地、难民营）
+- **界面**：木板面板（9 宫格拉伸用）、按钮底图、金色高亮按钮、像素字体（推荐免费商用的“方正像素”类字体或 Zpix，界面字体换成像素字体效果会统一很多）
+- **上架用**：小游戏图标 1024×1024（伊森像素头像 + 篝火）、分享卡片 500×400
+
+---
+
+## 七、交付方式
+
+**原图直接交，像素化交给脚本。**
+
+1. 生成的原图**不用自己抠、不用自己缩**，什么格式都行（jfif、webp、jpg、png）。按文件名命名，放进项目的 `art-raw/` 下对应的文件夹：`art-raw/units/`、`art-raw/portraits/`、`art-raw/buildings/`、`art-raw/bg/`。
+2. 用 GitHub Desktop 提交上来，告诉我“图放好了”。我运行 `tools/process_art.py`：自动去白底、裁边、缩成像素网格（角色 64×64、建筑 96×96、背景宽 360）、压颜色、去毛边，输出到 `assets/resources/sprites/`，再提交回去。你 Pull 下来就能在游戏里看到。
+   - 电脑上装了 Python 也可以自己跑：`pip install pillow numpy`，然后 `python tools/process_art.py`。
+   - 已经是手修好的真像素图（比如在 Aseprite 里画的 64×64），也可以直接放进去，脚本不会把它弄坏。
+   - 非像素风的图可以加 `--smooth` 按以前的方式处理。
+3. 游戏会自动读取 `sprites/units/`、`sprites/portraits/`、`sprites/buildings/`、`sprites/bg/` 里的图，**用最近邻放大**（像素不会糊）；有图就显示图，没图继续画色块。
+4. **怎么马上看到战斗小人**：进“战报”页，点“🎬 看一场演示战斗”（不影响营地）。
+5. 不满意、风格对不上的先别放，宁可少几张也要统一。**建议顺序**：伊森小人 + 伊森头像 → 普通幸存者 + 行尸 → 其他头像 → 其他丧尸 → 建筑通用图 → 背景 → 建筑阶段图。
