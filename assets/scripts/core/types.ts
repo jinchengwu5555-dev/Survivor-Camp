@@ -553,6 +553,8 @@ export interface GearStats {
     work?: { building?: string; mult: number };
     /** 侦察来回时间 */
     scout?: number;
+    /** 远程武器的射程（拿着它就能在后排开枪） */
+    range?: number;
 }
 
 export interface PropDef {
@@ -711,6 +713,10 @@ export interface SurvivorState {
     watch?: WatchMode;
     /** 最近几次心情变化的原因（见 core/mood.ts） */
     moodNotes?: { at: number; text: string; amount: number }[];
+    /** 战斗站位：前排 / 后排（没有 = 按武器自动，见 formation.ts） */
+    row?: SurvivorRow;
+    /** 最初的伙伴：第一次探索遇到并留下的人（见 bonds.ts） */
+    founder?: boolean;
     /** 特质（recruits.json 的 quirks）、已经暴露的藏着的特质、加入营地的时间 */
     quirks?: string[];
     revealed?: string[];
@@ -718,6 +724,26 @@ export interface SurvivorState {
 }
 
 export type WatchMode = 'auto' | 'always' | 'never';
+export type SurvivorRow = 'front' | 'back';
+
+/** 墓地里的一座墓（见 core/bonds.ts） */
+export interface GraveState {
+    id: string;
+    name: string;
+    title: string;
+    cause: string;
+    diedDay: number;
+    diedAt: number;
+    /** 跟着伊森多少天、和伊森并肩作战几次、羁绊值 */
+    days: number;
+    battles: number;
+    bond: number;
+    /** 最初的伙伴 */
+    founder: boolean;
+    prayers: number;
+    /** 最后一次来祷告是第几天（每座墓每天一次） */
+    lastPrayDay?: number;
+}
 
 export interface LogEntry {
     at: number;
@@ -817,6 +843,10 @@ export interface GameState {
     seen?: SeenState;
     /** 上一晚的守夜情况（见 core/watch.ts） */
     lastNight?: NightState;
+    /** 两个人一起打过几场仗："a|b" → 次数（见 bonds.ts） */
+    bonds?: Record<string, number>;
+    /** 墓地：死去的人（见 bonds.ts） */
+    graveyard?: GraveState[];
     /** 主角的浴火重生：涅槃了几次、下一次什么时候能再来（见 roster.ts） */
     phoenix?: { rebirths: number; readyAt: number };
     /** 心情跨档的次数（统计用） */

@@ -22,6 +22,7 @@ import {
     raidDefenders,
     raidEnemyBonus,
     raidSetup,
+    availableFighters,
     locationTier,
     restockSecondsLeft,
     squadOf,
@@ -36,7 +37,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, WatchMode } from '../core/types';
+import { BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo, survivorName } from '../core/roster';
@@ -58,6 +59,9 @@ import { allDialogues } from '../core/chatter';
 import { moodFactors, moodTier } from '../core/mood';
 import { districtName, locationName, objectiveText, townName } from '../core/names';
 import { candidateInfo, quirksOf } from '../core/recruits';
+import { bondOf, bondPoints, bondTier, BOND_TIERS, daysWithLeader, isFounder, LEADER, prayBlocker, sharedBattles } from '../core/bonds';
+import { ROW_NAMES, rowOf, squadSynergies, weaponRange } from '../core/formation';
+import { phoenixReady } from '../core/roster';
 import { goldBlocker, goldOffer, goldValue } from '../core/gold';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulSections, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
@@ -79,7 +83,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.8 设置+闲聊扩充';
+const GAME_VERSION = 'v1.9 站位+羁绊+墓地';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -161,7 +165,7 @@ const SPECIALTY_NAMES: Record<string, string> = {
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | null;
+type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | 'graveyard' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -210,6 +214,8 @@ export class GameRoot extends Component {
     private selectedSurvivor: string | null = null;
     /** 刚做完的事件选择：结果卡片（点“继续”后才看下一个事件） */
     private eventResult: { title: string; choice: string; text: string; effects: string } | null = null;
+    /** 探索时自己挑的队员（null = 自动编队） */
+    private pickedSquad: string[] | null = null;
     /** 设置菜单里“重新开始”按了第一下，等第二下确认 */
     private confirmRestart = false;
     /** 探索页选中的分区（选中时下方显示分区详情和“勘察”） */
@@ -783,6 +789,22 @@ export class GameRoot extends Component {
             });
         }
 
+        // 墓地：有人死了才出现，在营地左下角
+        const graves = state.graveyard ?? [];
+        if (graves.length > 0) {
+            const yard = makeNode('Graveyard', map, 120, 70);
+            yard.setPosition(-255, -245);
+            drawPanel(yard.addComponent(Graphics), 116, 64, new Color(60, 66, 60, 230), 12, new Color(150, 160, 150), 2);
+            addLabel(yard, '🪦'.repeat(Math.min(3, graves.length)), 26, TEXT, { width: 110 }).node.setPosition(0, 10);
+            addLabel(yard, `墓地 ${graves.length}`, 16, TEXT, { width: 110 }).node.setPosition(0, -20);
+            yard.on(Node.EventType.TOUCH_END, () => {
+                punch(yard);
+                this.sheet = 'graveyard';
+                this.resetScroll();
+                this.render();
+            });
+        }
+
         // 流浪商人的皮卡
         if (traderPresent(state, now)) {
             const truck = makeNode('Trader', map, 110, 90);
@@ -1025,6 +1047,8 @@ export class GameRoot extends Component {
                 this.renderCampStats(camp, now);
             } else if (this.sheet === 'settings') {
                 this.renderSettings(camp, now);
+            } else if (this.sheet === 'graveyard') {
+                this.renderGraveyard(camp, now);
             } else {
                 this.renderSites(camp, now);
                 camp.markSeen('sites');
@@ -1623,7 +1647,8 @@ export class GameRoot extends Component {
             this.drawPortrait(node, camp, s.id, -cardW / 2 + 48, 8, 36);
             const textX = 40;
             const textW = cardW - 100;
-            addLabel(node, `${info?.name ?? s.id}`, 24, TEXT, { width: textW, align: 'left' }).node.setPosition(textX, 38);
+            const bond = bondOf(config, state, s, now);
+            addLabel(node, `${isFounder(state, s) && s.id !== LEADER ? '⚜️' : ''}${info?.name ?? s.id}`, 24, s.id === LEADER ? ACCENT : hexColor(bond.color), { width: textW, align: 'left' }).node.setPosition(textX, 38);
             addLabel(node, `${info?.title ?? ''} · ${SPECIALTY_NAMES[info?.specialty ?? ''] ?? ''}`, 16, DIM, { width: textW, align: 'left' }).node.setPosition(textX, 14);
             addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }).node.setPosition(textX, -12);
             const talents = talentsOf(config, state, s.id).map((t) => t.icon + t.name).join(' ');
@@ -1724,6 +1749,8 @@ export class GameRoot extends Component {
         }
         this.gap(10);
 
+        this.renderBond(camp, id, now);
+        this.renderRow(camp, id);
         this.renderMood(camp, id, now);
         this.renderGearSlots(camp, id);
         this.renderWatchMode(camp, id);
@@ -1767,6 +1794,70 @@ export class GameRoot extends Component {
             camp.assign(id, null, camp.now);
             this.render();
         }, LEFT, !s.assignment ? 'highlight' : 'normal', 22, 50);
+    }
+
+    /** 个人档案里和伊森的羁绊：跟随天数、并肩作战次数、档位颜色 */
+    private renderBond(camp: CampGame, id: string, now: number): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        if (id === LEADER) {
+            const rebirths = state.phoenix?.rebirths ?? 0;
+            const ready = phoenixReady(config, state, now);
+            this.text(`🔥 浴火重生：已涅槃 ${rebirths} 次（攻击 +${rebirths * 5}%）· ${ready ? '现在倒下也能再站起来' : '刚涅槃过，这几天要小心'}`, 20, ready ? WIN : LOSE);
+            this.gap(6);
+            return;
+        }
+        const tier = bondOf(config, state, s, now);
+        const next = BOND_TIERS.slice().reverse().find((t) => t.min > bondPoints(config, state, s, now));
+        this.text(`❤️ 和伊森：${tier.name}${isFounder(state, s) ? ' · ⚜️最初的伙伴' : ''}`, 22, hexColor(tier.color));
+        this.text(
+            `跟着伊森 ${daysWithLeader(config, state, s, now)} 天，并肩作战 ${sharedBattles(state, id, LEADER)} 次${tier.atk > 1 ? `，和伊森同队攻击 +${Math.round((tier.atk - 1) * 100)}%` : ''}${next ? `；再深一点就是「${next.name}」` : ''}`,
+            18,
+            DIM,
+        );
+        this.gap(6);
+    }
+
+    /** 个人档案里的站位：自动 / 前排 / 后排 */
+    private renderRow(camp: CampGame, id: string): void {
+        const { config, state } = camp;
+        const s = state.survivors.find((x) => x.id === id)!;
+        const range = weaponRange(config, state, id);
+        this.text(`⚔️ 站位：${ROW_NAMES[rowOf(config, state, id)]}${range ? `（手里有远程武器，射程 ${range}）` : '（近战）'}`, 22, ACCENT);
+        this.text('前排先挨打、生命 +10%；后排靠后，拿枪的攻击 +10%。', 17, DIM);
+        const top = this.cursorY;
+        const w = (WIDTH - 20) / 3;
+        ([[null, '自动'], ['front', '前排'], ['back', '后排']] as [SurvivorRow | null, string][]).forEach(([row, label], i) => {
+            this.cursorY = top;
+            const current = (s.row ?? null) === row;
+            this.button(`${current ? '✅ ' : ''}${label}`, w, () => {
+                camp.setRow(id, row, camp.now);
+                this.render();
+            }, LEFT + i * (w + 10), current ? 'highlight' : 'normal', 20, 44);
+        });
+        this.gap(10);
+    }
+
+    /** 墓地：记着每一个死去的人，颜色是他和伊森的感情；每座墓每天可以祷告一次 */
+    private renderGraveyard(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const graves = [...(state.graveyard ?? [])].reverse();
+        this.text(`🪦 墓地（${graves.length} 人长眠于此）`, 28, ACCENT);
+        this.text('每座墓每天可以来祷告一次。感情越深的人，大家越想念他。', 18, DIM);
+        this.gap(8);
+        for (const g of graves) {
+            const tier = bondTier(g.bond);
+            this.text(`${g.founder ? '⚜️' : '✝'} ${g.name}  ${g.title}`, 24, hexColor(tier.color));
+            this.text(`${g.cause} · 第 ${g.diedDay} 天 · 跟着伊森 ${g.days} 天 · 并肩作战 ${g.battles} 次 · ${tier.name}${g.prayers ? ` · 祷告过 ${g.prayers} 次` : ''}`, 18, DIM);
+            const blocker = prayBlocker(config, state, g.id, now);
+            this.button(blocker ? `🕯️ ${blocker}` : '🕯️ 在墓前祷告', WIDTH, () => {
+                const res = camp.pray(g.id, camp.now);
+                if (res.ok) this.effect(`🕯️ ${res.message}`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, blocker ? 'disabled' : 'normal', 20, 44);
+            this.gap(10);
+        }
     }
 
     /** 个人档案里的心情：档位、效果、最近为什么变了、正在影响心情的事 */
@@ -2091,7 +2182,7 @@ export class GameRoot extends Component {
             this.text(`解锁条件：${unlockHint(config, state, loc, now)}`, 20, DIM);
             return;
         }
-        const squad = suggestSquad(config, state);
+        const squad = this.currentSquad(camp);
         const names = squad.map((id) => survivorInfo(config, state, id)?.name ?? id);
         const drops = (loc.drops ?? []).map((d) => {
             const def = config.props.find((p) => p.id === d.prop);
@@ -2113,15 +2204,65 @@ export class GameRoot extends Component {
             const tier = locationTier(config, loc);
             const d = districtAt(config, loc.map);
             this.text(`${d ? `${d.icon}${districtName(state, d)} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
+            this.renderSquadPicker(camp, now);
             this.renderVehiclePicker(camp, tier, squad);
             const guided = this.isGuided(`explore:${loc.id}`);
             this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
-                const res = camp.explore(loc.id, camp.now, undefined, this.selectedVehicle);
+                const res = camp.explore(loc.id, camp.now, squad, this.selectedVehicle);
+                if (res.ok) this.pickedSquad = null;
                 if (res.ok) this.effect(`🚶 小队出发前往${locationName(config, state, loc)}`, ACCENT);
                 else this.showToast(res.reason);
                 this.render();
             }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
         }
+    }
+
+    /** 这次要派出去的人：自己挑过就用自己挑的（去掉已经不能出发的），否则自动编队 */
+    private currentSquad(camp: CampGame): string[] {
+        const { config, state } = camp;
+        if (!this.pickedSquad) return suggestSquad(config, state);
+        const ok = new Set(availableFighters(config, state).map((s) => s.id));
+        return this.pickedSquad.filter((id) => ok.has(id));
+    }
+
+    /** 自己挑队员：每个能出发的人一个按钮，点一下加入 / 移出；下面显示站位和搭配效果 */
+    private renderSquadPicker(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const max = config.balance.maxSquadSize;
+        const squad = this.currentSquad(camp);
+        const pool = availableFighters(config, state);
+        this.text(`👥 小队 ${squad.length}/${max}（${this.pickedSquad ? '自己挑的' : '自动编队'}，点名字加入 / 移出）`, 18, ACCENT);
+        const perRow = 4;
+        const w = (WIDTH - 10 * (perRow - 1)) / perRow;
+        for (let i = 0; i < pool.length; i += perRow) {
+            const top = this.cursorY;
+            pool.slice(i, i + perRow).forEach((s, k) => {
+                this.cursorY = top;
+                const inSquad = squad.includes(s.id);
+                const tier = bondOf(config, state, s, now);
+                const row = rowOf(config, state, s.id) === 'back' ? '后' : '前';
+                this.button(`${inSquad ? '✅' : ''}${survivorName(config, state, s.id)}·${row}`, w, () => {
+                    const next = inSquad ? squad.filter((x) => x !== s.id) : squad.length < max ? [...squad, s.id] : squad;
+                    if (!inSquad && squad.length >= max) this.showToast(`小队最多 ${max} 人`);
+                    this.pickedSquad = next;
+                    this.render();
+                }, LEFT + k * (w + 10), inSquad ? 'highlight' : 'normal', 16, 40, false, 0, s.id === 'ethan' ? undefined : hexColor(tier.color));
+            });
+            this.cursorY = top - 40;
+            this.gap(6);
+        }
+        if (this.pickedSquad) {
+            this.button('↺ 恢复自动编队', WIDTH, () => {
+                this.pickedSquad = null;
+                this.render();
+            }, LEFT, 'normal', 16, 36);
+            this.gap(4);
+        }
+        const front = squad.filter((id) => rowOf(config, state, id) === 'front').map((id) => survivorName(config, state, id));
+        const back = squad.filter((id) => rowOf(config, state, id) === 'back').map((id) => survivorName(config, state, id));
+        this.text(`🛡️ 前排：${front.join('、') || '没人'}　🎯 后排：${back.join('、') || '没人'}`, 17, DIM);
+        for (const syn of squadSynergies(config, state, squad, now)) this.text(`${syn.icon} ${syn.name}：${syn.text}`, 17, syn.icon === '⚠️' ? LOSE : WIN);
+        this.gap(4);
     }
 
     /** 探索时遇到的人：看介绍、专长、天赋和印象，决定留下谁 */
@@ -2445,12 +2586,13 @@ export class GameRoot extends Component {
         height = 44,
         clickableWhenDisabled = false,
         badge = 0,
+        textColor: Color = TEXT,
     ): void {
         const node = makeNode('Button', this.target!, width, height);
         node.setPosition(x + width / 2, this.cursorY - height / 2);
         const fill = style === 'highlight' ? COLORS.highlight : style === 'disabled' ? COLORS.disabled : COLORS.button;
         drawPanel(node.addComponent(Graphics), width, height, fill, 8, style === 'highlight' ? ACCENT : undefined);
-        addLabel(node, str, size, TEXT, { width: width - 12, height });
+        addLabel(node, str, size, textColor, { width: width - 12, height });
         addBadge(node, width / 2 - 8, height / 2 - 6, badge);
         node.on(Node.EventType.TOUCH_END, () => {
             // 拖动滚动时不算点击；禁用的按钮不响应（页签除外，灰色只表示没选中）

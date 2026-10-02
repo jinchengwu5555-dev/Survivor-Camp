@@ -29,6 +29,8 @@ export interface UnitSetup {
     /** 攻击 / 生命倍率（营地里的天赋） */
     atkMult?: number;
     hpMult?: number;
+    /** 拿着远程武器：射程至少这么远 */
+    range?: number;
 }
 
 export interface BattleSetup {
@@ -240,6 +242,7 @@ export class Battle implements BattleContext {
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
             if (p.setup.hpMult) unit.stats.maxHp = unit.hp = Math.round(unit.stats.maxHp * p.setup.hpMult);
             if (p.setup.atkMult) unit.stats.atk = unit.stats.atk * p.setup.atkMult;
+            if (p.setup.range) unit.stats.attackRange = Math.max(unit.stats.attackRange, p.setup.range);
             unit.tag = p.setup.tag;
             for (const id of p.setup.extraSkills ?? []) {
                 const skill = this.registry.skill(id);

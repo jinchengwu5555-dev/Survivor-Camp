@@ -2,6 +2,7 @@
 
 import { dropGear, dropGearAt } from './gear';
 import { changeMoodAll } from './mood';
+import { bury } from './bonds';
 import { bedCount } from './economy';
 import { nextRandom, pickOne } from './rng';
 import { siteDeathChance, siteInjuryRecovery } from './siteMods';
@@ -105,6 +106,7 @@ export function killSurvivor(config: GameConfig, state: GameState, id: string, n
     const name = survivorName(config, state, id);
     if (where) dropGearAt(state, s, where);
     else dropGear(state, s);
+    bury(config, state, s, now, cause);
     state.survivors = state.survivors.filter((x) => x.id !== id);
     for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
     setFlag(state, `dead_${id}`);
@@ -128,10 +130,12 @@ export function resolveFallen(
     cause: string,
     canDie = true,
     where?: string,
+    /** 队里有医生时牺牲概率减半（formation.ts） */
+    deathScale = 1,
 ): { dead: string[]; injured: string[] } {
     const dead: string[] = [];
     const injured: string[] = [];
-    const chance = canDie ? deathChance(config, state, now) : 0;
+    const chance = canDie ? deathChance(config, state, now) * deathScale : 0;
     for (const id of fallen) {
         const s = state.survivors.find((x) => x.id === id);
         if (!s) continue;

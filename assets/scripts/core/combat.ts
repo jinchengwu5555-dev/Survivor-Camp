@@ -25,6 +25,8 @@ import { locationName } from './names';
 import { carryHome, makePieces, newHaul } from './packing';
 import { haulSections, pickVehicle, useVehicle, vehicleDef } from './vehicles';
 import { tierAt } from './districts';
+import { hasMedic, lootBonus, rowOf, squadBonus, weaponRange } from './formation';
+import { recordSharedBattle } from './bonds';
 import {
     ActionResult,
     BattleReport,
@@ -36,6 +38,7 @@ import {
     RaidDef,
     RESOURCE_IDS,
     ResourceBag,
+    SurvivorRow,
     SurvivorState,
 } from './types';
 
@@ -78,18 +81,22 @@ function battleUnitOf(config: GameConfig, state: GameState, survivorId: string):
 export interface SquadMember {
     id: string;
     unit: string;
-    /** 天赋带来的攻击 / 生命倍率（没有就是 1） */
+    /** 天赋、装备、站位、搭配带来的攻击 / 生命倍率（没有就是 1） */
     atkMult?: number;
     hpMult?: number;
+    /** 站位和远程武器射程（formation.ts） */
+    row?: SurvivorRow;
+    range?: number;
 }
 
-/** 把幸存者 id 列表转成上阵成员（没有战斗角色的人会被跳过） */
-export function squadOf(config: GameConfig, state: GameState, ids: string[]): SquadMember[] {
-    return ids.flatMap((id) => {
-        const unit = battleUnitOf(config, state, id);
-        if (!unit) return [];
+/** 把幸存者 id 列表转成上阵成员（没有战斗角色的人会被跳过）；站位和搭配的加成按整支队伍算 */
+export function squadOf(config: GameConfig, state: GameState, ids: string[], now = state.clock.gameTime): SquadMember[] {
+    const fighters = ids.filter((id) => !!battleUnitOf(config, state, id));
+    return fighters.map((id) => {
         const { atk, hp } = combatMultiplier(config, state, id);
-        return [{ id, unit, atkMult: atk, hpMult: hp }];
+        const bonus = squadBonus(config, state, fighters, id, now);
+        const range = weaponRange(config, state, id);
+        return { id, unit: battleUnitOf(config, state, id)!, atkMult: atk * bonus.atk, hpMult: hp * bonus.hp, row: rowOf(config, state, id), range: range || undefined };
     });
 }
 
@@ -98,7 +105,8 @@ export function survivorPower(config: GameConfig, state: GameState, survivorId: 
     const unitId = battleUnitOf(config, state, survivorId);
     if (!unitId) return 0;
     const stats = statsAtLevel(battleRegistry(config).unit(unitId), 1);
-    return Math.round((stats.maxHp * stats.atk) / 100);
+    const m = combatMultiplier(config, state, survivorId);
+    return Math.round((stats.maxHp * m.hp * stats.atk * m.atk) / 100);
 }
 
 /** 能上阵的人：没受伤、不在外面探索、有战斗角色 */
@@ -117,11 +125,19 @@ export function suggestSquad(config: GameConfig, state: GameState, size = config
         .slice(0, size);
 }
 
+/** 前排从 x=0 往后排，后排从 BACK_ROW_X 往后排：尸群先撞上前排 */
+const FRONT_SPACING = 0.6;
+const BACK_ROW_X = -3;
+
 function squadSetups(squad: SquadMember[], level: number): UnitSetup[] {
+    let front = 0;
+    let back = 0;
     return squad.map((m) => {
-        const setup: UnitSetup = { unit: m.unit, level, tag: m.id };
+        const x = m.row === 'back' ? BACK_ROW_X - back++ * FRONT_SPACING : -front++ * FRONT_SPACING;
+        const setup: UnitSetup = { unit: m.unit, level, tag: m.id, x };
         if (m.atkMult && m.atkMult !== 1) setup.atkMult = m.atkMult;
         if (m.hpMult && m.hpMult !== 1) setup.hpMult = m.hpMult;
+        if (m.range) setup.range = m.range;
         return setup;
     });
 }
@@ -363,7 +379,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         const recovered = takeDroppedGear(state, loc.id);
         for (const [id, n] of Object.entries(recovered)) drops[id] = (drops[id] ?? 0) + n;
         if (Object.keys(recovered).length) addLog(state, at, `小队在${locationName(config, state, loc)}找到了战友留下的装备：${formatProps(config, recovered)}。`);
-        const pieces = makePieces(config, state, expeditionLoot(config, state, loc), drops);
+        const pieces = makePieces(config, state, scaleBag(expeditionLoot(config, state, loc), lootBonus(config, state, squad)), drops);
         const cap = haulSections(config, state, squad, vehicleDef(config, ex.vehicle));
         const haul = newHaul(config, state, locationName(config, state, loc), at, pieces, cap.sections, cap.maxWeight);
         if (live) {
@@ -387,7 +403,8 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         changeMoodAll(state, -5, `在${locationName(config, state, loc)}吃了败仗`, at, (s) => squad.includes(s.id));
     }
     // 打赢了队友会把倒下的人背回来，只有打输撤退时才会有人回不来
-    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${locationName(config, state, loc)}牺牲了`, result === 'lose', loc.id);
+    recordSharedBattle(state, squad);
+    const { dead, injured } = resolveFallen(config, state, fallen, at, `在${locationName(config, state, loc)}牺牲了`, result === 'lose', loc.id, hasMedic(config, state, squad) ? 0.5 : 1);
     // 第一次探索回来一定会遇到人；之后打赢时按 recruitChance 偶尔遇到一个
     let rescued = '';
     const place = locationName(config, state, loc);
@@ -522,7 +539,9 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         }
         changeMoodAll(state, -10, '尸群冲破了栅栏', at);
     }
-    const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了');
+    const defenderIds = pending.setup.allies.map((u) => u.tag).filter((t): t is string => !!t && survivorIds.has(t));
+    recordSharedBattle(state, defenderIds);
+    const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了', true, undefined, hasMedic(config, state, defenderIds) ? 0.5 : 1);
     // 栅栏被冲破：尸群冲进营地，有人被咬死
     if (result === 'lose') {
         for (let i = 0; i < config.balance.raidBreachDeaths && state.survivors.length > 0; i++) {

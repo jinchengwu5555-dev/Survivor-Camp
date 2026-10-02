@@ -8,6 +8,7 @@ import { propCount } from './props';
 import { addLog, addStat } from './state';
 import { ActionResult, GameConfig, GameState, HaulSection, VehicleDef } from './types';
 import { survivorName } from './roster';
+import { carryBonus } from './formation';
 
 export const FUEL_PROP = 'gasoline';
 export const TIER_NAMES = ['走路', '自行车', '摩托 / 皮卡', '货车'];
@@ -133,5 +134,6 @@ export function haulSections(config: GameConfig, state: GameState, squad: string
         sections.push({ label: `${v.icon}${v.name}`, w: v.grid[0], h: v.grid[1] });
         maxWeight += v.cargo;
     }
+    maxWeight += carryBonus(config, state, squad);
     return { sections, maxWeight };
 }

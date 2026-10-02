@@ -1,6 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
-import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, WatchMode } from './types';
+import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
 import { updateChatter } from './chatter';
@@ -9,6 +9,7 @@ import { buildVehicle, checkVehicleOwners } from './vehicles';
 import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './packing';
 import { autoDecideCandidates, decideCandidate } from './recruits';
 import { spendGold } from './gold';
+import { pray } from './bonds';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -302,6 +303,22 @@ export class CampGame {
     /** 工坊打造装备 */
     forge(propId: string, now: number): ActionResult {
         return this.act(now, () => forgeGear(this.config, this.state, propId, now));
+    }
+
+    /** 战斗站位：前排 / 后排；null = 按武器自动 */
+    setRow(survivorId: string, row: SurvivorRow | null, now: number): ActionResult {
+        return this.act(now, () => {
+            const s = this.state.survivors.find((x) => x.id === survivorId);
+            if (!s) return { ok: false, reason: '没有这个人' };
+            if (row) s.row = row;
+            else delete s.row;
+            return { ok: true };
+        });
+    }
+
+    /** 在墓前祷告（每座墓每天一次） */
+    pray(graveId: string, now: number): ActionResult {
+        return this.act(now, () => pray(this.config, this.state, graveId, now));
     }
 
     /** 守夜安排：轮班 / 固定守夜 / 不守夜 */

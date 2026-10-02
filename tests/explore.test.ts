@@ -149,6 +149,7 @@ describe('探索背包', () => {
         game.tick(state.expeditions[0].returnsAt + 1);
         expect(game.currentHaul).toBeTruthy();
         const haul = game.currentHaul!;
+        state.resources.food = 0;
         const food = state.resources.food;
         expect(game.carryHaul(game.now).ok).toBe(true);
         expect(game.currentHaul).toBeUndefined();

@@ -110,7 +110,8 @@ export function firstRecruits(config: GameConfig, state: GameState, place: strin
     if (!config.recruits || hasFlag(state, 'first_recruits')) return;
     setFlag(state, 'first_recruits');
     const [lo, hi] = config.recruits.firstCount;
-    offerCandidates(config, state, lo + Math.floor(nextRandom(state) * (hi - lo + 1)), place, now);
+    // 第一次遇到的这几个人，留下来就是“最初的伙伴”
+    for (const c of offerCandidates(config, state, lo + Math.floor(nextRandom(state) * (hi - lo + 1)), place, now)) c.survivor.founder = true;
 }
 
 function candidateName(config: GameConfig, state: GameState, c: CandidateState): string {

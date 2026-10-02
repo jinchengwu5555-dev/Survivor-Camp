@@ -35,14 +35,17 @@ describe('天赋', () => {
         const game = newGame();
         const { config, state } = game;
         const squad = squadOf(config, state, ['hank']);
+        // 上阵倍率 = 天赋等个人倍率 × 站位和搭配（汉克是战士，站前排：生命 +10%，前排战士再 +10%）
         expect(squad[0].atkMult).toBeCloseTo(combatMultiplier(config, state, 'hank').atk);
+        expect(squad[0].hpMult).toBeCloseTo(combatMultiplier(config, state, 'hank').hp * 1.1 * 1.1);
         const raid = config.raids[0];
         const setup = raidSetup(config, raid, squadOf(config, state, ['ethan']), 300, 1, 1);
         const b = new Battle(battleRegistry(config), setup);
         const ethan = b.units.find((u) => u.tag === 'ethan')!;
         const base = battleRegistry(config).unit('ethan').stats;
-        expect(ethan.stats.maxHp).toBe(Math.round(base.maxHp * 1.25));
-        expect(ethan.stats.atk).toBeCloseTo(base.atk * 1.1);
+        // 天赋：铁打的身子 ×1.25、天生的领袖 ×1.1；站前排生命 ×1.1、有人领头攻击 ×1.05
+        expect(ethan.stats.maxHp).toBe(Math.round(base.maxHp * 1.25 * 1.1));
+        expect(ethan.stats.atk).toBeCloseTo(base.atk * 1.1 * 1.05);
     });
 
     it('恢复力强：养伤时间减半', () => {
