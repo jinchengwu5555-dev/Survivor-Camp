@@ -69,7 +69,8 @@ export function isOnExpedition(state: GameState, survivorId: string): boolean {
     return (
         state.expeditions.some((e) => e.squad.includes(survivorId)) ||
         (state.scouts ?? []).some((s) => s.survivor === survivorId) ||
-        (state.surveys ?? []).some((s) => s.squad.includes(survivorId))
+        (state.surveys ?? []).some((s) => s.squad.includes(survivorId)) ||
+        (state.hunts ?? []).some((s) => s.squad.includes(survivorId))
     );
 }
 

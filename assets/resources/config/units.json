@@ -44,8 +44,8 @@
     {
         "id": "militia", "name": "幸存者", "faction": "survivor",
         "appearance": { "sprite": "unit_militia", "color": "#7a8a7a", "scale": 1 },
-        "stats": { "maxHp": 420, "atk": 32, "def": 18, "moveSpeed": 1.1, "attackRange": 1, "attackInterval": 1.1, "critRate": 0.08, "critDamage": 1.5 },
-        "growth": { "maxHp": 36, "atk": 3, "def": 1.8 },
+        "stats": { "maxHp": 390, "atk": 30, "def": 16, "moveSpeed": 1.1, "attackRange": 1, "attackInterval": 1.15, "critRate": 0.06, "critDamage": 1.5 },
+        "growth": { "maxHp": 33, "atk": 2.8, "def": 1.6 },
         "skills": []
     },
     {

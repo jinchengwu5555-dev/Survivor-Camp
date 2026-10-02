@@ -257,11 +257,13 @@ describe('无限流经济', () => {
         const at = dayStart(36);
         const raid = currentRaid(config, state, at)!;
         const report = runRaid(config, state, raid, at);
+        const { startDay, daysPerLevel, rewardGrowth } = config.balance.raidScaling;
+        const level = Math.floor((36 - startDay) / daysPerLevel) + 1 - 1; // 第 36 天的等级，减去 1 点喘息
         expect(report.result).toBe('win');
-        expect(report.title).toBe(`${raid.name} +2`);
-        expect(state.stats.best_raid_level).toBe(2);
+        expect(report.title).toBe(`${raid.name} +${level}`);
+        expect(state.stats.best_raid_level).toBe(level);
         expect(state.raidRelief).toBe(0);
-        expect(report.loot.parts).toBe(Math.round(raid.reward.parts! * Math.pow(1.15, 2)));
+        expect(report.loot.parts).toBe(Math.round(raid.reward.parts! * Math.pow(rewardGrowth, level)));
     });
 
     it('探索随指挥部成长：敌人更强，战利品按指数增长', () => {

@@ -62,6 +62,7 @@ import { candidateInfo, quirksOf } from '../core/recruits';
 import { bondOf, bondPoints, bondTier, BOND_TIERS, daysWithLeader, isFounder, LEADER, prayBlocker, sharedBattles } from '../core/bonds';
 import { ROW_NAMES, rowOf, squadSynergies, weaponRange } from '../core/formation';
 import { phoenixReady } from '../core/roster';
+import { huntableGame, huntBlocker, suggestHunters } from '../core/hunting';
 import { goldBlocker, goldOffer, goldValue } from '../core/gold';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulSections, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
@@ -83,7 +84,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v1.9 站位+羁绊+墓地';
+const GAME_VERSION = 'v2.0 打猎+羁绊+站位';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -1673,6 +1674,8 @@ export class GameRoot extends Component {
         if (s.injured) return `🩹 养伤 ${s.recoverAt !== null ? formatTime(realSeconds(config, s.recoverAt - now)) : ''}`;
         if (state.expeditions.some((e) => e.squad.includes(id))) return '🚶 外出探索';
         if ((state.scouts ?? []).some((x) => x.survivor === id)) return '🔭 外出侦察';
+        if ((state.hunts ?? []).some((x) => x.squad.includes(id))) return '🏹 外出打猎';
+        if ((state.surveys ?? []).some((x) => x.squad.includes(id))) return '🗺️ 外出勘察';
         if (s.assignment) return `👷 ${getBuildingDef(config, s.assignment)?.name ?? ''}`;
         return '💤 空闲';
     }
@@ -2077,6 +2080,10 @@ export class GameRoot extends Component {
             if (target) walker(camp0, target, ex.startedAt, ex.returnsAt, vehicleDef(config, ex.vehicle)?.icon ?? '🚶');
         }
         for (const sc of state.scouts ?? []) walker(camp0, sc, sc.startedAt, sc.returnsAt, '🔭');
+        for (const hv of state.hunts ?? []) {
+            const d = districtDef(config, hv.district);
+            if (d) walker(camp0, { x: (d.rect.x1 + d.rect.x2) / 2 + 30, y: (d.rect.y1 + d.rect.y2) / 2 - 30 }, hv.startedAt, hv.returnsAt, '🏹');
+        }
         for (const sv of state.surveys ?? []) {
             const d = districtDef(config, sv.district);
             if (d) walker(camp0, { x: (d.rect.x1 + d.rect.x2) / 2, y: (d.rect.y1 + d.rect.y2) / 2 }, sv.startedAt, sv.returnsAt, vehicleDef(config, sv.vehicle)?.icon ?? '🗺️');
@@ -2452,6 +2459,31 @@ export class GameRoot extends Component {
         }
     }
 
+    /** 分区里的打猎 / 钓鱼：适不适合、能打到什么、派人去 */
+    private renderHuntingCard(camp: CampGame, d: DistrictDef, now: number): void {
+        const { config, state } = camp;
+        if (!d.hunting) return;
+        const game = huntableGame(config, state, d, now);
+        this.text(`🏹 打猎：${d.hunting.rating} · ${d.hunting.note}`, 18, ACCENT);
+        if (game.length) this.text(`这个季节能打到：${game.map((g) => `${g.icon}${g.name}${g.risk >= 0.2 ? '⚠️' : ''}`).join(' ')}`, 17, DIM);
+        const busy = (state.hunts ?? []).find((h) => h.district === d.id);
+        if (busy) {
+            this.text(`🏹 ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}正在打猎，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 18, ACCENT);
+            this.gap(8);
+            return;
+        }
+        const hunters = suggestHunters(config, state);
+        const blocker = huntBlocker(config, state, d.id, hunters, now, this.selectedVehicle);
+        const names = hunters.map((id) => survivorName(config, state, id)).join('、') || '没有能派的人';
+        this.button(blocker ? `🏹 打猎（${blocker}）` : `🏹 派 ${names} 去打猎`, WIDTH, () => {
+            const res = camp.hunt(d.id, camp.now, hunters, this.selectedVehicle);
+            if (res.ok) this.effect(`🏹 出发去${districtName(state, d)}打猎`, ACCENT);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, blocker ? 'disabled' : 'normal', 20, 48);
+        this.gap(10);
+    }
+
     /** 分区详情：探索进度、要什么车、危险程度、派人勘察 */
     private renderDistrictCard(camp: CampGame, d: DistrictDef, now: number): void {
         const { config, state } = camp;
@@ -2461,6 +2493,7 @@ export class GameRoot extends Component {
         this.text(`要${TIER_NAMES[d.tier]}才能到 · 勘察一趟 ${formatTime(realSeconds(config, d.surveyMinutes * 60_000))} · 受伤概率 ${Math.round(d.danger * 100)}%`, 18, d.tier > maxTierOwned(config, state) ? LOSE : TEXT);
         const reward = [formatBag(config, d.complete?.resources ?? {}), formatProps(config, d.complete?.props ?? {})].filter(Boolean).join(' ');
         if (reward) this.text(`全部探索完奖励：${reward}`, 18, WIN);
+        this.renderHuntingCard(camp, d, now);
         const busy = (state.surveys ?? []).find((s) => s.district === d.id);
         if (busy) {
             this.text(`🗺️ ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}正在勘察，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 20, ACCENT);

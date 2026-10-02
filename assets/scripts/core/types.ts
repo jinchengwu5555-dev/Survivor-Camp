@@ -859,6 +859,8 @@ export interface GameState {
     vehicles?: string[];
     /** 正在勘察分区的小队、勘察驱散迷雾的点、已经探索完的分区 */
     surveys?: SurveyState[];
+    /** 正在打猎的人（结构和勘察一样） */
+    hunts?: SurveyState[];
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
     /** 黄金（见 core/gold.ts；老存档没有 = 0） */
@@ -939,6 +941,23 @@ export interface DistrictDef {
     drops?: PropDrop[];
     /** 整个区都探索完的一次性奖励 */
     complete?: { resources?: ResourceBag; props?: Record<string, number> };
+    /** 打猎 / 钓鱼：这个区适不适合、能打到什么（见 core/hunting.ts） */
+    hunting?: { rating: string; note: string; game: GameAnimalDef[] };
+}
+
+export interface GameAnimalDef {
+    id: string;
+    name: string;
+    icon: string;
+    weight: number;
+    /** 打到一只得多少食物（随指挥部等级按一半指数成长） */
+    food: number;
+    /** 打的时候有人受伤的概率 */
+    risk: number;
+    /** hunt 打猎 / fish 钓鱼（钓鱼不看武器，看耐心） */
+    kind: 'hunt' | 'fish';
+    /** 只在这些季节出现 */
+    seasons?: string[];
 }
 
 export interface DistrictsConfig {
@@ -948,6 +967,8 @@ export interface DistrictsConfig {
     revealRadius: number;
     /** 每个人能背多重 */
     carryPerPerson: number;
+    /** 打猎：出去多久、每人试几次、基础成功率、季节影响 */
+    hunt?: { minutes: number; triesPerHunter: number; baseChance: number; seasonChance: Record<string, number> };
     districts: DistrictDef[];
 }
 

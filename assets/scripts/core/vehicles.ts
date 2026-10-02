@@ -25,7 +25,7 @@ export function ownedVehicles(config: GameConfig, state: GameState): VehicleDef[
 
 /** 正在外面的车 */
 export function vehicleBusy(state: GameState, id: string): boolean {
-    return state.expeditions.some((e) => e.vehicle === id) || (state.surveys ?? []).some((s) => s.vehicle === id);
+    return state.expeditions.some((e) => e.vehicle === id) || (state.surveys ?? []).some((s) => s.vehicle === id) || (state.hunts ?? []).some((s) => s.vehicle === id);
 }
 
 /** 这辆车现在能不能开出去；返回 null 表示可以 */

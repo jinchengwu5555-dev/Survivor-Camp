@@ -262,6 +262,11 @@ export function validateConfig(config: GameConfig): string[] {
         for (const id of Object.keys(d.complete?.props ?? {})) checkProp(where, id);
         if (d.rect.x2 <= d.rect.x1 || d.rect.y2 <= d.rect.y1) errors.push(`${where}：rect 范围不对`);
         if (d.surveyMinutes <= 0) errors.push(`${where}：surveyMinutes 必须大于 0`);
+        for (const g of d.hunting?.game ?? []) {
+            if (g.weight <= 0 || g.food <= 0) errors.push(`${where} 猎物 ${g.id}：weight、food 必须大于 0`);
+            if (g.kind !== 'hunt' && g.kind !== 'fish') errors.push(`${where} 猎物 ${g.id}：kind 只能是 hunt / fish`);
+            for (const se of g.seasons ?? []) if (!config.seasons.some((x) => x.id === se)) errors.push(`${where} 猎物 ${g.id}：未知季节 ${se}`);
+        }
     }
     const vehicleList = config.vehicles ?? [];
     checkUnique('交通工具', vehicleList.map((v) => v.id));

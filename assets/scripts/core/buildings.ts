@@ -76,6 +76,7 @@ export function assignSurvivor(config: GameConfig, state: GameState, survivorId:
     if (state.expeditions.some((e) => e.squad.includes(survivorId))) return { ok: false, reason: '正在外面探索' };
     if ((state.scouts ?? []).some((s) => s.survivor === survivorId)) return { ok: false, reason: '正在外面侦察' };
     if ((state.surveys ?? []).some((s) => s.squad.includes(survivorId))) return { ok: false, reason: '正在外面勘察' };
+    if ((state.hunts ?? []).some((s) => s.squad.includes(survivorId))) return { ok: false, reason: '正在外面打猎' };
     const slots = workerSlots(config, state, buildingId);
     if (slots <= 0) return { ok: false, reason: '这个建筑不需要工人' };
     const used = state.survivors.filter((x) => x.assignment === buildingId && x.id !== survivorId).length;

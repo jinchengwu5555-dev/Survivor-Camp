@@ -10,6 +10,7 @@ import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './pac
 import { autoDecideCandidates, decideCandidate } from './recruits';
 import { spendGold } from './gold';
 import { pray } from './bonds';
+import { resolveHunts, startHunt, suggestHunters } from './hunting';
 import { advanceEconomy } from './economy';
 import { assignSurvivor, completeUpgrades, speedUpUpgrade, startUpgrade } from './buildings';
 import { ChoiceResult, getEventDef, maybeTriggerRandomEvent, resolveChoice } from './events';
@@ -105,6 +106,7 @@ export class CampGame {
         resolveExpeditions(this.config, s, now, this.liveRaids);
         resolveScouts(this.config, s, now);
         resolveSurveys(this.config, s, now);
+        resolveHunts(this.config, s, now);
         checkVehicleOwners(this.config, s, now);
         // 没有界面在看（比如模拟器），等着装的背包自动装好带回来
         if (!this.liveRaids) for (const h of [...(s.pendingHauls ?? [])]) confirmHaul(this.config, s, h.id, now);
@@ -218,6 +220,11 @@ export class CampGame {
     /** 勘察一个分区：驱散一片迷雾 */
     survey(districtId: string, now: number, squad?: string[], vehicle?: string): ActionResult {
         return this.act(now, () => startSurvey(this.config, this.state, districtId, squad ?? suggestSurveyors(this.state), now, vehicle));
+    }
+
+    /** 派人去某个区打猎 / 钓鱼 */
+    hunt(districtId: string, now: number, hunters?: string[], vehicle?: string): ActionResult {
+        return this.act(now, () => startHunt(this.config, this.state, districtId, hunters ?? suggestHunters(this.config, this.state), now, vehicle));
     }
 
     /** 在工坊修一辆车 */
