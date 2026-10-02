@@ -6,8 +6,11 @@ import { BattleUnit } from '../assets/scripts/core/battle/types';
 import { createBattleUnit, statsAtLevel } from '../assets/scripts/core/battle/units';
 import { loadConfig } from './helpers';
 
+/** 战斗引擎的测试：给伊森装回技能，测技能系统本身（游戏里幸存者已经没有技能了，敌人和工坊物品还在用） */
 function registry() {
-    return new BattleRegistry(loadConfig());
+    const config = loadConfig();
+    config.units.find((u) => u.id === 'ethan')!.skills = ['cover_fire', 'leader_call', 'last_stand'];
+    return new BattleRegistry(config);
 }
 
 function battle(allies: UnitSetup[], enemies: UnitSetup[], extra: Partial<BattleSetup> = {}, reg = registry()) {

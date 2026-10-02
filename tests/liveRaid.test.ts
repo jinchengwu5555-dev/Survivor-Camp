@@ -37,11 +37,18 @@ describe('亲手守夜', () => {
         expect(game.state.raidCount).toBe(1);
     });
 
-    it('手动放技能、打完结算，战报可以完整重放（包括玩家的操作）', () => {
+    it('修补栅栏、打完结算，战报可以完整重放（包括玩家的操作）', () => {
         const game = newGame();
+        game.state.resources.wood = 500;
+        // 只留伊森一个人守夜，尸群才摸得到栅栏
+        for (const sv of game.state.survivors) if (sv.id !== 'ethan') sv.injured = true;
         game.tick(T0 + RAID);
+        const first = game.liveRaid()!;
+        // 打到栅栏掉血了再修
+        for (let i = 0; i < 10_000 && !first.done && first.barricade!.hp >= first.barricade!.stats.maxHp; i++) first.advance(0.1);
+        expect(first.repair()).toBeNull();
         const live = playOut(game);
-        expect(live.battle.inputs.some((i) => 'cast' in i)).toBe(true);
+        expect(live.battle.inputs.some((i) => 'heal' in i)).toBe(true);
         const report = game.finishLiveRaid(T0 + RAID + MIN)!;
         expect(game.state.pendingRaid).toBeNull();
         expect(report.kind).toBe('raid');

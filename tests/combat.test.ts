@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from '../assets/scripts/core/battle/Battle';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { battleRegistry, currentRaid, runRaid, suggestSquad } from '../assets/scripts/core/combat';
+import { battleRegistry, currentRaid, runRaid, suggestSquad, survivorPower } from '../assets/scripts/core/combat';
 import { applyEffect } from '../assets/scripts/core/events';
 import { loadGame } from '../assets/scripts/core/save';
 import { dayStart, INJURY, loadConfig, MemoryStorage, MIN, RAID, T0 } from './helpers';
@@ -18,15 +18,23 @@ const survivor = (game: CampGame, id: string) => game.state.survivors.find((s) =
 describe('探索', () => {
     it('自动编队按战斗力挑 4 个人，优先派闲着的人', () => {
         const game = newGame();
-        expect(suggestSquad(game.config, game.state)).toEqual(['derek', 'ethan', 'martha', 'toby']);
+        const squad = suggestSquad(game.config, game.state);
+        expect(squad).toHaveLength(4);
+        expect(squad).toContain('ethan');
+        // 伊森战斗力最高；其他人都是普通幸存者，看天赋和装备
+        const power = (id: string) => survivorPower(game.config, game.state, id);
+        for (let i = 1; i < squad.length; i++) expect(power(squad[i - 1])).toBeGreaterThanOrEqual(power(squad[i]));
         game.assign('martha', 'kitchen', T0);
-        expect(suggestSquad(game.config, game.state)).toEqual(['derek', 'ethan', 'toby', 'sophie']);
+        expect(suggestSquad(game.config, game.state)).not.toContain('martha');
     });
 
     it('人手不够时才从岗位上抽人，出发后离开工作岗位', () => {
         const game = newGame();
         for (const [id, job] of [['martha', 'kitchen'], ['toby', 'kitchen'], ['derek', 'scrapyard'], ['sophie', 'scrapyard']]) game.assign(id, job, T0);
-        expect(suggestSquad(game.config, game.state)).toEqual(['ethan', 'derek', 'martha', 'toby']);
+        const squad = suggestSquad(game.config, game.state);
+        expect(squad[0]).toBe('ethan');
+        expect(squad).toHaveLength(4);
+        expect(squad).toContain('martha');
         expect(game.explore('gas_station', T0).ok).toBe(true);
         expect(survivor(game, 'martha').assignment).toBeNull();
         expect(game.assign('martha', 'kitchen', T0)).toEqual({ ok: false, reason: '正在外面探索' });
@@ -107,7 +115,7 @@ describe('探索', () => {
         const later = dayStart(6);
         game.state.lastTickAt = later;
         game.state.nextRaidAt = Number.MAX_SAFE_INTEGER;
-        game.state.buildings.training.level = 3; // 训练满级后必胜，避免测试依赖随机结果
+        game.state.buildings.training.level = 8; // 训练练够了必胜，避免测试依赖随机结果
         game.explore('sheriff_office', later);
         game.tick(later + 30 * MIN);
         expect(game.state.reports[0].result).toBe('win');
@@ -154,7 +162,8 @@ describe('尸潮夜袭', () => {
         game.tick(T0 + RAID);
         const report = game.state.reports[0];
         expect(report).toMatchObject({ kind: 'raid', title: '尸群', result: 'win', loot: { parts: 10, wood: 20 } });
-        expect(report.setup.allies.map((a) => a.tag)).toEqual(['barricade', 'derek', 'ethan', 'martha', 'toby', 'sophie']);
+        expect(report.setup.allies[0].tag).toBe('barricade');
+        expect(report.setup.allies.map((a) => a.tag).sort()).toEqual(['barricade', 'derek', 'ethan', 'martha', 'sophie', 'toby']);
         expect(report.setup.allies[0].maxHp).toBe(25 * 30);
         expect(report.setup.mustSurvive).toEqual(['barricade']);
         expect(game.state.resources.parts).toBeGreaterThanOrEqual(parts + 10);

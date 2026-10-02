@@ -817,6 +817,8 @@ export interface GameState {
     seen?: SeenState;
     /** 上一晚的守夜情况（见 core/watch.ts） */
     lastNight?: NightState;
+    /** 主角的浴火重生：涅槃了几次、下一次什么时候能再来（见 roster.ts） */
+    phoenix?: { rebirths: number; readyAt: number };
     /** 心情跨档的次数（统计用） */
     moodShifts?: number;
     /** 营地闲聊：说过的对话 id、最近的几段、下一段的时间（见 core/chatter.ts） */

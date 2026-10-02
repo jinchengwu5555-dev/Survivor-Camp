@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { currentRaid, runRaid } from '../assets/scripts/core/combat';
 import { bedCount, productionPerMinute, safety } from '../assets/scripts/core/economy';
+import { combatMultiplier } from '../assets/scripts/core/talents';
 import { applyEffect } from '../assets/scripts/core/events';
 import { carryOverAchievements, emptyRecords, recordRun } from '../assets/scripts/core/records';
 import { addWanderer, applyHardship, deathChance, killSurvivor, resolveFallen, survivorInfo } from '../assets/scripts/core/roster';
@@ -198,5 +199,29 @@ describe('换营地', () => {
         killSurvivor(withoutEthan.config, withoutEthan.state, 'ethan', LATER, '牺牲了');
         withoutEthan.relocate('dam', LATER);
         expect(withoutEthan.state.eventQueue).not.toContain('dam_arrival');
+    });
+});
+
+describe('主角：浴火重生', () => {
+    it('伊森本该牺牲时重伤而不死，攻击永久变强；冷却中倒下就可能真的牺牲', () => {
+        const game = newGame();
+        const { config, state } = game;
+        config.balance.deathChanceOnFall = 1;
+        const atk = combatMultiplier(config, state, 'ethan').atk;
+        expect(resolveFallen(config, state, ['ethan'], LATER, '牺牲了')).toEqual({ dead: [], injured: ['ethan'] });
+        expect(state.survivors.find((s) => s.id === 'ethan')!.injured).toBe(true);
+        expect(state.phoenix?.rebirths).toBe(1);
+        expect(combatMultiplier(config, state, 'ethan').atk).toBeCloseTo(atk * 1.05);
+        // 冷却中：死亡概率只有一半（这里 1 → 0.5），多试几次总会出事
+        let dead = false;
+        for (let i = 0; i < 20 && !dead; i++) dead = resolveFallen(config, state, ['ethan'], LATER + 1, '牺牲了').dead.length > 0;
+        expect(dead).toBe(true);
+    });
+
+    it('其他角色都是普通幸存者：用同一种战斗单位，没有技能', () => {
+        const config = loadConfig();
+        for (const s of config.survivors) if (s.id !== 'ethan') expect(s.isHero).toBe(false);
+        for (const s of config.survivors) if (s.id !== 'ethan' && s.battleUnit) expect(s.battleUnit).toBe('militia');
+        expect(config.units.find((u) => u.id === 'ethan')!.skills).toEqual([]);
     });
 });

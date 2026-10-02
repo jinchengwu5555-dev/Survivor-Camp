@@ -4,7 +4,7 @@
         "appearance": { "sprite": "unit_ethan", "color": "#4a6fa5", "scale": 1 },
         "stats": { "maxHp": 420, "atk": 38, "def": 20, "moveSpeed": 1.2, "attackRange": 4, "attackInterval": 1.2, "critRate": 0.15, "critDamage": 1.6 },
         "growth": { "maxHp": 40, "atk": 4, "def": 2 },
-        "skills": ["cover_fire", "leader_call", "last_stand"]
+        "skills": []
     },
     {
         "id": "martha", "name": "玛莎", "faction": "survivor",

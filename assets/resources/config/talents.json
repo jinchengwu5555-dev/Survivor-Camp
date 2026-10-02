@@ -12,5 +12,6 @@
     { "id": "swift", "name": "飞毛腿", "icon": "👟", "description": "去侦察时来回快 40%。", "effects": { "scout": 0.6 } },
     { "id": "pathfinder", "name": "认路", "icon": "🧭", "description": "熟悉镇上的每条小路。侦察快 20%，干活产量 +5%。", "effects": { "scout": 0.8, "work": { "mult": 1.05 } } },
     { "id": "optimist", "name": "乐天派", "icon": "🌞", "description": "心情恢复得快一倍。", "effects": { "moodRecovery": 2 } },
-    { "id": "veteran", "name": "老兵", "icon": "🎖️", "wanderer": false, "description": "见过真正的战场。战斗时攻击 +25%。", "effects": { "combat": { "atk": 1.25 } } }
+    { "id": "veteran", "name": "老兵", "icon": "🎖️", "wanderer": false, "description": "见过真正的战场。战斗时攻击 +25%。", "effects": { "combat": { "atk": 1.25 } } },
+    { "id": "phoenix", "name": "浴火重生", "icon": "🔥", "wanderer": false, "description": "像凤凰一样，倒下了也能再站起来：本该牺牲时改为重伤（冷却 3 天），每涅槃一次攻击永久 +5%。冷却中倒下，牺牲的概率也只有别人的一半。", "effects": {} }
 ]

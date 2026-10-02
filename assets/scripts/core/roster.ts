@@ -135,7 +135,12 @@ export function resolveFallen(
     for (const id of fallen) {
         const s = state.survivors.find((x) => x.id === id);
         if (!s) continue;
-        if (nextRandom(state) < chance) {
+        const phoenix = hasPhoenix(config, state, id);
+        const roll = nextRandom(state);
+        if (phoenix && roll < chance && phoenixReady(config, state, now)) {
+            rebirth(config, state, s, now);
+            injured.push(id);
+        } else if (roll < (phoenix ? chance * 0.5 : chance)) {
             const name = killSurvivor(config, state, id, now, cause, where);
             if (name) dead.push(name);
         } else {
@@ -146,13 +151,43 @@ export function resolveFallen(
     return { dead, injured };
 }
 
-/** 随机死一个人（饿死、冻死、尸群冲进营地）。优先不是核心角色的人 */
+/** 随机死一个人（饿死、冻死、尸群冲进营地）。优先不是主角的人；主角能浴火重生就不会死 */
 export function killRandom(config: GameConfig, state: GameState, now: number, cause: string): string | null {
     if (currentDay(config, state, now) <= config.balance.deathGraceDays) return null;
     const isHero = (s: SurvivorState) => survivorInfo(config, state, s.id)?.isHero ?? false;
     const pool = state.survivors.filter((s) => !isHero(s));
     const victim = pickOne(state, pool.length ? pool : state.survivors);
+    if (victim && hasPhoenix(config, state, victim.id) && phoenixReady(config, state, now)) {
+        rebirth(config, state, victim, now);
+        return null;
+    }
     return victim ? killSurvivor(config, state, victim.id, now, cause) : null;
+}
+
+// ---------- 主角的天赋：浴火重生 ----------
+
+export const PHOENIX = 'phoenix';
+/** 涅槃之后多少天才能再来一次 */
+const PHOENIX_COOLDOWN_DAYS = 3;
+
+export function hasPhoenix(config: GameConfig, state: GameState, id: string): boolean {
+    return (survivorInfo(config, state, id)?.talents ?? []).includes(PHOENIX);
+}
+
+export function phoenixReady(config: GameConfig, state: GameState, now: number): boolean {
+    return now >= (state.phoenix?.readyAt ?? 0);
+}
+
+/** 本该牺牲，却浴火重生：重伤（养伤时间加倍），攻击永久 +5%，3 天内不能再来一次 */
+export function rebirth(config: GameConfig, state: GameState, s: SurvivorState, now: number): void {
+    const count = (state.phoenix?.rebirths ?? 0) + 1;
+    state.phoenix = { rebirths: count, readyAt: now + PHOENIX_COOLDOWN_DAYS * config.balance.dayLengthMinutes * 60_000 };
+    injureSurvivor(config, state, s, now);
+    if (s.recoverAt !== null) s.recoverAt = now + (s.recoverAt - now) * 2;
+    addStat(state, 'rebirths');
+    const name = survivorName(config, state, s.id);
+    addLog(state, now, `🔥 ${name}倒下了……又挣扎着站了起来。浴火重生（第 ${count} 次），他变得更强了。`);
+    changeMoodAll(state, 5, `${name}浴火重生`, now);
 }
 
 /**
