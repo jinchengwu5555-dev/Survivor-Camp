@@ -1,0 +1,14 @@
+{
+    "_doc": "今日情报（资料库 R79），见 core/intel.ts。每天给几个分区一条情报，当天派人去（打猎、钓鱼、勘察）收益或危险会变。倍率：hunt 打猎成功率、fish 钓鱼成功率、loot 勘察带回的资源、danger 受伤概率。{d} 是分区名。",
+    "perDay": 2,
+    "kinds": [
+        { "id": "game_rich", "icon": "🦌", "text": "有人看见{d}的林子里有动物在跑，今天打猎收获多。", "hunt": 1.6, "needs": "hunt" },
+        { "id": "fish_bite", "icon": "🐟", "text": "{d}的水面一直在冒泡，今天鱼特别好钓。", "fish": 1.8, "needs": "fish" },
+        { "id": "herd_left", "icon": "🌫️", "text": "昨晚{d}的尸群往别处游荡了，今天去那里更安全。", "danger": 0.3 },
+        { "id": "supply_cache", "icon": "📦", "text": "无线电里有人说，{d}有个仓库还没被翻过，今天勘察能多带回东西。", "loot": 1.7 },
+        { "id": "horde_near", "icon": "⚠️", "text": "{d}聚了一大群行尸，今天最好别去——不过它们守着的东西也更多。", "danger": 2.5, "loot": 1.8, "hunt": 0.7 },
+        { "id": "quiet_morning", "icon": "🌄", "text": "{d}今天格外安静，动物和人都出来晒太阳了。", "hunt": 1.3, "danger": 0.6 },
+        { "id": "rain_tracks", "icon": "🌧️", "text": "昨夜下过雨，{d}的泥地上全是脚印，好追踪猎物。", "hunt": 1.4, "needs": "hunt" },
+        { "id": "smoke_signal", "icon": "💨", "text": "{d}有人点了烟，像是有人在那边扎营。去看看可能有收获，也可能有麻烦。", "loot": 1.4, "danger": 1.5 }
+    ]
+}

@@ -72,8 +72,10 @@ import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
 import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup, farmTodos } from '../core/badges';
+import { latestEntries } from '../core/diary';
+import { todayIntel } from '../core/intel';
 import { animalDef, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
-import { formatProps, propBlocker, propCount, propDef, propReward } from '../core/props';
+import { formatProps, propBlocker, propCount, propDef, propReward, treasureValue } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
@@ -85,7 +87,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.3 种菜养殖';
+const GAME_VERSION = 'v2.4 日记·情报·信号弹';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -167,7 +169,7 @@ const SPECIALTY_NAMES: Record<string, string> = {
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
-type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | 'graveyard' | null;
+type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | 'graveyard' | 'diary' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight';
 
@@ -356,6 +358,7 @@ export class GameRoot extends Component {
         camp.liveRaids = true;
         this.camp = camp;
         this.seenLevels = {};
+        this.rareCounts = null;
         for (const b of Object.values(camp.state.buildings)) this.seenLevels[b.id] = b.level;
         this.seenReportId = camp.state.reports.reduce((max, r) => Math.max(max, r.id), 0);
     }
@@ -568,9 +571,31 @@ export class GameRoot extends Component {
         return this.eventShowing(camp) || this.tab !== 'camp' || this.sheet !== null;
     }
 
+    /** 稀有品（出大红）的数量：背包里的 + 等着装包的；变多了就全屏提示 */
+    private rareCounts: Record<string, number> | null = null;
+
+    private checkRareLoot(camp: CampGame): void {
+        const { config, state } = camp;
+        const counts: Record<string, number> = {};
+        for (const p of config.props) {
+            if (!p.rare) continue;
+            const inHauls = (state.pendingHauls ?? []).reduce((n, h) => n + h.pieces.filter((x) => x.kind === 'prop' && x.item === p.id).reduce((m, x) => m + x.amount, 0), 0);
+            counts[p.id] = propCount(state, p.id) + inHauls;
+        }
+        const before = this.rareCounts;
+        this.rareCounts = counts;
+        if (!before) return;
+        const gained = config.props.filter((p) => p.rare && (counts[p.id] ?? 0) > (before[p.id] ?? 0));
+        if (!gained.length || !this.fx) return;
+        const names = gained.map((p) => `${p.icon}${p.name}`).join('、');
+        floatText(this.fx, '🟥 出大红了！', 0, 160, hexColor('#ff4040'), 52, 60, 3);
+        floatText(this.fx, names, 0, 90, COLORS.crit, 36, 60, 3);
+    }
+
     private render(): void {
         const camp = this.camp;
         if (!camp || !this.content || this.battleView) return;
+        this.checkRareLoot(camp);
         if (!this.connected) {
             this.setFriendView(false);
             this.showOffline();
@@ -799,6 +824,25 @@ export class GameRoot extends Component {
             btn.on(Node.EventType.TOUCH_END, () => {
                 punch(btn);
                 this.sheet = 'sites';
+                this.resetScroll();
+                this.render();
+            });
+        }
+
+        // 日记：营地右下角，有新的一篇时带红点
+        const diaryEntries = state.diary ?? [];
+        if (diaryEntries.length > 0) {
+            const book = makeNode('Diary', map, 110, 64);
+            book.setPosition(255, -245);
+            drawPanel(book.addComponent(Graphics), 106, 60, new Color(80, 64, 44, 230), 12, new Color(180, 150, 110), 2);
+            addLabel(book, '📖', 26, TEXT, { width: 100 }).node.setPosition(0, 10);
+            addLabel(book, `日记 ${diaryEntries.length}`, 16, TEXT, { width: 100 }).node.setPosition(0, -18);
+            const unread = camp.badges().diary;
+            if (unread > 0) addBadge(book, 48, 24, unread);
+            book.on(Node.EventType.TOUCH_END, () => {
+                if (this.dragDistance > DRAG_THRESHOLD) return;
+                punch(book);
+                this.sheet = 'diary';
                 this.resetScroll();
                 this.render();
             });
@@ -1078,6 +1122,9 @@ export class GameRoot extends Component {
                 this.renderSettings(camp, now);
             } else if (this.sheet === 'graveyard') {
                 this.renderGraveyard(camp, now);
+            } else if (this.sheet === 'diary') {
+                this.renderDiary(camp);
+                camp.markSeen('diary');
             } else {
                 this.renderSites(camp, now);
                 camp.markSeen('sites');
@@ -1099,6 +1146,12 @@ export class GameRoot extends Component {
         const { config, state } = camp;
         this.text('⚙️ 设置', 28, ACCENT);
         this.text(`${townName(state)} · 第 ${currentDay(config, state, now)} 天 · ${state.survivors.length} 人 · ${GAME_VERSION}`, 18, DIM);
+        this.gap(10);
+        this.button('📖 伊森的日记', WIDTH, () => {
+            this.sheet = 'diary';
+            this.resetScroll();
+            this.render();
+        }, LEFT, 'normal', 24, 56);
         this.gap(10);
         this.button(camp.paused ? '▶ 继续游戏' : '⏸ 暂停游戏（时间停住，尸潮也不会来）', WIDTH, () => {
             camp.setPaused(!camp.paused, Date.now());
@@ -1211,6 +1264,7 @@ export class GameRoot extends Component {
             if (def.type === 'resource') effect = `打开得到 ${formatBag(config, propReward(config, state, def))}`;
             if (def.type === 'speedup') effect = `正在升级的建筑加速 ${formatTime(realSeconds(config, (def.minutes ?? 0) * 60_000))}（在线时间）`;
             if (def.type === 'gear') effect = `${GEAR_SLOT_NAMES[def.slot!]}：${gearStatsText(config, def)}。${def.description}`;
+            if (def.type === 'treasure') effect = `🟥稀有 · 卖掉得到 ${formatBag(config, treasureValue(config, state, def, now))}${traderPresent(state, now) ? '（商人在营地，卖得更贵）' : '（商人来的时候卖更值钱）'}。${def.description}`;
             this.text(`${def.icon} ${def.name} ×${count}   ${effect}`, 22);
             const half = (WIDTH - 10) / 2;
             if (def.type === 'gear') {
@@ -1223,7 +1277,7 @@ export class GameRoot extends Component {
                 this.gap(12);
                 continue;
             }
-            const verb = def.type === 'seed' ? '种下' : def.type === 'animal' ? '放进畜栏' : '使用';
+            const verb = def.type === 'seed' ? '种下' : def.type === 'animal' ? '放进畜栏' : def.type === 'flare' ? '🎆 发射' : def.type === 'treasure' ? '💰 卖掉' : '使用';
             this.button(blocker ? `${verb}（${blocker}）` : verb, half, () => {
                 const res = camp.useProp(def.id, camp.now);
                 if (res.ok) this.effect(`${def.icon} ${res.message ?? def.name}`, WIN, 28);
@@ -1992,6 +2046,8 @@ export class GameRoot extends Component {
             const tier = bondTier(g.bond);
             this.text(`${g.founder ? '⚜️' : '✝'} ${g.name}  ${g.title}`, 24, hexColor(tier.color));
             this.text(`${g.cause} · 第 ${g.diedDay} 天 · 跟着伊森 ${g.days} 天 · 并肩作战 ${g.battles} 次 · ${tier.name}${g.prayers ? ` · 祷告过 ${g.prayers} 次` : ''}`, 18, DIM);
+            if (g.lost && !g.returned) this.text(`🕳️ 尸骨未归${g.sightings ? `：在尸群里见过 ${g.sightings} 次，下次守夜打倒就能带回来` : '：遗体还留在外面，也许哪天会在尸群里见到'}`, 18, LOSE);
+            else if (g.returned) this.text('🪦 从尸群里认出来、带回营地安葬了', 18, WIN);
             const blocker = prayBlocker(config, state, g.id, now);
             this.button(blocker ? `🕯️ ${blocker}` : '🕯️ 在墓前祷告', WIDTH, () => {
                 const res = camp.pray(g.id, camp.now);
@@ -1999,6 +2055,20 @@ export class GameRoot extends Component {
                 else this.showToast(res.reason);
                 this.render();
             }, LEFT, blocker ? 'disabled' : 'normal', 20, 44);
+            this.gap(10);
+        }
+    }
+
+    /** 伊森的日记：每天一篇，新的在前 */
+    private renderDiary(camp: CampGame): void {
+        const entries = latestEntries(camp.state);
+        this.text('📖 伊森的日记', 28, ACCENT);
+        this.text('每过一天，伊森会把这一天发生的事写下来。可以截图分享给朋友。', 18, DIM);
+        this.gap(8);
+        if (!entries.length) this.text('还是空白的一页。过完第一天再来看看吧。', 22, DIM);
+        for (const e of entries) {
+            this.text(`—— 第 ${e.day} 天${e.author !== '伊森' ? `（${e.author}）` : ''} ——`, 22, ACCENT);
+            this.text(e.text, 22);
             this.gap(10);
         }
     }
@@ -2248,8 +2318,14 @@ export class GameRoot extends Component {
         drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
         addLabel(title, `🗺️ ${townName(state)} · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
 
-        // 下方：选中地点的详情
+        // 下方：今日情报 + 选中地点的详情
         this.cursorY = TOWN_CENTER_Y - TOWN_HEIGHT / 2 - 8;
+        const intel = todayIntel(config, state, now);
+        if (intel.length) {
+            this.text('📻 今日情报（今天出发的打猎、钓鱼、勘察有效）', 20, ACCENT);
+            for (const x of intel) this.text(`${x.kind.icon} ${x.text}`, 18, TEXT);
+            this.gap(6);
+        }
         this.renderLocationCard(camp, now, statusOf);
     }
 
@@ -2630,6 +2706,8 @@ export class GameRoot extends Component {
         const explored = districtExplored(config, state, d, now);
         this.text(`${d.icon} ${districtName(state, d)}  已探索 ${Math.round(explored * 100)}%${state.districtsCompleted?.includes(d.id) ? ' ✅' : ''}`, 24, ACCENT);
         this.text(d.description, 18, DIM);
+        const tip = todayIntel(config, state, now).find((x) => x.district.id === d.id);
+        if (tip) this.text(`📻 今日情报：${tip.kind.icon} ${tip.text}`, 18, WIN);
         this.text(`要${TIER_NAMES[d.tier]}才能到 · 勘察一趟 ${formatTime(realSeconds(config, d.surveyMinutes * 60_000))} · 受伤概率 ${Math.round(d.danger * 100)}%`, 18, d.tier > maxTierOwned(config, state) ? LOSE : TEXT);
         const reward = [formatBag(config, d.complete?.resources ?? {}), formatProps(config, d.complete?.props ?? {})].filter(Boolean).join(' ');
         if (reward) this.text(`全部探索完奖励：${reward}`, 18, WIN);

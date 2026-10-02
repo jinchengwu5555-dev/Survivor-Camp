@@ -1,5 +1,6 @@
 {
     "firstDay": 2,
+    "treasureBonus": 1.5,
     "intervalMinutes": 160,
     "stayMinutes": 60,
     "offersPerVisit": 3,
@@ -19,5 +20,5 @@
         { "id": "food_for_coffee", "give": { "food": 50 }, "get": {}, "getProps": { "coffee": 2 }, "weight": 2 },
         { "id": "cans_for_mystery", "give": { "cans": 5 }, "get": {}, "getProps": { "mystery_box": 1 }, "weight": 2 },
         { "id": "wood_for_flyer", "give": { "wood": 120 }, "get": {}, "getProps": { "flyer": 1 }, "weight": 1 },
-        { "id": "medicine_for_walkie", "give": { "medicine": 12 }, "get": {}, "getProps": { "walkie": 1 }, "weight": 1 }, {"id": "wood_for_potato", "give": {"wood": 40}, "get": {}, "getProps": {"seed_potato": 2}, "weight": 2}, {"id": "food_for_veg_seeds", "give": {"food": 30}, "get": {}, "getProps": {"seed_tomato": 1, "seed_carrot": 1}, "weight": 2}, {"id": "food_for_corn", "give": {"food": 50}, "get": {}, "getProps": {"seed_corn": 2}, "weight": 1}, {"id": "medicine_for_herbs", "give": {"medicine": 8}, "get": {}, "getProps": {"seed_herbs": 2}, "weight": 1}, {"id": "food_for_chicks", "give": {"food": 60}, "get": {}, "getProps": {"chicks": 1}, "weight": 2}, {"id": "parts_for_rabbits", "give": {"parts": 25}, "get": {}, "getProps": {"rabbit_pair": 1}, "weight": 1}, {"id": "cans_for_goat", "give": {"cans": 3}, "get": {}, "getProps": {"goat_kid": 1}, "weight": 1}, {"id": "parts_for_piglet", "give": {"parts": 50}, "get": {}, "getProps": {"piglet": 1}, "weight": 1}]
+        { "id": "medicine_for_walkie", "give": { "medicine": 12 }, "get": {}, "getProps": { "walkie": 1 }, "weight": 1 }, {"id": "wood_for_potato", "give": {"wood": 40}, "get": {}, "getProps": {"seed_potato": 2}, "weight": 2}, {"id": "food_for_veg_seeds", "give": {"food": 30}, "get": {}, "getProps": {"seed_tomato": 1, "seed_carrot": 1}, "weight": 2}, {"id": "food_for_corn", "give": {"food": 50}, "get": {}, "getProps": {"seed_corn": 2}, "weight": 1}, {"id": "medicine_for_herbs", "give": {"medicine": 8}, "get": {}, "getProps": {"seed_herbs": 2}, "weight": 1}, {"id": "food_for_chicks", "give": {"food": 60}, "get": {}, "getProps": {"chicks": 1}, "weight": 2}, {"id": "parts_for_rabbits", "give": {"parts": 25}, "get": {}, "getProps": {"rabbit_pair": 1}, "weight": 1}, {"id": "cans_for_goat", "give": {"cans": 3}, "get": {}, "getProps": {"goat_kid": 1}, "weight": 1}, {"id": "parts_for_piglet", "give": {"parts": 50}, "get": {}, "getProps": {"piglet": 1}, "weight": 1}, {"id": "parts_for_flare", "give": {"parts": 25}, "get": {}, "getProps": {"flare": 1}, "weight": 2}]
 }

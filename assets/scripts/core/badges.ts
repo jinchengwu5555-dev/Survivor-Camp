@@ -1,7 +1,7 @@
 // 界面红点：哪里有新东西、哪里有事可做。
 //
 // 两种红点：
-//   “新内容”：新加入的人、新解锁的地点、新悬赏、新能做的物品、新成就、新战报、新发现的营地、商人来访、背包里新得到的道具。
+//   “新内容”：新加入的人、新解锁的地点、今日情报、新的日记、新悬赏、新能做的物品、新成就、新战报、新发现的营地、商人来访、背包里新得到的道具。
 //             玩家打开对应页面后调用 markSeen() 记为已读，红点消失。
 //   “可以做”：有人闲着而岗位有空、小队可以出发、有奖励能领。做完红点自然消失，不需要标记已读。
 // 已读记录存在 state.seen 里。第一次计算时（新开局或老存档）把当时已有的内容全部记为已读，避免满屏红点。
@@ -10,6 +10,8 @@ import { availableBounties, bountyProgress } from './bounties';
 import { availableLocations, restockSecondsLeft, suggestSquad } from './combat';
 import { workshopLevel } from './crafting';
 import { dailyClaimable } from './daily';
+import { todayIntel } from './intel';
+import { currentDay } from './state';
 import { bestCrop, petBlocker, produceFood, readyPlots } from './farming';
 import { workerSlots } from './economy';
 import { relocationTargets } from './sites';
@@ -19,15 +21,20 @@ import { GameConfig, GameState, SeenState } from './types';
 import { idleSurvivors, workersIn } from './workers';
 
 /** 会显示红点的地方 */
-export type BadgeGroup = 'survivors' | 'explore' | 'bounties' | 'workshop' | 'achievements' | 'reports' | 'sites' | 'trader' | 'props';
-export const BADGE_GROUPS: BadgeGroup[] = ['survivors', 'explore', 'bounties', 'workshop', 'achievements', 'reports', 'sites', 'trader', 'props'];
+export type BadgeGroup = 'survivors' | 'explore' | 'bounties' | 'workshop' | 'achievements' | 'reports' | 'sites' | 'trader' | 'props' | 'diary';
+export const BADGE_GROUPS: BadgeGroup[] = ['survivors', 'explore', 'bounties', 'workshop', 'achievements', 'reports', 'sites', 'trader', 'props', 'diary'];
 
 /** 每个地方现在有哪些“新内容”的 key（不管看没看过） */
 function contentKeys(config: GameConfig, state: GameState, now: number): Record<BadgeGroup, string[]> {
     const level = workshopLevel(config, state);
     return {
         survivors: state.survivors.map((s) => `survivor:${s.id}`),
-        explore: [...availableLocations(config, state, now).map((l) => `loc:${l.id}`), ...activeScoutSpots(state, now).map((s) => `spot:${s.id}`)],
+        explore: [
+            ...availableLocations(config, state, now).map((l) => `loc:${l.id}`),
+            ...activeScoutSpots(state, now).map((s) => `spot:${s.id}`),
+            // 今日情报：每天一条新内容
+            ...(todayIntel(config, state, now).length ? [`intel:${currentDay(config, state, now)}`] : []),
+        ],
         bounties: availableBounties(config, state, now).map((b) => `bounty:${b.id}`),
         workshop: level > 0 ? config.items.filter((i) => i.workshopLevel <= level).map((i) => `item:${i.id}`) : [],
         achievements: state.achievements.map((a) => `ach:${a.id}`),
@@ -38,6 +45,8 @@ function contentKeys(config: GameConfig, state: GameState, now: number): Record<
         props: Object.entries(state.props ?? {})
             .filter(([, n]) => n > 0)
             .map(([id, n]) => `prop:${id}:${n}`),
+        // 伊森的日记：每天一篇
+        diary: (state.diary ?? []).map((e) => `diary:${e.day}`),
     };
 }
 

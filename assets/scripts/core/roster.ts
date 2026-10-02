@@ -106,7 +106,7 @@ export function killSurvivor(config: GameConfig, state: GameState, id: string, n
     const name = survivorName(config, state, id);
     if (where) dropGearAt(state, s, where);
     else dropGear(state, s);
-    bury(config, state, s, now, cause);
+    bury(config, state, s, now, cause, !!where);
     state.survivors = state.survivors.filter((x) => x.id !== id);
     for (const ex of state.expeditions) ex.squad = ex.squad.filter((m) => m !== id);
     setFlag(state, `dead_${id}`);

@@ -338,7 +338,7 @@ export function validateConfig(config: GameConfig): string[] {
     for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
     for (const p of config.props) {
         const where = `道具 ${p.id}`;
-        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear', 'seed', 'animal'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear', 'seed', 'animal', 'flare', 'treasure'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
         if (p.type === 'seed' && !config.farming?.crops.some((c) => c.id === p.crop && c.seed === p.id)) errors.push(`${where}：种子要写 crop，并且那种作物的 seed 要指回这个道具`);
         if (p.type === 'animal') {
             checkAnimal(where, p.animal ?? '');
@@ -354,7 +354,7 @@ export function validateConfig(config: GameConfig): string[] {
             if (p.craft) checkBag(where, p.craft.cost);
         }
         checkBag(where, p.reward);
-        if (p.type === 'resource' && !p.reward) errors.push(`${where}：资源箱要写 reward`);
+        if ((p.type === 'resource' || p.type === 'treasure') && !p.reward) errors.push(`${where}：资源箱、稀有品要写 reward`);
         if (p.type === 'speedup' && !(p.minutes && p.minutes > 0)) errors.push(`${where}：加速道具要写 minutes`);
         if (p.type === 'mood' && !p.amount) errors.push(`${where}：士气道具要写 amount`);
         if (p.type === 'chest') {
@@ -366,6 +366,27 @@ export function validateConfig(config: GameConfig): string[] {
             }
         }
     }
+
+    const fz = config.balance.familiarZombie;
+    if (fz) {
+        if (!config.units?.some((u) => u.id === fz.unit)) errors.push(`balance.familiarZombie：未知战斗单位 ${fz.unit}`);
+        if (fz.chance < 0 || fz.chance > 1) errors.push('balance.familiarZombie：chance 要在 0～1 之间');
+    }
+    if (config.intel) {
+        checkUnique('情报', config.intel.kinds.map((k) => k.id));
+        for (const k of config.intel.kinds) {
+            if (!k.text.includes('{d}')) errors.push(`情报 ${k.id}：text 里要有 {d}（分区名）`);
+            for (const v of [k.hunt, k.fish, k.loot, k.danger]) if (v !== undefined && v <= 0) errors.push(`情报 ${k.id}：倍率必须大于 0`);
+        }
+    }
+    if (config.diary) {
+        const d = config.diary;
+        if (!d.openers.length || !d.closers.length || !d.quiet.length) errors.push('diary.json：openers、closers、quiet 都不能为空');
+        for (const se of Object.keys(d.seasons)) if (!config.seasons.some((x) => x.id === se)) errors.push(`diary.json：未知季节 ${se}`);
+        for (const st of d.stats) if (!st.lines.length) errors.push(`diary.json：${st.stat} 没有句子`);
+    }
+    const fl = config.balance.flare;
+    if (fl && (fl.candidates[0] < 1 || fl.candidates[1] < fl.candidates[0])) errors.push('balance.flare：candidates 写错了');
 
     if (config.farming) {
         const f = config.farming;

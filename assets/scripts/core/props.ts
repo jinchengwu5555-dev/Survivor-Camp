@@ -6,7 +6,9 @@ import { completeUpgrades } from './buildings';
 import { finishExpeditionNow, formatBag } from './combat';
 import { grantResources, hqLevel } from './economy';
 import { addAnimals, animalDef, cropOfSeed, penSpace, plant, plantBlocker } from './farming';
+import { fireFlare, flareBlocker } from './familiar';
 import { changeMoodAll } from './mood';
+import { traderPresent } from './trader';
 import { nextRandom, pickWeighted } from './rng';
 import { addWanderer } from './roster';
 import { addLog, addStat, healSurvivorState } from './state';
@@ -63,6 +65,15 @@ export function propReward(config: GameConfig, state: GameState, def: PropDef): 
     return out;
 }
 
+/** 稀有品（出大红）卖掉能换多少：随指挥部成长，商人在营地时更贵 */
+export function treasureValue(config: GameConfig, state: GameState, def: PropDef, now: number): ResourceBag {
+    const base = propReward(config, state, def);
+    const mult = traderPresent(state, now) ? config.trader.treasureBonus ?? 1 : 1;
+    const out: ResourceBag = {};
+    for (const id of RESOURCE_IDS) if (base[id]) out[id] = Math.round(base[id]! * mult);
+    return out;
+}
+
 /** 现在能不能用；返回 null 表示可以 */
 export function propBlocker(config: GameConfig, state: GameState, id: string, now = state.lastTickAt): string | null {
     const def = propDef(config, id);
@@ -77,6 +88,8 @@ export function propBlocker(config: GameConfig, state: GameState, id: string, no
             return state.survivors.some((s) => s.injured) ? null : '没有伤员';
         case 'gear':
             return '装备要在幸存者档案里给人穿上';
+        case 'flare':
+            return flareBlocker(config, state);
         case 'seed':
             return plantBlocker(config, state, cropOfSeed(config, id)?.id ?? '', now);
         case 'animal':
@@ -127,6 +140,18 @@ export function useProp(config: GameConfig, state: GameState, id: string, now: n
                 return { ok: false, reason: '没有空床位了' };
             }
             message = `${w.profile?.name ?? '一个流浪者'}来投奔了`;
+            break;
+        }
+        case 'flare': {
+            const r = fireFlare(config, state, now);
+            if (!r.ok) return r;
+            message = r.message ?? '';
+            break;
+        }
+        case 'treasure': {
+            const got = grantResources(config, state, treasureValue(config, state, def, now));
+            message = `卖了个好价钱：${formatBag(config, got)}`;
+            addStat(state, 'treasures_sold');
             break;
         }
         case 'seed': {

@@ -114,6 +114,13 @@ export interface BalanceDef {
      * 守夜的人精力 -watchCost，其他人睡一觉 +restGain。精力低于 tiredBelow 时干活和攻击打折扣，精力 0 时只剩 minFactor。
      * 守夜人手不够时，尸潮来了栅栏生命只有 understaffedWallFactor。
      */
+    /**
+     * 熟悉的丧尸：死在外面、遗体没带回来的人，过 delayDays 天后每次尸潮有 chance 的概率混在尸群里出现。
+     * 用 unit 战斗单位，生命 / 攻击乘倍率，第 spawnAt 秒出场。打倒就能把遗体带回来安葬。
+     */
+    familiarZombie?: { delayDays: number; chance: number; unit: string; hpMult: number; atkMult: number; spawnAt: number };
+    /** 信号弹：招来几个人 [最少, 最多]，当晚一定有尸潮，尸潮等级 +raidBonus */
+    flare?: { candidates: [number, number]; raidBonus: number };
     nightWatch?: {
         survivorsPerWatcher: number;
         watchCost: number;
@@ -508,6 +515,10 @@ export interface GameConfig {
     vehicles?: VehicleDef[];
     /** 种菜和养殖（老配置没有） */
     farming?: FarmingConfig;
+    /** 今日情报（老配置没有） */
+    intel?: IntelConfig;
+    /** 伊森的日记（老配置没有） */
+    diary?: DiaryConfig;
     /** 探索背包：资源怎么分包、占几格、多重（老配置没有） */
     packing?: PackingConfig;
     /** 每局随机地名的名字池（老配置没有） */
@@ -556,7 +567,7 @@ export interface PickupConfig {
  *   chest     从 contents 里随机开出一样（道具或资源）
  *   gear      装备：在幸存者档案里穿戴（slot + gear 属性），不能直接“使用”
  */
-export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear' | 'seed' | 'animal';
+export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear' | 'seed' | 'animal' | 'flare' | 'treasure';
 
 export type GearSlot = 'weapon' | 'armor' | 'tool' | 'bag';
 export const GEAR_SLOTS: GearSlot[] = ['weapon', 'armor', 'tool', 'bag'];
@@ -597,6 +608,8 @@ export interface PropDef {
     crop?: string;
     /** type = animal：放进畜栏的牲口（farming.json 的 animals），数量用 amount */
     animal?: string;
+    /** 稀有品（“出大红”）：拿到时全屏提示。type = treasure 时卖掉得到 reward，商人在营地时卖得更贵 */
+    rare?: boolean;
 }
 
 /** 天赋（talents.json），见 core/talents.ts */
@@ -662,6 +675,8 @@ export interface TraderOfferDef {
 
 /** 流浪商人：第 firstDay 天起，每隔 intervalMinutes 来一次，待 stayMinutes，每次随机摆 offersPerVisit 笔交易 */
 export interface TraderConfig {
+    /** 商人在营地时卖稀有品（treasure）多给的倍率 */
+    treasureBonus?: number;
     firstDay: number;
     intervalMinutes: number;
     stayMinutes: number;
@@ -763,6 +778,12 @@ export interface GraveState {
     prayers: number;
     /** 最后一次来祷告是第几天（每座墓每天一次） */
     lastPrayDay?: number;
+    /** 死在外面，遗体没能带回来（见 core/familiar.ts） */
+    lost?: boolean;
+    /** 变成行尸在尸潮里出现过几次 */
+    sightings?: number;
+    /** 遗体后来被带回来安葬了 */
+    returned?: boolean;
 }
 
 export interface LogEntry {
@@ -883,6 +904,13 @@ export interface GameState {
     hunts?: SurveyState[];
     /** 菜园和畜栏（见 core/farming.ts；老存档没有，用到时补上） */
     farm?: FarmState;
+    /** 今日情报：第几天、哪几个分区有什么情报（见 core/intel.ts） */
+    intel?: { day: number; items: { district: string; kind: string }[] };
+    /** 伊森的日记：每天一篇（见 core/diary.ts）；diarySnap 是当天开始时的快照 */
+    diary?: DiaryEntry[];
+    diarySnap?: DiarySnapshot;
+    /** 放过信号弹：下一次尸潮一定会来，而且更大（见 core/familiar.ts 的 fireFlare） */
+    flare?: boolean;
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
     /** 黄金（见 core/gold.ts；老存档没有 = 0） */
@@ -1186,6 +1214,8 @@ export interface PendingRaid {
     carried: { tag: string; item: string }[];
     /** 这场战斗里修补了几次栅栏 */
     repairs: number;
+    /** 混在尸群里的熟人（墓地 id，见 core/familiar.ts） */
+    familiar?: string;
 }
 
 export interface GameOverInfo {
@@ -1273,4 +1303,57 @@ export interface FarmState {
     pettedDay?: number;
     /** 送过开局种子了 */
     starter?: boolean;
+}
+
+/** 今日情报（intel.json），见 core/intel.ts */
+export interface IntelKind {
+    id: string;
+    icon: string;
+    /** {d} 换成分区名 */
+    text: string;
+    hunt?: number;
+    fish?: number;
+    loot?: number;
+    danger?: number;
+    /** 只给能打猎（hunt）/ 能钓鱼（fish）的分区 */
+    needs?: 'hunt' | 'fish';
+}
+
+export interface IntelConfig {
+    perDay: number;
+    kinds: IntelKind[];
+}
+
+/** 伊森的日记（diary.json），见 core/diary.ts */
+export interface DiaryConfig {
+    /** 按心情档位挑开头：心情 >= min 的第一档 */
+    openers: { min: number; lines: string[] }[];
+    /** 季节一句 */
+    seasons: Record<string, string[]>;
+    /** 当天统计变化 → 一句话；{n} 是变化量 */
+    stats: { stat: string; lines: string[] }[];
+    joined: string[];
+    died: string[];
+    left: string[];
+    /** 什么都没发生 */
+    quiet: string[];
+    closers: string[];
+    /** 最多保留几篇 */
+    keep: number;
+}
+
+export interface DiaryEntry {
+    day: number;
+    at: number;
+    /** 写日记的人（伊森不在了由别人接着写） */
+    author: string;
+    text: string;
+}
+
+export interface DiarySnapshot {
+    day: number;
+    stats: Record<string, number>;
+    survivors: string[];
+    graves: number;
+    food: number;
 }

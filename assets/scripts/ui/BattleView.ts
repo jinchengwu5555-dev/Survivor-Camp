@@ -7,6 +7,7 @@ import { Color, Graphics, Label, Node } from 'cc';
 import { Battle, BattleSetup } from '../core/battle/Battle';
 import { BattleUnit } from '../core/battle/types';
 import { battleRegistry } from '../core/combat';
+import { parseFamiliarTag } from '../core/familiar';
 import { LiveRaid } from '../core/liveRaid';
 import { BattleReport, GameConfig } from '../core/types';
 import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, UIButton } from './widgets';
@@ -47,6 +48,8 @@ export class BattleView {
     private readonly bars: Graphics;
     private readonly unitLabels = new Map<number, Label>();
     private readonly unitSprites = new Map<number, Node>();
+    /** 混在尸群里的熟人：头顶的名字（见 core/familiar.ts） */
+    private readonly nameTags = new Map<number, Label>();
     private readonly unitsLayer: Node;
     private readonly fx: Node;
     private readonly status: Label;
@@ -227,6 +230,22 @@ export class BattleView {
                 bars.stroke();
             }
             this.hpBar(bars, x, top + 6, u.tag === 'barricade' ? 90 : 44 * scale, u);
+            const familiar = parseFamiliarTag(u.tag);
+            if (familiar) {
+                let tag = this.nameTags.get(u.uid);
+                if (!tag) {
+                    tag = addLabel(this.fx, `🧟${familiar.name}`, 18, hexColor('#d090ff'), { width: 160, height: 24 });
+                    this.nameTags.set(u.uid, tag);
+                    floatText(this.fx, `那是……${familiar.name}？`, x, top + 60, hexColor('#d090ff'), 26, 50, 2.5);
+                }
+                tag.node.setPosition(x, top + 28);
+            }
+        }
+        for (const [uid, tag] of this.nameTags) {
+            if (!alive.has(uid)) {
+                tag.node.destroy();
+                this.nameTags.delete(uid);
+            }
         }
         // 靠后车道的先画（被前面的挡住）
         withSprite

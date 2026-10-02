@@ -21,6 +21,8 @@
     "firstRaidMinutes": 8,
     "gold": { "start": 60, "lot": 10, "fullValueDays": 6, "worthlessDay": 24, "rates": { "food": 60, "wood": 50, "parts": 18, "medicine": 8, "cans": 1 } },
     "raidChance": { "base": 0.55, "perDay": 0.01, "max": 0.9 },
+    "familiarZombie": { "delayDays": 2, "chance": 0.4, "unit": "walker", "hpMult": 2, "atkMult": 1.3, "spawnAt": 6 },
+    "flare": { "candidates": [2, 3], "raidBonus": 2 },
     "nightWatch": { "survivorsPerWatcher": 4, "watchCost": 40, "restGain": 35, "tiredBelow": 50, "minFactor": 0.6, "understaffedWallFactor": 0.7 },
     "raidRepair": { "hpRatio": 0.2, "woodPerHp": 0.1, "minWood": 10, "maxUses": 3 },
     "maxDefenders": 5,

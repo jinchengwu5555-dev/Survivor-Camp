@@ -1,5 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
+import { updateDiary } from './diary';
 import { autoFarm, clearPlot, collectProduce, harvestAll, petAnimals, plant, slaughter, updateFarm } from './farming';
 import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
@@ -124,6 +125,7 @@ export class CampGame {
         updateTrader(this.config, s, now);
         updateScoutSpots(this.config, s, now);
         updateChatter(this.config, s, now);
+        updateDiary(this.config, s, now);
         this.settle(now);
     }
 

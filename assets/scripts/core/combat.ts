@@ -4,6 +4,7 @@
 // 所有战斗都是按种子自动结算的，战报里保存了完整的 BattleSetup，
 // 界面以后可以用同一个种子把整场战斗重放出来（结果完全一致）。
 
+import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
 import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
@@ -456,7 +457,8 @@ export function maybeRunRaid(config: GameConfig, state: GameState, now: number, 
     nightQuirks(config, state, at);
     const raid = currentRaid(config, state, now);
     if (!raid) return;
-    if (!rollRaid(config, state, now)) {
+    // 放过信号弹：今晚一定有尸潮
+    if (!state.flare && !rollRaid(config, state, now)) {
         addStat(state, 'quiet_nights');
         addLog(state, at, `🌙 平静的一夜，没有尸潮。守夜的是${watchersText(config, state, watchers)}。`);
         return;
@@ -492,12 +494,17 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
     const level = survivorBattleLevel(config, state);
     const bloodMoon = nextRaidIsBloodMoon(config, state);
     state.raidCount += 1;
-    const enemyBonus = raidEnemyBonus(config, state, at);
+    // 信号弹引来的尸潮更大（用掉一次）
+    const flareBonus = state.flare ? config.balance.flare?.raidBonus ?? 0 : 0;
+    state.flare = false;
+    const enemyBonus = raidEnemyBonus(config, state, at) + flareBonus;
     const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
+    // 死在外面的熟人可能混在尸群里（familiar.ts）
+    const familiar = addFamiliar(config, state, setup, Math.max(1, ...setup.enemies.map((e) => e.level ?? 1)), at);
     const carried = equipItems(config, state, setup.allies).map((c) => ({ tag: c.tag, item: c.item.id }));
-    const title = `${bloodMoon ? '血月·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
-    return { raid: raid.id, at, title, bloodMoon, enemyBonus, setup, carried, repairs: 0 };
+    const title = `${bloodMoon ? '血月·' : ''}${flareBonus ? '信号弹·' : ''}${raid.name}${enemyBonus > 0 ? ` +${enemyBonus}` : ''}`;
+    return { raid: raid.id, at, title, bloodMoon, enemyBonus, setup, carried, repairs: 0, familiar };
 }
 
 /** 守夜结束：发奖励或扣物资、处理伤亡、写战报。battle 必须已经分出胜负 */
@@ -551,7 +558,11 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         }
     }
 
+    const familiarUnit = battle.side('enemy').find((u) => parseFamiliarTag(u.tag)?.id === pending.familiar);
+    const familiarText = pending.familiar ? settleFamiliar(config, state, pending.familiar, !!familiarUnit && !familiarUnit.alive, at) : '';
+
     const summary =
+        familiarText +
         (result === 'win'
             ? `【${title}】营地守住了！${formatBag(config, loot) ? `缴获 ${formatBag(config, loot)}。` : ''}${found ? `还捡到了${found}。` : ''}`
             : `【${title}】尸群冲进了营地，损失了 ${formatBag(config, lost) || '一些物资'}。`) +

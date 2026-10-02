@@ -78,7 +78,8 @@ export function isFounder(state: GameState, s: SurvivorState): boolean {
 // ---------- 墓地 ----------
 
 /** 有人死了：写进墓地（killSurvivor 调用） */
-export function bury(config: GameConfig, state: GameState, s: SurvivorState, now: number, cause: string): GraveState {
+/** lost = 死在外面，遗体没能带回来（之后可能变成行尸回来，见 familiar.ts） */
+export function bury(config: GameConfig, state: GameState, s: SurvivorState, now: number, cause: string, lost = false): GraveState {
     const info = survivorInfo(config, state, s.id);
     const points = bondPoints(config, state, s, now);
     const grave: GraveState = {
@@ -94,6 +95,7 @@ export function bury(config: GameConfig, state: GameState, s: SurvivorState, now
         founder: isFounder(state, s),
         prayers: 0,
     };
+    if (lost) grave.lost = true;
     state.graveyard = [...(state.graveyard ?? []), grave];
     // 感情越深，大家越难过
     const tier = bondTier(points);

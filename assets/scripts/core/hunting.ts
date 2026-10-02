@@ -10,6 +10,7 @@ import { addResource, hqLevel } from './economy';
 import { gearOf } from './gear';
 import { districtDef, surveyCandidates } from './districts';
 import { addAnimals, animalDef, penSpace } from './farming';
+import { intelMods } from './intel';
 import { districtName } from './names';
 import { nextRandom, pickWeighted } from './rng';
 import { injureSurvivor, survivorInfo, survivorName } from './roster';
@@ -91,6 +92,8 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
         const at = h.returnsAt;
         const game = huntableGame(config, state, d, at);
         const season = cfg.seasonChance[seasonAt(config, state, at).season.id] ?? 1;
+        // 今日情报按出发那天算
+        const intel = intelMods(config, state, d.id, h.startedAt);
         const caught: Record<string, number> = {};
         let food = 0;
         const hurt: string[] = [];
@@ -99,7 +102,8 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
             for (let i = 0; i < cfg.triesPerHunter; i++) {
                 const animal = pickWeighted(state, game);
                 if (!animal) continue;
-                if (nextRandom(state) >= cfg.baseChance * hunterSkill(config, state, id, animal.kind) * season) continue;
+                const tip = animal.kind === 'fish' ? intel.fish : intel.hunt;
+                if (nextRandom(state) >= cfg.baseChance * hunterSkill(config, state, id, animal.kind) * season * tip) continue;
                 // 畜栏有空位：有机会活捉回去养
                 if (animal.capture && penSpace(config, state) > 0 && nextRandom(state) < animal.capture.chance) {
                     const n = addAnimals(config, state, animal.capture.animal, 1, at);
@@ -114,7 +118,7 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
                 food += Math.round(animal.food * growth);
                 addStat(state, `game_${animal.id}`);
                 const s = state.survivors.find((x) => x.id === id);
-                if (s && !s.injured && nextRandom(state) < animal.risk) {
+                if (s && !s.injured && nextRandom(state) < animal.risk * intel.danger) {
                     injureSurvivor(config, state, s, at);
                     hurt.push(`${survivorName(config, state, id)}被${animal.name}弄伤了`);
                 }

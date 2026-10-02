@@ -57,5 +57,11 @@
     { "id": "chicks", "size": [2, 1], "weight": 2, "name": "一笼小鸡", "icon": "🐤", "type": "animal", "animal": "chicken", "amount": 2, "description": "两只叽叽喳喳的小鸡。放进畜栏。" },
     { "id": "rabbit_pair", "size": [2, 1], "weight": 3, "name": "一对兔子", "icon": "🐇", "type": "animal", "animal": "rabbit", "amount": 2, "description": "一公一母，很快就会变成一窝。放进畜栏。" },
     { "id": "goat_kid", "size": [2, 2], "weight": 8, "name": "小山羊", "icon": "🐐", "type": "animal", "animal": "goat", "amount": 1, "description": "一只咩咩叫的小山羊。放进畜栏。" },
-    { "id": "piglet", "size": [2, 2], "weight": 8, "name": "猪崽", "icon": "🐖", "type": "animal", "animal": "pig", "amount": 1, "description": "一只哼哼唧唧的猪崽。放进畜栏。" }
+    { "id": "piglet", "size": [2, 2], "weight": 8, "name": "猪崽", "icon": "🐖", "type": "animal", "animal": "pig", "amount": 1, "description": "一只哼哼唧唧的猪崽。放进畜栏。" },
+    { "id": "flare", "weight": 0.5, "name": "信号弹", "icon": "🎆", "type": "flare", "description": "打上天，附近的幸存者会循着信号来投奔。但今晚的尸潮一定会来，而且更大。" },
+    { "id": "gold_watch", "rare": true, "weight": 0.2, "name": "金表", "icon": "⌚", "type": "treasure", "reward": { "food": 300, "parts": 100, "medicine": 30 }, "description": "沉甸甸的老式金表，表盘上刻着一行字。卖掉能换一大笔物资。" },
+    { "id": "gold_bar", "rare": true, "size": [1, 2], "weight": 2, "name": "金条", "icon": "🟨", "type": "treasure", "reward": { "food": 500, "wood": 300, "parts": 150 }, "description": "银行金库里的金条。末日里不能吃，但总有人愿意拿一车物资来换。" },
+    { "id": "military_radio", "rare": true, "size": [2, 2], "weight": 6, "name": "军用电台", "icon": "📡", "type": "treasure", "reward": { "parts": 400, "medicine": 40 }, "description": "还能用的军用电台，拆开全是好零件。" },
+    { "id": "generator_core", "rare": true, "size": [2, 2], "weight": 10, "name": "发电机组件", "icon": "⚙️", "type": "treasure", "reward": { "parts": 500, "wood": 200 }, "description": "柴油发电机的核心部件，懂行的人眼睛都会发光。" },
+    { "id": "antibiotics_case", "rare": true, "size": [2, 1], "weight": 3, "name": "一箱抗生素", "icon": "💉", "type": "treasure", "reward": { "medicine": 180 }, "description": "整箱没开封的抗生素。比金子还值钱。" }
 ]

@@ -3,6 +3,7 @@
 // 有一定概率受伤。一个区的迷雾全散了，发一次性的“探索完成”奖励。
 // 分区里的探索地点（locations）也要有能到那个区的交通工具才能去。
 
+import { intelMods } from './intel';
 import { isOnExpedition } from './combat';
 import { grantResources, hqLevel } from './economy';
 import { addProp, rollDrops } from './props';
@@ -133,13 +134,16 @@ export function resolveSurveys(config: GameConfig, state: GameState, now: number
         }
         // 带回来的东西受背包限制：资源最多装满重量上限的一半（勘察主要是看路）
         const cap = haulSections(config, state, squad, vehicleDef(config, sv.vehicle));
+        // 今日情报按出发那天算
+        const intel = intelMods(config, state, d.id, sv.startedAt);
         const loot = surveyLoot(config, state, d);
+        for (const id of RESOURCE_IDS) if (loot[id]) loot[id] = Math.round(loot[id]! * intel.loot);
         const scale = Math.min(1, (cap.maxWeight * 4) / Math.max(1, Object.values(loot).reduce((n, v) => n + (v ?? 0), 0)));
         for (const id of RESOURCE_IDS) if (loot[id]) loot[id] = Math.round(loot[id]! * scale);
         const got = grantResources(config, state, loot);
         const found = rollDrops(state, d.drops);
         let hurt = '';
-        if (nextRandom(state) < d.danger) {
+        if (nextRandom(state) < d.danger * intel.danger) {
             const victim = squad[Math.floor(nextRandom(state) * squad.length)];
             const s = state.survivors.find((x) => x.id === victim)!;
             injureSurvivor(config, state, s, at);
