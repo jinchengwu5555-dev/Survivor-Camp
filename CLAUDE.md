@@ -22,6 +22,7 @@
 - 幸存者没有技能；除了伊森（`isHero`，天赋浴火重生）都用 `militia` 战斗单位。站位和搭配在 `core/formation.ts`（`squadOf` 统一套用），羁绊、墓地和祷告在 `core/bonds.ts`（`killSurvivor` 会自动 `bury`），打猎在 `core/hunting.ts` + `districts.json` 的 `hunting`。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
+- 界面字体是像素字体子集（`assets/resources/fonts/camp_pixel.ttf`）：Label 一律经过 `widgets.ts` 的 `addLabel` / `styleLabel`；加了新文字后运行 `python tools/subset_font.py` 重新裁剪（`tests/font.test.ts` 会检查缺字）。
 - 提交前运行 `npm test` 和 `npm run typecheck`。
 - **每次修改结束都要 git commit 并 push**（推到当前开发分支），不要把改动留在本地。
 - 改了界面或玩法时，顺手更新 `ui/GameRoot.ts` 里的 `GAME_VERSION`，用户靠它确认自己跑的是不是最新代码。

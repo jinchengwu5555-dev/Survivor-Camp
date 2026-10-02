@@ -7,7 +7,7 @@
 //   Overlay     守夜 / 战斗回放画面（BattleView），打开时隐藏 Content
 //   Fx          飘字特效（不会被重画清掉）
 
-import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, UIOpacity, UITransform } from 'cc';
+import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, TTFFont, UIOpacity, UITransform } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { buildingLabel, buildingLockReason, buildingStage, nextBuildingStage, upgradeBlocker } from '../core/buildings';
 import {
@@ -78,13 +78,13 @@ import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
-import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch } from './widgets';
+import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch, setUiFont, styleLabel } from './widgets';
 import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.1 像素风准备';
+const GAME_VERSION = 'v2.2 像素字体';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -256,7 +256,20 @@ export class GameRoot extends Component {
             if (online && !this.config) this.loadConfig();
             this.render();
         });
+        this.loadFont();
         this.connect();
+    }
+
+    /** 像素字体（几百 KB），加载完重画一次；失败就继续用系统字体 */
+    private loadFont(): void {
+        resources.load('fonts/camp_pixel', TTFFont, (err, font) => {
+            if (err || !font) {
+                console.warn('像素字体加载失败，使用系统字体', err);
+                return;
+            }
+            setUiFont(font);
+            this.render();
+        });
     }
 
     /** 游戏需要联网：没网时显示提示和重试按钮 */
@@ -2591,8 +2604,7 @@ export class GameRoot extends Component {
         node.setPosition(x, this.cursorY);
         const label = node.addComponent(Label);
         label.string = str;
-        label.fontSize = size;
-        label.lineHeight = size + 8;
+        styleLabel(label, size);
         label.color = color;
         label.horizontalAlign = Label.HorizontalAlign.LEFT;
         label.overflow = Label.Overflow.RESIZE_HEIGHT;

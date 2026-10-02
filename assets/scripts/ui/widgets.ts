@@ -1,7 +1,7 @@
 // 界面小工具：还没有美术资源，所有东西都用代码画（色块 + 文字 + emoji）。
 // GameRoot（营地界面）和 BattleView（战斗画面）共用。
 
-import { Color, Graphics, Label, Layers, Node, tween, UIOpacity, UITransform, Vec3 } from 'cc';
+import { Color, Graphics, Label, Layers, Node, TTFFont, tween, UIOpacity, UITransform, Vec3 } from 'cc';
 
 export const COLORS = {
     bg: new Color(28, 32, 30),
@@ -43,13 +43,39 @@ export interface LabelOptions {
     wrap?: boolean;
 }
 
+// 像素字体 Camp Pixel（Fusion Pixel 12px 的子集，见 tools/subset_font.py）。
+// 加载完成前、或者字体里没有的字（emoji）用系统字体顶上。
+let uiFont: TTFFont | null = null;
+/** 像素字体原生 12px，字号对齐到 6 的倍数才不会糊 */
+const PIXEL_STEP = 6;
+
+export function setUiFont(font: TTFFont | null): void {
+    uiFont = font;
+}
+
+/** 字号对齐到像素字体的网格：14→12，22→24，40→42 */
+export function pixelSize(size: number): number {
+    if (!uiFont) return size;
+    return Math.max(12, Math.round(size / PIXEL_STEP) * PIXEL_STEP);
+}
+
+/** 统一设置字体、字号、行高；所有 Label 都要经过这里 */
+export function styleLabel(label: Label, size: number): void {
+    const px = pixelSize(size);
+    if (uiFont) {
+        label.font = uiFont;
+        label.useSystemFont = false;
+    }
+    label.fontSize = px;
+    label.lineHeight = px + 8;
+}
+
 /** 在 parent 下放一个文字节点（锚点在中心） */
 export function addLabel(parent: Node, text: string, size: number, color: Color, opts: LabelOptions = {}): Label {
     const node = makeNode('Label', parent, opts.width ?? 600, opts.height ?? size + 10);
     const label = node.addComponent(Label);
     label.string = text;
-    label.fontSize = size;
-    label.lineHeight = size + 8;
+    styleLabel(label, size);
     label.color = color;
     label.horizontalAlign =
         opts.align === 'left' ? Label.HorizontalAlign.LEFT : opts.align === 'right' ? Label.HorizontalAlign.RIGHT : Label.HorizontalAlign.CENTER;

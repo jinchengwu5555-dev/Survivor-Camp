@@ -75,9 +75,19 @@ build-templates/wechatgame/  ← 构建微信小游戏时原样拷进输出目�
   cloudfunctions/leaderboard/  ← 云函数：全服排行榜和防刷校验
 art-raw/                ← 美术原图（任何格式），tools/process_art.py 抠图后输出到 assets/resources/sprites/
 tools/process_art.py    ← 美术图批处理：去背景、去白边、裁边、缩放
+tools/subset_font.py    ← 像素字体裁剪：只保留游戏里用到的字 → assets/resources/fonts/camp_pixel.ttf
 docs/GDD.md             ← 游戏设计文档
 docs/reference/         ← 备用资料库：参考作品分析、点子池、候选事件（尚未采用）
 ```
+
+### 像素字体
+
+界面文字用 **Camp Pixel**：[缝合像素字体 Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font)（TakWolf）12px 比例宽度简体中文版的子集，SIL OFL-1.1 许可，可免费商用。按 OFL 要求，裁剪后的字体改了名字，许可证原文在 `assets/resources/fonts/LICENSE-fusion-pixel.txt`（需要随游戏一起发布）。
+
+- 完整字体 1.4MB，`tools/subset_font.py` 只保留配置表和代码里出现过的字（约 1900 字、330KB）。
+- **加了新文字以后要重新裁剪**：`pip install fonttools && python tools/subset_font.py`。`tests/font.test.ts` 会检查缺字。
+- 字号会对齐到 6 的倍数（`widgets.ts` 的 `pixelSize`），像素才不会糊；emoji 和字体里没有的符号用系统字体显示。
+- 所有文字都要经过 `widgets.ts` 的 `addLabel` / `styleLabel`，不要自己 `addComponent(Label)` 后直接设字号。
 
 ## 第一次打开项目
 
