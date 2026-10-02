@@ -1,9 +1,11 @@
 // 背包道具：资源箱、建造加速、召回对讲机、咖啡、医疗包、招募传单、神秘补给箱……
+// 种子（种进菜园）、一笼小鸡（放进畜栏）……
 // 探索、守夜、拾荒、每日宝箱、商人、事件都会掉落。道具定义在 props.json。
 
 import { completeUpgrades } from './buildings';
 import { finishExpeditionNow, formatBag } from './combat';
 import { grantResources, hqLevel } from './economy';
+import { addAnimals, animalDef, cropOfSeed, penSpace, plant, plantBlocker } from './farming';
 import { changeMoodAll } from './mood';
 import { nextRandom, pickWeighted } from './rng';
 import { addWanderer } from './roster';
@@ -62,7 +64,7 @@ export function propReward(config: GameConfig, state: GameState, def: PropDef): 
 }
 
 /** 现在能不能用；返回 null 表示可以 */
-export function propBlocker(config: GameConfig, state: GameState, id: string): string | null {
+export function propBlocker(config: GameConfig, state: GameState, id: string, now = state.lastTickAt): string | null {
     const def = propDef(config, id);
     if (!def) return '没有这个道具';
     if (propCount(state, id) <= 0) return '背包里没有了';
@@ -75,6 +77,11 @@ export function propBlocker(config: GameConfig, state: GameState, id: string): s
             return state.survivors.some((s) => s.injured) ? null : '没有伤员';
         case 'gear':
             return '装备要在幸存者档案里给人穿上';
+        case 'seed':
+            return plantBlocker(config, state, cropOfSeed(config, id)?.id ?? '', now);
+        case 'animal':
+            if ((state.buildings.pen?.level ?? 0) <= 0) return '还没有畜栏';
+            return penSpace(config, state) > 0 ? null : '畜栏满了';
         default:
             return null;
     }
@@ -82,7 +89,7 @@ export function propBlocker(config: GameConfig, state: GameState, id: string): s
 
 /** 使用一个道具 */
 export function useProp(config: GameConfig, state: GameState, id: string, now: number): ActionResult {
-    const blocker = propBlocker(config, state, id);
+    const blocker = propBlocker(config, state, id, now);
     if (blocker) return { ok: false, reason: blocker };
     const def = propDef(config, id)!;
     state.props![id] -= 1;
@@ -120,6 +127,18 @@ export function useProp(config: GameConfig, state: GameState, id: string, now: n
                 return { ok: false, reason: '没有空床位了' };
             }
             message = `${w.profile?.name ?? '一个流浪者'}来投奔了`;
+            break;
+        }
+        case 'seed': {
+            state.props![id] += 1; // plant 自己会扣种子
+            const r = plant(config, state, cropOfSeed(config, id)!.id, now);
+            if (!r.ok) return r;
+            message = r.message ?? '种下了';
+            break;
+        }
+        case 'animal': {
+            const n = addAnimals(config, state, def.animal ?? '', def.amount ?? 1, now);
+            message = `${n} 只${animalDef(config, def.animal ?? '')?.name ?? '牲口'}进了畜栏`;
             break;
         }
         case 'chest': {

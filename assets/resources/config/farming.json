@@ -1,0 +1,28 @@
+{
+    "_doc": "种菜和养殖，见 core/farming.ts。时间都是游戏分钟（一天 80 分钟）；食物产量会跟着指挥部等级一起涨（和打猎一样）。",
+    "seasonGrowth": { "summer": 1, "autumn": 1.15, "winter": 0, "spring": 1.1 },
+    "greenhouseLevel": 10,
+    "greenhouseWinter": 0.6,
+    "farmerBonus": 0.25,
+    "maxFarmers": 2,
+    "witherMinutes": 80,
+    "starterSeeds": { "seed_lettuce": 2, "seed_potato": 2 },
+    "crops": [
+        { "id": "lettuce", "name": "生菜", "icon": "🥬", "seed": "seed_lettuce", "minutes": 30, "yield": { "food": 10 }, "seedsBack": [1, 2], "description": "长得最快，收得也少。" },
+        { "id": "carrot", "name": "胡萝卜", "icon": "🥕", "seed": "seed_carrot", "minutes": 45, "yield": { "food": 16 }, "seedsBack": [1, 2], "description": "兔子最爱吃。" },
+        { "id": "tomato", "name": "番茄", "icon": "🍅", "seed": "seed_tomato", "minutes": 50, "yield": { "food": 20 }, "seedsBack": [1, 2], "seasons": ["summer", "autumn", "spring"], "description": "怕冷，冬天只能种在大棚里。" },
+        { "id": "potato", "name": "土豆", "icon": "🥔", "seed": "seed_potato", "minutes": 70, "yield": { "food": 30 }, "seedsBack": [1, 3], "description": "耐储存、不挑地，末日里最靠得住的庄稼。" },
+        { "id": "herbs", "name": "草药", "icon": "🌿", "seed": "seed_herbs", "minutes": 80, "yield": { "medicine": 5 }, "seedsBack": [1, 2], "description": "薄荷、洋甘菊、芦荟，能做成简单的药。" },
+        { "id": "corn", "name": "玉米", "icon": "🌽", "seed": "seed_corn", "minutes": 120, "yield": { "food": 60 }, "seedsBack": [1, 2], "seasons": ["summer", "autumn"], "description": "只能在夏天和秋天种，收成很大。" },
+        { "id": "pumpkin", "name": "南瓜", "icon": "🎃", "seed": "seed_pumpkin", "minutes": 160, "yield": { "food": 90 }, "seedsBack": [1, 2], "seasons": ["summer", "autumn"], "description": "长得慢，一个顶一锅汤。" }
+    ],
+    "petMood": 3,
+    "starveDays": 2,
+    "animals": [
+        { "id": "chicken", "name": "鸡", "icon": "🐔", "feed": 3, "product": { "name": "鸡蛋", "icon": "🥚", "food": 9 }, "meat": 15, "breed": 0.15, "litter": [1, 2], "description": "每天下蛋，吃得少。" },
+        { "id": "duck", "name": "鸭", "icon": "🦆", "feed": 3, "product": { "name": "鸭蛋", "icon": "🥚", "food": 8 }, "meat": 16, "breed": 0.1, "litter": [1, 2], "description": "和鸡差不多，肉多一点。" },
+        { "id": "rabbit", "name": "兔子", "icon": "🐇", "feed": 2, "meat": 14, "breed": 0.35, "litter": [1, 3], "description": "不下蛋，但生得飞快。" },
+        { "id": "goat", "name": "山羊", "icon": "🐐", "feed": 6, "product": { "name": "羊奶", "icon": "🥛", "food": 18 }, "meat": 45, "breed": 0.06, "litter": [1, 1], "description": "每天产奶，什么草都吃。" },
+        { "id": "pig", "name": "猪", "icon": "🐖", "feed": 8, "meat": 120, "breed": 0.1, "litter": [1, 3], "description": "吃得多，一头够全营地吃好几天。" }
+    ]
+}

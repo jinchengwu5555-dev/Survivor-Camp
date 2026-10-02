@@ -9,7 +9,7 @@
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
         "timeLimit": 60,
         "loot": { "food": 50, "wood": 10 },
-        "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 }, { "prop": "gasoline", "chance": 0.3 }, { "prop": "waist_pouch", "chance": 0.2 } ],
+        "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 }, { "prop": "gasoline", "chance": 0.3 }, { "prop": "waist_pouch", "chance": 0.2 }, { "prop": "seed_potato", "chance": 0.2 } ],
         "discoversSite": "garage",
         "recruitChance": 0.1
     },
@@ -27,7 +27,7 @@
         ],
         "timeLimit": 60,
         "loot": { "food": 40, "medicine": 8 },
-        "drops": [ { "prop": "med_box", "chance": 0.4 }, { "prop": "chocolate", "chance": 0.3 }, { "prop": "hiking_boots", "chance": 0.2 } ],
+        "drops": [ { "prop": "med_box", "chance": 0.4 }, { "prop": "chocolate", "chance": 0.3 }, { "prop": "hiking_boots", "chance": 0.2 }, { "prop": "seed_lettuce", "chance": 0.3 }, { "prop": "rabbit_pair", "chance": 0.08 } ],
         "recruitChance": 0.1
     },
     {
@@ -190,8 +190,7 @@
             {
                 "prop": "med_box",
                 "chance": 0.3
-            }
-        ],
+            }, { "prop": "seed_herbs", "chance": 0.25 }, { "prop": "chicks", "chance": 0.1 } ],
         "recruitChance": 0.25
     },
     {

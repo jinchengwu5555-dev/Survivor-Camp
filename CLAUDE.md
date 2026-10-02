@@ -19,7 +19,7 @@
 - 装备是 `type: "gear"` 的背包道具（`core/gear.ts`），各人倍率统一走 `talents.ts` 的 `workMultiplier` / `combatMultiplier` / `scoutMultiplier`（天赋 × 装备 × 精力 × 心情档位），不要在别处另乘。改心情一律用 `mood.ts` 的 `changeMood` / `changeMoodAll` 并写上原因。
 - 地图分区在 `districts.json` + `core/districts.ts`（勘察驱散迷雾），交通工具在 `vehicles.json` + `core/vehicles.ts`（决定能去哪个区、背包多大）。探索战利品要装背包（`core/packing.ts`）：界面模式进 `state.pendingHauls` 让玩家摆，测试和模拟自动装。营地闲聊在 `chatter.json` + `core/chatter.ts`（不重复）。建筑升级阶段写在 `buildings.json` 的 `stages`。守夜轮班和“今晚有没有尸潮”在 `core/watch.ts`；营地数值面板读 `core/campStats.ts`。
 - 开局只有伊森（`balance.startingSurvivors`），招募和特质在 `recruits.json` + `core/recruits.ts`；测试默认 5 人开局，测单人开局用 `loadConfig({ soloStart: true })`。地名每局随机（`core/names.ts`），显示地名一律用 `locationName()` / `districtName()` / `townName()`，不要直接读 `loc.name`。
-- 幸存者没有技能；除了伊森（`isHero`，天赋浴火重生）都用 `militia` 战斗单位。站位和搭配在 `core/formation.ts`（`squadOf` 统一套用），羁绊、墓地和祷告在 `core/bonds.ts`（`killSurvivor` 会自动 `bury`），打猎在 `core/hunting.ts` + `districts.json` 的 `hunting`。
+- 幸存者没有技能；除了伊森（`isHero`，天赋浴火重生）都用 `militia` 战斗单位。站位和搭配在 `core/formation.ts`（`squadOf` 统一套用），羁绊、墓地和祷告在 `core/bonds.ts`（`killSurvivor` 会自动 `bury`），打猎在 `core/hunting.ts` + `districts.json` 的 `hunting`。种菜和养殖在 `core/farming.ts` + `farming.json`（菜园 garden、畜栏 pen；模拟模式 `autoFarm` 自动打理）。
 - 界面红点由 `core/badges.ts` 统一计算（新内容 + 可以做的事）；新增页面或新内容类型时在那里补上，打开页面时调用 `camp.markSeen()`。
 - 游戏需要联网；排行榜在 `platform/Leaderboard.ts`（好友榜走开放数据域，全服榜走云函数）。
 - 界面字体是像素字体子集（`assets/resources/fonts/camp_pixel.ttf`）：Label 一律经过 `widgets.ts` 的 `addLabel` / `styleLabel`；加了新文字后运行 `python tools/subset_font.py` 重新裁剪（`tests/font.test.ts` 会检查缺字）。

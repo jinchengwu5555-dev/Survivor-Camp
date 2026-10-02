@@ -127,5 +127,32 @@
             { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 900, "requiresHq": 3, "spoilReduction": 0.7 }
         ],
         "scaling": { "maxLevel": 10, "costGrowth": 1.5, "timeGrowth": 1.32, "spoilPerLevel": 0.03 }
+    },
+    {
+        "id": "garden", "unlock": {"hq": 2}, "stages": [{"level": 1, "name": "花盆", "icon": "🪴", "description": "超市花卉区搬来的几个花盆，只能种点小东西。"}, {"level": 3, "name": "菜畦", "icon": "🌱", "description": "停车场撬开柏油，翻出了几垄菜畦。"}, {"level": 6, "name": "菜园", "icon": "🥬", "description": "围起来的菜园，有引水管和堆肥箱。"}, {"level": 10, "name": "温室大棚", "icon": "🏡", "description": "塑料布搭的大棚，冬天也能种菜。"}],
+        "name": "菜园",
+        "icon": "🌱",
+        "map": { "x": -230, "y": 175 },
+        "description": "种菜的地方。要有种子才能种，熟了记得收，放久了会烂在地里。等级越高菜地越多；农夫在营地时菜长得更快。",
+        "startLevel": 0,
+        "levels": [
+            { "cost": { "wood": 40 }, "buildSeconds": 60, "plots": 2 },
+            { "cost": { "wood": 90, "parts": 10 }, "buildSeconds": 240, "requiresHq": 2, "plots": 3 },
+            { "cost": { "wood": 160, "parts": 30 }, "buildSeconds": 600, "requiresHq": 3, "plots": 3 }
+        ],
+        "scaling": { "maxLevel": 14, "costGrowth": 1.45, "timeGrowth": 1.3, "plotsEvery": 2 }
+    },
+    {
+        "id": "pen", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "鸡笼", "icon": "🐔", "description": "购物车和铁丝网拼成的笼子。"}, {"level": 3, "name": "畜栏", "icon": "🐐", "description": "木桩围起来的畜栏，羊和兔子都养得下。"}, {"level": 6, "name": "小农场", "icon": "🐖", "description": "有猪圈、鸡舍和饲料棚的小农场。"}, {"level": 9, "name": "牧场", "icon": "🐄", "description": "营地外圈了一片草地，牲口成群。"}],
+        "name": "畜栏",
+        "icon": "🐔",
+        "map": { "x": 230, "y": 175 },
+        "description": "养牲口的地方。牲口每天要吃食物，会下蛋、产奶、生崽，也能宰了吃肉。打猎时有机会活捉。",
+        "startLevel": 0,
+        "levels": [
+            { "cost": { "wood": 70, "parts": 10 }, "buildSeconds": 120, "pens": 4 },
+            { "cost": { "wood": 140, "parts": 30 }, "buildSeconds": 400, "requiresHq": 3, "pens": 6 }
+        ],
+        "scaling": { "maxLevel": 12, "costGrowth": 1.45, "timeGrowth": 1.3, "pensPerLevel": 2 }
     }
 ]

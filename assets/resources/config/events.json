@@ -1921,5 +1921,66 @@
                 ]
             }
         ]
+    },
+    {
+        "id": "garden_pests",
+        "title": "菜园闹虫",
+        "text": "一早起来，菜叶子上全是窟窿，叶子背面密密麻麻爬满了青虫。再不管，这一茬菜就全完了。",
+        "weight": 3,
+        "conditions": {"minBuilding": {"garden": 1}},
+        "choices": [
+            { "text": "兑点消毒水喷一遍（3 药品）", "cost": { "medicine": 3 }, "outcomes": [ { "weight": 1, "text": "刺鼻的味道飘了一上午，虫子死了一大片，菜保住了。", "effects": [] } ] },
+            { "text": "全营地一起捉虫", "outcomes": [ { "weight": 2, "text": "大家蹲在地里捉了一下午虫，腰都直不起来。捉来的虫子还能喂鸡。", "effects": [ { "type": "mood", "target": "all", "amount": -2 }, { "type": "resource", "resource": "food", "amount": 10 } ] }, { "weight": 1, "text": "捉着捉着变成了比赛，谁捉得多谁晚上多分一勺汤。好久没这么笑过了。", "effects": [ { "type": "mood", "target": "all", "amount": 3 } ] } ] },
+            { "text": "顾不上，随它去", "outcomes": [ { "weight": 1, "text": "几天后，菜地里只剩下光秃秃的菜梗。", "effects": [ { "type": "resource", "resource": "food", "amount": -25 } ] } ] }
+        ]
+    },
+    {
+        "id": "coop_fox",
+        "title": "鸡笼边的脚印",
+        "text": "鸡笼外面的泥地上有一串小小的脚印，铁丝网被扒开了一个口子。是狐狸。它今晚一定还会再来。",
+        "weight": 3,
+        "conditions": {"hasAnimals": ["chicken"]},
+        "choices": [
+            { "text": "下个套子（10 零件）", "cost": { "parts": 10 }, "outcomes": [ { "weight": 2, "text": "半夜一声惨叫，套子里多了一只瘦狐狸。今晚加菜。", "effects": [ { "type": "resource", "resource": "food", "amount": 20 } ] }, { "weight": 1, "text": "套子被碰翻了，狐狸没抓到，但它也没敢再进鸡笼。", "effects": [] } ] },
+            { "text": "派个人守着鸡笼", "outcomes": [ { "weight": 1, "text": "守了一整夜，狐狸来了又被吓跑。守夜的人第二天一直在打哈欠。", "effects": [ { "type": "mood", "target": "random", "amount": -6 } ] } ] },
+            { "text": "鸡笼补一补，听天由命", "outcomes": [ { "weight": 1, "text": "第二天早上，鸡笼里少了一只鸡，地上只剩一撮鸡毛。", "effects": [ { "type": "livestock", "animal": "chicken", "amount": -1 } ] }, { "weight": 1, "text": "补好的铁丝网挡住了它。鸡都在。", "effects": [] } ] }
+        ]
+    },
+    {
+        "id": "goat_widow",
+        "title": "牵着羊的老太太",
+        "text": "一个老太太牵着一只山羊站在栅栏外。“我走不动了，”她说，“这只羊跟了我十年，我不想它被那些东西吃掉。”",
+        "weight": 2,
+        "once": true,
+        "conditions": {"minBuilding": {"pen": 1}},
+        "choices": [
+            { "text": "用药品换下她的羊（8 药品）", "cost": { "medicine": 8 }, "outcomes": [ { "weight": 1, "text": "老太太把药揣进怀里，摸了摸羊的头，头也不回地走了。", "effects": [ { "type": "livestock", "animal": "goat", "amount": 1 } ] } ] },
+            { "text": "收下羊，再给她装一袋吃的（40 食物）", "cost": { "food": 40 }, "outcomes": [ { "weight": 1, "text": "她哭了，说营地里的人都是好人。那天晚上大家吃得少了点，但没人抱怨。", "effects": [ { "type": "livestock", "animal": "goat", "amount": 1 }, { "type": "mood", "target": "all", "amount": 4 } ] } ] },
+            { "text": "我们养不起，给她指条路", "outcomes": [ { "weight": 1, "text": "老太太点点头，临走前从兜里掏出一包种子塞给你：“总得有人种点东西。”", "effects": [ { "type": "prop", "prop": "seed_pumpkin", "amount": 2 }, { "type": "mood", "target": "all", "amount": -2 } ] } ] }
+        ]
+    },
+    {
+        "id": "bumper_harvest",
+        "title": "丰收",
+        "text": "菜园里的菜一下子全熟了，红的绿的堆满了半个仓库。末日以来，第一次有吃不完的新鲜东西。",
+        "weight": 2,
+        "conditions": {"minBuilding": {"garden": 3}},
+        "choices": [
+            { "text": "办一场丰收宴（30 食物）", "cost": { "food": 30 }, "outcomes": [ { "weight": 1, "text": "长桌摆在停车场上，有人弹起了吉他。这一晚，没人提起外面的世界。", "effects": [ { "type": "mood", "target": "all", "amount": 7 } ] } ] },
+            { "text": "晒干、腌起来，留着过冬", "outcomes": [ { "weight": 1, "text": "屋顶上晒满了菜干，地窖里多了几坛酸菜。", "effects": [ { "type": "resource", "resource": "food", "amount": 50 } ] } ] },
+            { "text": "挑最好的留种", "outcomes": [ { "weight": 1, "text": "最大的番茄、最饱满的玉米都被小心地收了起来。明年会更好。", "effects": [ { "type": "prop", "prop": "seed_corn", "amount": 2 }, { "type": "prop", "prop": "seed_tomato", "amount": 2 } ] } ] }
+        ]
+    },
+    {
+        "id": "rabbit_escape",
+        "title": "兔子打洞跑了",
+        "text": "兔笼底下被刨出了一个洞，洞口一直通到栅栏外面。早上一数，少了好几只。",
+        "weight": 2,
+        "conditions": {"hasAnimals": ["rabbit"]},
+        "choices": [
+            { "text": "出去追", "outcomes": [ { "weight": 2, "text": "在停车场的车底下逮回来了一只，其他的不见了。", "effects": [ { "type": "livestock", "animal": "rabbit", "amount": -1 } ] }, { "weight": 1, "text": "追到街角，撞上了两只行尸。兔子没追回来，人倒是挂了彩。", "effects": [ { "type": "livestock", "animal": "rabbit", "amount": -2 }, { "type": "injure", "survivor": "random" } ] } ] },
+            { "text": "给兔笼铺一层铁板（20 零件）", "cost": { "parts": 20 }, "outcomes": [ { "weight": 1, "text": "跑掉的就算了，剩下的再也跑不了了。", "effects": [ { "type": "livestock", "animal": "rabbit", "amount": -1 } ] } ] },
+            { "text": "跑就跑吧，外面也该有点活物", "outcomes": [ { "weight": 1, "text": "有人说，春天的时候在公园里看到了兔子。大家听了都挺高兴。", "effects": [ { "type": "livestock", "animal": "rabbit", "amount": -2 }, { "type": "mood", "target": "all", "amount": 2 } ] } ] }
+        ]
     }
 ]

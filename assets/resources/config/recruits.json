@@ -24,6 +24,7 @@
     ],
     "quirks": [
         { "id": "supplies", "name": "带着物资", "icon": "🎒", "good": true, "hint": "背包鼓鼓囊囊的", "description": "加入时带来一些食物和木材。", "onJoin": { "resources": { "food": 50, "wood": 30 } } },
+        { "id": "seeds", "name": "带着种子", "icon": "🌱", "good": true, "hint": "口袋里沙沙作响", "description": "加入时带来几包种子。", "onJoin": { "props": { "seed_potato": 2, "seed_tomato": 1, "seed_carrot": 1 } } },
         { "id": "armed", "name": "带着家伙", "icon": "🏏", "good": true, "hint": "腰里别着东西", "description": "加入时带来一件武器。", "onJoin": { "props": { "bat": 1 } } },
         { "id": "forager", "name": "会找吃的", "icon": "🍄", "good": true, "hint": "认得路边哪些野菜能吃", "description": "每晚多带回一点食物。", "nightly": { "resources": { "food": 10 }, "text": "{name}在营地附近摘了些野菜和蘑菇。" } },
         { "id": "cheerful", "name": "开心果", "icon": "🌟", "good": true, "hint": "说话总带着笑", "description": "每晚让大家心情好一点。", "nightly": { "moodAll": 1, "text": "{name}讲了个笑话，大家都笑了。" } },

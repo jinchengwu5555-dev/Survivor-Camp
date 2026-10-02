@@ -10,6 +10,7 @@ import { availableBounties, bountyProgress } from './bounties';
 import { availableLocations, restockSecondsLeft, suggestSquad } from './combat';
 import { workshopLevel } from './crafting';
 import { dailyClaimable } from './daily';
+import { bestCrop, petBlocker, produceFood, readyPlots } from './farming';
 import { workerSlots } from './economy';
 import { relocationTargets } from './sites';
 import { traderPresent } from './trader';
@@ -84,4 +85,21 @@ export function markSeen(config: GameConfig, state: GameState, group: BadgeGroup
     const known = new Set(seen.keys);
     for (const k of contentKeys(config, state, now)[group]) if (!known.has(k)) seen.keys.push(k);
     if (group === 'reports') seen.reportId = latestReportId(state);
+}
+
+/**
+ * 菜园、畜栏上的“可以做”提示（显示在营地地图的建筑上）：
+ *   菜园：🧺 有熟了的菜、🌱 有空地、有这个季节能种的种子；畜栏：🥚 有蛋 / 奶可以收、🤗 今天还没照看、⚠️ 牲口在挨饿
+ */
+export function farmTodos(config: GameConfig, state: GameState, now: number): { garden: string[]; pen: string[] } {
+    const farm = state.farm;
+    const garden: string[] = [];
+    const pen: string[] = [];
+    if (!farm) return { garden, pen };
+    if (readyPlots(config, state, now) > 0) garden.push('🧺');
+    if (bestCrop(config, state, now)) garden.push('🌱');
+    if (produceFood(config, state) > 0) pen.push('🥚');
+    if (!petBlocker(config, state, now)) pen.push('🤗');
+    if (farm.hunger > 0) pen.push('⚠️');
+    return { garden, pen };
 }

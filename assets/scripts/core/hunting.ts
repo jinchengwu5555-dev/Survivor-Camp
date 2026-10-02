@@ -4,10 +4,12 @@
 // 每个猎人试 triesPerHunter 次，每次成功率 = baseChance × 猎人本事 × 季节。
 //   猎人本事：战士、拾荒者 +15%；拿远程武器 +15%（猎弓这种射程 5 的 +25%）；神枪手天赋 +10%
 //   钓鱼看耐心：农夫 +20%，不看武器
+// 有的猎物（走失的鸡、野兔、山羊……）在畜栏有空位时有机会活捉回去养（capture）。
 
 import { addResource, hqLevel } from './economy';
 import { gearOf } from './gear';
 import { districtDef, surveyCandidates } from './districts';
+import { addAnimals, animalDef, penSpace } from './farming';
 import { districtName } from './names';
 import { nextRandom, pickWeighted } from './rng';
 import { injureSurvivor, survivorInfo, survivorName } from './roster';
@@ -92,11 +94,22 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
         const caught: Record<string, number> = {};
         let food = 0;
         const hurt: string[] = [];
+        const captured: string[] = [];
         for (const id of hunters) {
             for (let i = 0; i < cfg.triesPerHunter; i++) {
                 const animal = pickWeighted(state, game);
                 if (!animal) continue;
                 if (nextRandom(state) >= cfg.baseChance * hunterSkill(config, state, id, animal.kind) * season) continue;
+                // 畜栏有空位：有机会活捉回去养
+                if (animal.capture && penSpace(config, state) > 0 && nextRandom(state) < animal.capture.chance) {
+                    const n = addAnimals(config, state, animal.capture.animal, 1, at);
+                    if (n > 0) {
+                        const kept = animalDef(config, animal.capture.animal);
+                        captured.push(`${kept?.icon ?? animal.icon}${kept?.name ?? animal.name}`);
+                        addStat(state, 'animals_captured');
+                        continue;
+                    }
+                }
                 caught[animal.id] = (caught[animal.id] ?? 0) + 1;
                 food += Math.round(animal.food * growth);
                 addStat(state, `game_${animal.id}`);
@@ -113,7 +126,7 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
             const g = game.find((x) => x.id === id)!;
             return `${g.icon}${g.name}${n > 1 ? `×${n}` : ''}`;
         });
-        addLog(state, at, `🏹 去${d.icon}${districtName(state, d)}打猎的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : '空手而归。'}${hurt.length ? `${hurt.join('，')}。` : ''}`);
+        addLog(state, at, `🏹 去${d.icon}${districtName(state, d)}打猎的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : captured.length ? '' : '空手而归。'}${captured.length ? `活捉了${captured.join('、')}，关进了畜栏！` : ''}${hurt.length ? `${hurt.join('，')}。` : ''}`);
     }
 }
 

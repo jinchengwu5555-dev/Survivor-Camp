@@ -1,5 +1,6 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
+import { addAnimals, removeAnimal } from './farming';
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
 import { addResource, bedCount, canAfford, hqLevel, pay } from './economy';
 import { changeMood } from './mood';
@@ -22,6 +23,8 @@ export function conditionMet(config: GameConfig, state: GameState, cond: Conditi
     if (cond.notFlags && cond.notFlags.some((f) => hasFlag(state, f))) return false;
     if (cond.hasSurvivors && !cond.hasSurvivors.every((id) => state.survivors.some((s) => s.id === id))) return false;
     if (cond.minHq !== undefined && hqLevel(state) < cond.minHq) return false;
+    if (cond.minBuilding && Object.entries(cond.minBuilding).some(([id, lv]) => (state.buildings[id]?.level ?? 0) < lv)) return false;
+    if (cond.hasAnimals && !cond.hasAnimals.every((id) => (state.farm?.animals[id] ?? 0) > 0)) return false;
     return true;
 }
 
@@ -72,7 +75,7 @@ export function choiceHints(config: GameConfig, choice: EventChoiceDef): string[
         (e) =>
             e.type === 'injure' ||
             e.type === 'removeSurvivor' ||
-            ((e.type === 'resource' || e.type === 'mood') && e.amount < 0),
+            ((e.type === 'resource' || e.type === 'mood' || e.type === 'livestock') && e.amount < 0),
     );
     const reward = effects.some(
         (e) =>
@@ -81,7 +84,7 @@ export function choiceHints(config: GameConfig, choice: EventChoiceDef): string[
             e.type === 'addWanderer' ||
             e.type === 'discoverSite' ||
             e.type === 'heal' ||
-            ((e.type === 'resource' || e.type === 'mood') && e.amount > 0),
+            ((e.type === 'resource' || e.type === 'mood' || e.type === 'livestock') && e.amount > 0),
     );
     if (risky) hints.push('⚠️有风险');
     if (reward) hints.push('🎁可能有收获');
@@ -97,6 +100,7 @@ interface Snapshot {
     props: Record<string, number>;
     survivors: { id: string; name: string; injured: boolean; mood: number }[];
     sites: number;
+    animals: Record<string, number>;
 }
 
 function snapshot(config: GameConfig, state: GameState): Snapshot {
@@ -105,6 +109,7 @@ function snapshot(config: GameConfig, state: GameState): Snapshot {
         props: { ...(state.props ?? {}) },
         survivors: state.survivors.map((s) => ({ id: s.id, name: rosterName(config, state, s.id), injured: s.injured, mood: s.mood })),
         sites: state.discoveredSites.length,
+        animals: { ...(state.farm?.animals ?? {}) },
     };
 }
 
@@ -137,6 +142,10 @@ function describeChanges(config: GameConfig, state: GameState, before: Snapshot)
         const total = kept.reduce((sum, s) => sum + s.mood - before.survivors.find((b) => b.id === s.id)!.mood, 0);
         const avg = Math.round(total / kept.length);
         if (avg) parts.push(`${avg > 0 ? '😊' : '😞'}心情${avg > 0 ? '+' : ''}${avg}`);
+    }
+    for (const a of config.farming?.animals ?? []) {
+        const d = (state.farm?.animals[a.id] ?? 0) - (before.animals[a.id] ?? 0);
+        if (d) parts.push(`${a.icon}${a.name}${d > 0 ? '+' : ''}${d}`);
     }
     if (state.discoveredSites.length > before.sites) parts.push('🗺发现新营地');
     return parts.join(' · ');
@@ -253,6 +262,10 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             break;
         case 'prop':
             addProp(state, effect.prop, effect.amount ?? 1);
+            break;
+        case 'livestock':
+            if (effect.amount > 0) addAnimals(config, state, effect.animal, effect.amount, now);
+            else for (let i = 0; i < -effect.amount; i++) removeAnimal(state, effect.animal);
             break;
     }
 }

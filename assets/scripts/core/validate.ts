@@ -67,6 +67,10 @@ export function validateConfig(config: GameConfig): string[] {
         });
     }
 
+    const checkAnimal = (where: string, id: string) => {
+        if (!config.farming?.animals.some((a) => a.id === id)) errors.push(`${where}：未知牲口 ${id}`);
+    };
+
     const checkEffect = (where: string, e: Effect) => {
         switch (e.type) {
             case 'resource':
@@ -101,6 +105,10 @@ export function validateConfig(config: GameConfig): string[] {
             case 'discoverSite':
                 if (!config.sites.some((s) => s.id === e.site)) errors.push(`${where}：未知营地地点 ${e.site}`);
                 break;
+            case 'livestock':
+                checkAnimal(where, e.animal);
+                if (!e.amount) errors.push(`${where}：livestock 的 amount 不能是 0`);
+                break;
             default:
                 errors.push(`${where}：未知效果类型 ${(e as { type: string }).type}`);
         }
@@ -109,6 +117,8 @@ export function validateConfig(config: GameConfig): string[] {
     for (const ev of config.events) {
         if (ev.choices.length === 0) errors.push(`事件 ${ev.id} 没有选项`);
         for (const id of ev.conditions?.hasSurvivors ?? []) checkSurvivor(`事件 ${ev.id} 条件`, id, []);
+        for (const id of Object.keys(ev.conditions?.minBuilding ?? {})) if (!config.buildings.some((b) => b.id === id)) errors.push(`事件 ${ev.id} 条件：未知建筑 ${id}`);
+        for (const id of ev.conditions?.hasAnimals ?? []) checkAnimal(`事件 ${ev.id} 条件`, id);
         if (ev.speaker) checkSurvivor(`事件 ${ev.id} 的 speaker`, ev.speaker, []);
         ev.choices.forEach((c, ci) => {
             const where = `事件 ${ev.id} 选项 ${ci + 1}`;
@@ -266,6 +276,10 @@ export function validateConfig(config: GameConfig): string[] {
             if (g.weight <= 0 || g.food <= 0) errors.push(`${where} 猎物 ${g.id}：weight、food 必须大于 0`);
             if (g.kind !== 'hunt' && g.kind !== 'fish') errors.push(`${where} 猎物 ${g.id}：kind 只能是 hunt / fish`);
             for (const se of g.seasons ?? []) if (!config.seasons.some((x) => x.id === se)) errors.push(`${where} 猎物 ${g.id}：未知季节 ${se}`);
+            if (g.capture) {
+                checkAnimal(`${where} 猎物 ${g.id}`, g.capture.animal);
+                if (g.capture.chance <= 0 || g.capture.chance > 1) errors.push(`${where} 猎物 ${g.id}：capture.chance 要在 0～1 之间`);
+            }
         }
     }
     const vehicleList = config.vehicles ?? [];
@@ -324,7 +338,12 @@ export function validateConfig(config: GameConfig): string[] {
     for (const id of Object.keys(config.balance.startingProps ?? {})) checkProp('开局道具', id);
     for (const p of config.props) {
         const where = `道具 ${p.id}`;
-        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        if (!['resource', 'speedup', 'recall', 'mood', 'heal', 'recruit', 'chest', 'gear', 'seed', 'animal'].includes(p.type)) errors.push(`${where}：未知类型 ${p.type}`);
+        if (p.type === 'seed' && !config.farming?.crops.some((c) => c.id === p.crop && c.seed === p.id)) errors.push(`${where}：种子要写 crop，并且那种作物的 seed 要指回这个道具`);
+        if (p.type === 'animal') {
+            checkAnimal(where, p.animal ?? '');
+            if (!(p.amount && p.amount > 0)) errors.push(`${where}：牲口道具要写 amount`);
+        }
         if (p.type === 'gear') {
             if (!p.slot || !GEAR_SLOTS.includes(p.slot)) errors.push(`${where}：装备要写 slot（weapon / armor / tool / bag）`);
             const g = p.gear;
@@ -346,6 +365,31 @@ export function validateConfig(config: GameConfig): string[] {
                 if (!c.prop && !c.resources) errors.push(`${where}：contents 每一项要有 prop 或 resources`);
             }
         }
+    }
+
+    if (config.farming) {
+        const f = config.farming;
+        checkUnique('作物', f.crops.map((c) => c.id));
+        checkUnique('牲口', f.animals.map((a) => a.id));
+        for (const c of f.crops) {
+            const where = `作物 ${c.id}`;
+            checkProp(where, c.seed);
+            checkBag(where, c.yield);
+            if (c.minutes <= 0) errors.push(`${where}：minutes 必须大于 0`);
+            if (c.seedsBack[0] < 0 || c.seedsBack[1] < c.seedsBack[0]) errors.push(`${where}：seedsBack 写错了`);
+            // 平均拿回的种子至少 1 颗，不然种子会越种越少
+            if ((c.seedsBack[0] + c.seedsBack[1]) / 2 < 1) errors.push(`${where}：平均拿回的种子少于 1 颗，会种绝`);
+            for (const se of c.seasons ?? []) if (!config.seasons.some((x) => x.id === se)) errors.push(`${where}：未知季节 ${se}`);
+        }
+        for (const a of f.animals) {
+            const where = `牲口 ${a.id}`;
+            if (a.feed <= 0 || a.meat <= 0) errors.push(`${where}：feed、meat 必须大于 0`);
+            if (a.breed < 0 || a.breed > 1) errors.push(`${where}：breed 要在 0～1 之间`);
+            if (a.litter[0] < 1 || a.litter[1] < a.litter[0]) errors.push(`${where}：litter 写错了`);
+        }
+        for (const id of Object.keys(f.starterSeeds)) checkProp('开局种子', id);
+        for (const se of Object.keys(f.seasonGrowth)) if (!config.seasons.some((x) => x.id === se)) errors.push(`farming.json：未知季节 ${se}`);
+        if (!config.buildings.some((b) => b.id === 'garden') || !config.buildings.some((b) => b.id === 'pen')) errors.push('farming.json 需要 garden（菜园）和 pen（畜栏）两个建筑');
     }
 
     checkUnique('成就', config.achievements.map((x) => x.id));

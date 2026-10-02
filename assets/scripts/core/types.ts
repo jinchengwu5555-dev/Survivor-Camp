@@ -158,6 +158,10 @@ export interface BuildingLevelDef {
     spoilReduction?: number;
     /** 工坊等级：决定能做哪些物品 */
     workshopLevel?: number;
+    /** 菜园：有几块菜地 */
+    plots?: number;
+    /** 畜栏：能养几只牲口 */
+    pens?: number;
 }
 
 /**
@@ -178,6 +182,10 @@ export interface BuildingScaling {
     slotsEvery?: number;
     battleLevelPerLevel?: number;
     spoilPerLevel?: number;
+    /** 菜园：每几级多一块菜地 */
+    plotsEvery?: number;
+    /** 畜栏：每级多养几只 */
+    pensPerLevel?: number;
 }
 
 export interface BuildingDef {
@@ -244,7 +252,9 @@ export type Effect =
     /** 累计统计数据（成就、悬赏会用到），amount 默认 1 */
     | { type: 'stat'; stat: string; amount?: number }
     /** 获得背包道具，amount 默认 1 */
-    | { type: 'prop'; prop: string; amount?: number };
+    | { type: 'prop'; prop: string; amount?: number }
+    /** 畜栏里加 / 减牲口（farming.json 的 animals）；放不下的不算 */
+    | { type: 'livestock'; animal: string; amount: number };
 
 export interface Condition {
     minDay?: number;
@@ -257,6 +267,10 @@ export interface Condition {
     hasSurvivors?: string[];
     /** 指挥部至少几级（营地变大了才会发生的事） */
     minHq?: number;
+    /** 这些建筑至少几级（比如有了菜园才会闹虫） */
+    minBuilding?: Record<string, number>;
+    /** 畜栏里至少有这些牲口 */
+    hasAnimals?: string[];
 }
 
 export interface EventOutcomeDef {
@@ -492,6 +506,8 @@ export interface GameConfig {
     districts?: DistrictsConfig;
     /** 交通工具（老配置没有） */
     vehicles?: VehicleDef[];
+    /** 种菜和养殖（老配置没有） */
+    farming?: FarmingConfig;
     /** 探索背包：资源怎么分包、占几格、多重（老配置没有） */
     packing?: PackingConfig;
     /** 每局随机地名的名字池（老配置没有） */
@@ -540,7 +556,7 @@ export interface PickupConfig {
  *   chest     从 contents 里随机开出一样（道具或资源）
  *   gear      装备：在幸存者档案里穿戴（slot + gear 属性），不能直接“使用”
  */
-export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear';
+export type PropType = 'resource' | 'speedup' | 'recall' | 'mood' | 'heal' | 'recruit' | 'chest' | 'gear' | 'seed' | 'animal';
 
 export type GearSlot = 'weapon' | 'armor' | 'tool' | 'bag';
 export const GEAR_SLOTS: GearSlot[] = ['weapon', 'armor', 'tool', 'bag'];
@@ -577,6 +593,10 @@ export interface PropDef {
     /** 在探索背包里占几格（宽 × 高）、多重；不写用 packing 的默认值 */
     size?: [number, number];
     weight?: number;
+    /** type = seed：种出什么（farming.json 的 crops） */
+    crop?: string;
+    /** type = animal：放进畜栏的牲口（farming.json 的 animals），数量用 amount */
+    animal?: string;
 }
 
 /** 天赋（talents.json），见 core/talents.ts */
@@ -861,6 +881,8 @@ export interface GameState {
     surveys?: SurveyState[];
     /** 正在打猎的人（结构和勘察一样） */
     hunts?: SurveyState[];
+    /** 菜园和畜栏（见 core/farming.ts；老存档没有，用到时补上） */
+    farm?: FarmState;
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
     /** 黄金（见 core/gold.ts；老存档没有 = 0） */
@@ -958,6 +980,8 @@ export interface GameAnimalDef {
     kind: 'hunt' | 'fish';
     /** 只在这些季节出现 */
     seasons?: string[];
+    /** 有机会活捉回畜栏（畜栏有空位时），活捉的就不算食物 */
+    capture?: { animal: string; chance: number };
 }
 
 export interface DistrictsConfig {
@@ -1172,3 +1196,81 @@ export interface GameOverInfo {
 }
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; reason: string };
+
+/** 种菜和养殖（farming.json），见 core/farming.ts */
+export interface CropDef {
+    id: string;
+    name: string;
+    icon: string;
+    /** 种子道具 id */
+    seed: string;
+    /** 正常季节多少游戏分钟成熟 */
+    minutes: number;
+    /** 收成（食物会跟着指挥部等级涨） */
+    yield: ResourceBag;
+    /** 收获时拿回几颗种子 [最少, 最多] */
+    seedsBack: [number, number];
+    /** 只有这些季节能露天种（大棚里不限） */
+    seasons?: string[];
+    description: string;
+}
+
+export interface AnimalDef {
+    id: string;
+    name: string;
+    icon: string;
+    /** 每只每天吃多少食物 */
+    feed: number;
+    /** 每只每天的产出（鸡蛋、羊奶） */
+    product?: { name: string; icon: string; food: number };
+    /** 宰了得多少食物 */
+    meat: number;
+    /** 吃饱时每天生崽的概率（至少要有两只） */
+    breed: number;
+    litter: [number, number];
+    description: string;
+}
+
+export interface FarmingConfig {
+    /** 季节对生长速度的影响（0 = 露天种不了） */
+    seasonGrowth: Record<string, number>;
+    /** 菜园几级变成温室大棚：冬天也能种、不限季节 */
+    greenhouseLevel: number;
+    greenhouseWinter: number;
+    /** 每个在营地的农夫让菜长快多少，最多算几个 */
+    farmerBonus: number;
+    maxFarmers: number;
+    /** 熟了多久没收就烂在地里 */
+    witherMinutes: number;
+    /** 菜园第一次建好时送的种子 */
+    starterSeeds: Record<string, number>;
+    crops: CropDef[];
+    /** 照看牲口（每天一次）全员心情 + */
+    petMood: number;
+    /** 连续饿几天就会死掉（跑掉）一只 */
+    starveDays: number;
+    animals: AnimalDef[];
+}
+
+export interface FarmPlot {
+    crop: string;
+    plantedAt: number;
+    readyAt: number;
+}
+
+export interface FarmState {
+    /** 每块菜地种着什么（null = 空地） */
+    plots: (FarmPlot | null)[];
+    /** 牲口：种类 → 数量 */
+    animals: Record<string, number>;
+    /** 连续饿了几天 */
+    hunger: number;
+    /** 结算到第几天了 */
+    day: number;
+    /** 攒着没收的产出：种类 → 份数 */
+    produce: Record<string, number>;
+    /** 上次照看牲口是第几天 */
+    pettedDay?: number;
+    /** 送过开局种子了 */
+    starter?: boolean;
+}

@@ -4,7 +4,7 @@
 // 规则（第 L 级，由最后一个手写等级 base 推算，k = L - base 的等级）：
 //   花费、时间、产量、仓库、安全值：乘以 growth^k
 //   床位、战斗等级、防腐：加上 perLevel × k
-//   工人岗位：每 slotsEvery 级 +1
+//   工人岗位：每 slotsEvery 级 +1；菜地：每 plotsEvery 级 +1；畜栏：每级 +pensPerLevel
 //   除指挥部外，生成的等级都要求指挥部达到同样的等级（建筑不能超过指挥部）
 
 import { BuildingDef, BuildingLevelDef, GameConfig, RESOURCE_IDS, ResourceBag } from './types';
@@ -44,6 +44,8 @@ export function generatedLevel(def: BuildingDef, baseLevel: number, level: numbe
     if (base.battleLevel !== undefined) lv.battleLevel = base.battleLevel + (s.battleLevelPerLevel ?? 0) * k;
     if (base.spoilReduction !== undefined) lv.spoilReduction = Math.min(0.9, twoDecimals(base.spoilReduction + (s.spoilPerLevel ?? 0) * k));
     if (base.workshopLevel !== undefined) lv.workshopLevel = base.workshopLevel;
+    if (base.plots !== undefined) lv.plots = base.plots + (s.plotsEvery ? Math.floor(k / s.plotsEvery) : 0);
+    if (base.pens !== undefined) lv.pens = base.pens + (s.pensPerLevel ?? 0) * k;
     return lv;
 }
 

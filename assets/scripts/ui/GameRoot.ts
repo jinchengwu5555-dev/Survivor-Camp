@@ -71,7 +71,8 @@ import { planWatch, raidChanceTonight, WATCH_MODE_NAMES, watchersNeeded, watcher
 import { statsAtLevel } from '../core/battle/units';
 import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, revealers, unlockHint } from '../core/townMap';
 import { activeScoutSpots, scoutKind } from '../core/scouting';
-import { BadgeGroup } from '../core/badges';
+import { BadgeGroup, farmTodos } from '../core/badges';
+import { animalDef, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
 import { formatProps, propBlocker, propCount, propDef, propReward } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
@@ -84,7 +85,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.2 像素字体';
+const GAME_VERSION = 'v2.3 种菜养殖';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -988,6 +989,18 @@ export class GameRoot extends Component {
         }
         if (guided) addLabel(node, '👉', 34, TEXT, { width: 50 }).node.setPosition(-bw / 2 - 18, 0);
 
+        // 菜园、畜栏有事可做：左上角一个小气泡（🧺 收菜、🌱 能种、🥚 收蛋、🤗 照看、⚠️ 挨饿）
+        if (def.id === 'garden' || def.id === 'pen') {
+            const todos = farmTodos(config, state, now)[def.id];
+            if (todos.length) {
+                const tw = 20 + todos.length * 28;
+                const tag = makeNode('FarmTodo', node, tw, 32);
+                tag.setPosition(-bw / 2 + tw / 2 - 4, bh / 2 - 6);
+                drawPanel(tag.addComponent(Graphics), tw, 32, new Color(30, 60, 30, 230), 16, WIN, 2);
+                addLabel(tag, todos.join(''), 20, TEXT, { width: tw - 4 });
+            }
+        }
+
         // 在这里干活的人：一排小圆点（颜色是角色的主色）
         const workers = workersIn(state, def.id);
         const shown = Math.min(workers.length, 6);
@@ -1210,7 +1223,8 @@ export class GameRoot extends Component {
                 this.gap(12);
                 continue;
             }
-            this.button(blocker ? `使用（${blocker}）` : '使用', half, () => {
+            const verb = def.type === 'seed' ? '种下' : def.type === 'animal' ? '放进畜栏' : '使用';
+            this.button(blocker ? `${verb}（${blocker}）` : verb, half, () => {
                 const res = camp.useProp(def.id, camp.now);
                 if (res.ok) this.effect(`${def.icon} ${res.message ?? def.name}`, WIN, 28);
                 else this.showToast(res.reason);
@@ -1490,6 +1504,117 @@ export class GameRoot extends Component {
         } else {
             this.text('已经是最高等级了', 20, DIM);
         }
+        this.gap(8);
+        if (def.id === 'garden' && b.level > 0) this.renderGarden(camp, now);
+        if (def.id === 'pen' && b.level > 0) this.renderPen(camp, now);
+    }
+
+    /** 菜园：每块地种着什么、还要多久；收获；用种子种下 */
+    private renderGarden(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const f = config.farming;
+        const farm = state.farm;
+        if (!f || !farm) return;
+        const season = seasonAt(config, state, now).season;
+        const growth = f.seasonGrowth[season.id] ?? 1;
+        const greenhouse = isGreenhouse(config, state);
+        this.text(`—— 菜地 ${farm.plots.length} 块 ——`, 22, DIM);
+        this.text(
+            growth <= 0 && !greenhouse
+                ? `${season.icon}${season.name}天地冻住了，露天种不了（菜园升到 ${f.greenhouseLevel} 级变成温室大棚就能种）`
+                : `${season.icon}${season.name}天：生长速度 ×${(greenhouse && growth <= 0 ? f.greenhouseWinter : growth).toFixed(2)}${greenhouse ? '（温室大棚）' : ''}；农夫在营地时长得更快`,
+            18,
+            DIM,
+        );
+        farm.plots.forEach((p, i) => {
+            if (!p) {
+                this.text(`第 ${i + 1} 块：空地`, 20, DIM);
+                return;
+            }
+            const crop = cropDef(config, p.crop);
+            const name = `${crop?.icon ?? ''}${crop?.name ?? p.crop}`;
+            if (p.readyAt > now) this.text(`第 ${i + 1} 块：${name} · 还要 ${formatTime(realSeconds(config, p.readyAt - now))}`, 20);
+            else this.text(`第 ${i + 1} 块：${name} ✅ 熟了！${formatTime(realSeconds(config, p.readyAt + f.witherMinutes * 60_000 - now))} 后会烂在地里`, 20, WIN);
+        });
+        const ready = readyPlots(config, state, now);
+        this.button(ready > 0 ? `🧺 收获（${ready} 块熟了）` : '🧺 还没有熟的', WIDTH, () => {
+            const res = camp.harvest(camp.now);
+            if (res.ok) this.effect(`🧺 ${res.message}`, WIN, 24);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, ready > 0 ? 'highlight' : 'disabled', 22, 52);
+        this.gap(6);
+        this.text('种什么（种子用掉一颗，收获时会拿回 1～3 颗）：', 20, DIM);
+        const growthBonus = foodGrowth(config, state);
+        const noSeeds: string[] = [];
+        for (const crop of f.crops) {
+            const seeds = state.props?.[crop.seed] ?? 0;
+            if (seeds <= 0) {
+                noSeeds.push(`${crop.icon}${crop.name}`);
+                continue;
+            }
+            const blocker = plantBlocker(config, state, crop.id, now);
+            const yieldText = RESOURCE_IDS.filter((id) => crop.yield[id])
+                .map((id) => `${config.resources.find((r) => r.id === id)?.icon ?? id}${Math.round(crop.yield[id]! * (id === 'food' ? growthBonus : 1))}`)
+                .join(' ');
+            const minutes = growMinutes(config, state, crop, now);
+            const time = Number.isFinite(minutes) ? formatTime(realSeconds(config, minutes * 60_000)) : '—';
+            const label = `${crop.icon}种${crop.name}（种子×${seeds} · ${time} · ${yieldText}）`;
+            this.button(blocker ? `${label} ${blocker}` : label, WIDTH, () => {
+                const res = camp.plant(crop.id, camp.now);
+                if (res.ok) this.effect(`🌱 ${res.message}`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, blocker ? 'disabled' : 'normal', 20, 46);
+            this.gap(4);
+        }
+        if (noSeeds.length) this.text(`没有种子：${noSeeds.join(' ')}。种子可以在探索、勘察中找到，也能跟商人换。`, 18, DIM);
+        this.gap(8);
+    }
+
+    /** 畜栏：养了什么、每天吃多少；收蛋、照看、宰杀 */
+    private renderPen(camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const f = config.farming;
+        const farm = state.farm;
+        if (!f || !farm) return;
+        const total = Object.values(farm.animals).reduce((a, b) => a + b, 0);
+        this.text(`—— 畜栏 ${total}/${penCapacity(config, state)} ——`, 22, DIM);
+        if (total === 0) {
+            this.text('还没有牲口。打猎时有机会活捉（走失的鸡、野兔、山羊……），商人有时也卖小鸡、猪崽。', 20, DIM);
+        } else {
+            const feed = dailyFeed(config, state);
+            this.text(`每天换日时喂一次：🍞${feed}${farm.hunger > 0 ? `  ⚠️ 已经饿了 ${farm.hunger} 天，再饿下去会饿死！` : ''}`, 20, farm.hunger > 0 ? LOSE : TEXT);
+            const growth = foodGrowth(config, state);
+            for (const [id, n] of Object.entries(farm.animals)) {
+                const a = animalDef(config, id);
+                if (!a || n <= 0) continue;
+                const product = a.product ? `每只每天 ${a.product.icon}${a.product.name}` : '不产东西';
+                this.text(`${a.icon}${a.name} ×${n}  · 每只吃🍞${a.feed} · ${product} · 两只以上会生崽`, 20);
+                this.button(`🔪 宰一只${a.name}（🍞+${Math.round(a.meat * growth)}）`, WIDTH, () => {
+                    const res = camp.slaughter(id, camp.now);
+                    if (res.ok) this.effect(`🔪 ${res.message}`, ACCENT);
+                    else this.showToast(res.reason);
+                    this.render();
+                }, LEFT, 'normal', 20, 44);
+                this.gap(4);
+            }
+        }
+        const produce = produceFood(config, state);
+        this.button(produce > 0 ? `🥚 收鸡蛋、羊奶（🍞+${produce}）` : '🥚 还没有可以收的', WIDTH, () => {
+            const res = camp.collectProduce(camp.now);
+            if (res.ok) this.effect(`🧺 ${res.message}`, WIN, 24);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, produce > 0 ? 'highlight' : 'disabled', 22, 52);
+        this.gap(6);
+        const petBlock = petBlocker(config, state, now);
+        this.button(petBlock ? `🤗 照看牲口（${petBlock}）` : `🤗 照看牲口（全员心情 +${f.petMood}，每天一次）`, WIDTH, () => {
+            const res = camp.petAnimals(camp.now);
+            if (res.ok) this.effect(`🤗 ${res.message}`, WIN);
+            else this.showToast(res.reason);
+            this.render();
+        }, LEFT, petBlock ? 'disabled' : 'normal', 22, 52);
         this.gap(8);
     }
 
@@ -2703,6 +2828,8 @@ function levelSummary(config: GameConfig, lv: BuildingLevelDef): string {
     if (lv.battleLevel) parts.push(`战斗等级 +${lv.battleLevel}`);
     if (lv.spoilReduction) parts.push(`食物腐烂 -${Math.round(lv.spoilReduction * 100)}%`);
     if (lv.workshopLevel) parts.push(`工坊 ${lv.workshopLevel} 级`);
+    if (lv.plots) parts.push(`菜地 ${lv.plots} 块`);
+    if (lv.pens) parts.push(`能养 ${lv.pens} 只牲口`);
     return parts.join('  ');
 }
 

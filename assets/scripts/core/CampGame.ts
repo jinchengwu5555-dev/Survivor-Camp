@@ -1,5 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
+import { autoFarm, clearPlot, collectProduce, harvestAll, petAnimals, plant, slaughter, updateFarm } from './farming';
 import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
@@ -107,6 +108,9 @@ export class CampGame {
         resolveScouts(this.config, s, now);
         resolveSurveys(this.config, s, now);
         resolveHunts(this.config, s, now);
+        updateFarm(this.config, s, now);
+        // 没有界面在看（比如模拟器），菜园和畜栏自动打理
+        if (!this.liveRaids) autoFarm(this.config, s, now);
         checkVehicleOwners(this.config, s, now);
         // 没有界面在看（比如模拟器），等着装的背包自动装好带回来
         if (!this.liveRaids) for (const h of [...(s.pendingHauls ?? [])]) confirmHaul(this.config, s, h.id, now);
@@ -331,6 +335,32 @@ export class CampGame {
     /** 守夜安排：轮班 / 固定守夜 / 不守夜 */
     setWatch(survivorId: string, mode: WatchMode, now: number): ActionResult {
         return this.act(now, () => (setWatchMode(this.state, survivorId, mode) ? { ok: true } : { ok: false, reason: '没有这个人' }));
+    }
+
+    /** 菜园：种下一颗种子（不指定地块就种在第一块空地） */
+    plant(cropId: string, now: number, plotIndex?: number): ActionResult {
+        return this.act(now, () => plant(this.config, this.state, cropId, now, plotIndex));
+    }
+
+    harvest(now: number): ActionResult {
+        return this.act(now, () => harvestAll(this.config, this.state, now));
+    }
+
+    clearPlot(plotIndex: number, now: number): ActionResult {
+        return this.act(now, () => clearPlot(this.config, this.state, plotIndex, now));
+    }
+
+    /** 畜栏：收鸡蛋、羊奶 */
+    collectProduce(now: number): ActionResult {
+        return this.act(now, () => collectProduce(this.config, this.state, now));
+    }
+
+    slaughter(animalId: string, now: number): ActionResult {
+        return this.act(now, () => slaughter(this.config, this.state, animalId, now));
+    }
+
+    petAnimals(now: number): ActionResult {
+        return this.act(now, () => petAnimals(this.config, this.state, now));
     }
 
     acceptBounty(bountyId: string, now: number): ActionResult {
