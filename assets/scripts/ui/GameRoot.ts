@@ -87,7 +87,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.4 日记·情报·信号弹';
+const GAME_VERSION = 'v2.4.1 出错提示';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -243,24 +243,28 @@ export class GameRoot extends Component {
     private raidWarned = false;
 
     onLoad(): void {
-        this.drawBackground();
-        this.content = makeNode('Content', this.node);
-        this.mapLayer = makeNode('Map', this.node);
-        this.hud = makeNode('Hud', this.node);
-        this.nav = makeNode('Nav', this.node);
-        this.target = this.content;
-        this.overlay = makeNode('Overlay', this.node);
-        this.fx = makeNode('Fx', this.node);
-        game.on(Game.EVENT_HIDE, this.onHide, this);
-        this.node.on(Node.EventType.TOUCH_START, () => (this.dragDistance = 0));
-        this.node.on(Node.EventType.TOUCH_MOVE, (e: EventTouch) => this.onDrag(e.getDeltaY()));
-        this.network.onChange((online) => {
-            this.connected = online;
-            if (online && !this.config) this.loadConfig();
-            this.render();
-        });
-        this.loadFont();
-        this.connect();
+        try {
+            this.drawBackground();
+            this.content = makeNode('Content', this.node);
+            this.mapLayer = makeNode('Map', this.node);
+            this.hud = makeNode('Hud', this.node);
+            this.nav = makeNode('Nav', this.node);
+            this.target = this.content;
+            this.overlay = makeNode('Overlay', this.node);
+            this.fx = makeNode('Fx', this.node);
+            game.on(Game.EVENT_HIDE, this.onHide, this);
+            this.node.on(Node.EventType.TOUCH_START, () => (this.dragDistance = 0));
+            this.node.on(Node.EventType.TOUCH_MOVE, (e: EventTouch) => this.onDrag(e.getDeltaY()));
+            this.network.onChange((online) => {
+                this.connected = online;
+                if (online && !this.config) this.loadConfig();
+                this.render();
+            });
+            this.loadFont();
+            this.connect();
+        } catch (e) {
+            this.showCrash(e);
+        }
     }
 
     /** 像素字体（几百 KB），加载完重画一次；失败就继续用系统字体 */
@@ -307,6 +311,15 @@ export class GameRoot extends Component {
     }
 
     update(dt: number): void {
+        if (this.crashed) return;
+        try {
+            this.updateUnsafe(dt);
+        } catch (e) {
+            this.showCrash(e);
+        }
+    }
+
+    private updateUnsafe(dt: number): void {
         // 断网时不推进时间：之后重新连上，这段会算成离线（营地暂停，只发挂机收益）
         if (!this.camp || !this.connected) return;
         this.battleView?.update(dt);
@@ -330,6 +343,16 @@ export class GameRoot extends Component {
         if (this.loading) return;
         this.loading = true;
         resources.loadDir('config', JsonAsset, (err, assets) => {
+            try {
+                this.onConfigLoaded(err, assets);
+            } catch (e) {
+                this.showCrash(e);
+            }
+        });
+    }
+
+    private onConfigLoaded(err: Error | null, assets: JsonAsset[]): void {
+        {
             if (err) {
                 this.showFatal(`配置加载失败：${err.message}`);
                 return;
@@ -350,7 +373,7 @@ export class GameRoot extends Component {
             this.runRecorded = !!saved?.gameOver;
             this.goOnline();
             this.render();
-        });
+        }
     }
 
     private setCamp(camp: CampGame): void {
@@ -592,7 +615,34 @@ export class GameRoot extends Component {
         floatText(this.fx, names, 0, 90, COLORS.crit, 36, 60, 3);
     }
 
+    /** 出错时不要留一块空白屏：把错误显示出来，方便截图反馈 */
+    private crashed: string | null = null;
+
+    private showCrash(e: unknown): void {
+        const err = e instanceof Error ? e : new Error(String(e));
+        this.crashed = `${err.message}\n${(err.stack ?? '').split('\n').slice(1, 6).join('\n')}`;
+        console.error('游戏出错了', err);
+        try {
+            if (!this.content) return;
+            this.fullScreenMode();
+            this.text(`😵 游戏出错了（${GAME_VERSION}）`, 30, LOSE);
+            this.text('请把这个画面截图发给开发者：', 20, DIM);
+            this.text(this.crashed, 18, TEXT);
+        } catch (inner) {
+            console.error('连错误画面都画不出来', inner);
+        }
+    }
+
     private render(): void {
+        if (this.crashed) return;
+        try {
+            this.renderUnsafe();
+        } catch (e) {
+            this.showCrash(e);
+        }
+    }
+
+    private renderUnsafe(): void {
         const camp = this.camp;
         if (!camp || !this.content || this.battleView) return;
         this.checkRareLoot(camp);
