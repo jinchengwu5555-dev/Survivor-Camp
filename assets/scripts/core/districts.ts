@@ -8,7 +8,7 @@ import { isOnExpedition } from './combat';
 import { grantResources, hqLevel } from './economy';
 import { addProp, rollDrops } from './props';
 import { nextRandom } from './rng';
-import { injureSurvivor, survivorName } from './roster';
+import { injureSurvivor, survivorInfo, survivorName } from './roster';
 import { addLog, addStat } from './state';
 import { isRevealed, revealers } from './townMap';
 import { ActionResult, DistrictDef, GameConfig, GameState, MapPoint, RESOURCE_IDS, ResourceBag } from './types';
@@ -93,7 +93,8 @@ export function startSurvey(config: GameConfig, state: GameState, districtId: st
         squad: [...squad],
         vehicle: v?.id,
         startedAt: now,
-        returnsAt: now + d.surveyMinutes * (v?.speed ?? 1) * 60_000,
+        // 队里有斥候：勘察快 25%
+        returnsAt: now + d.surveyMinutes * (v?.speed ?? 1) * (squad.some((id) => survivorInfo(config, state, id)?.specialty === 'scout') ? 0.75 : 1) * 60_000,
     });
     addLog(state, now, `${squad.map((id) => survivorName(config, state, id)).join('、')}${v ? `开着${v.icon}${v.name}` : ''}出发去勘察${d.icon}${districtName(state, d)}。`);
     return { ok: true };

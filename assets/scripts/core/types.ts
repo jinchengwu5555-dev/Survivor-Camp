@@ -10,7 +10,7 @@ export const RESOURCE_IDS: ResourceId[] = ['food', 'water', 'wood', 'parts', 'me
 
 export type ResourceBag = Partial<Record<ResourceId, number>>;
 
-export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' | 'fighter' | 'farmer';
+export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' | 'fighter' | 'farmer' | 'hunter' | 'carpenter' | 'herder' | 'engineer' | 'scout' | 'guard';
 
 // ---------- 配置（来自 assets/resources/config/*.json） ----------
 
@@ -286,6 +286,8 @@ export interface Condition {
     minBuilding?: Record<string, number>;
     /** 畜栏里至少有这些牲口 */
     hasAnimals?: string[];
+    /** 存粮只够吃不到这么多天（按现在的人数）才会发生，比如“不够分的晚饭” */
+    maxFoodDays?: number;
 }
 
 export interface EventOutcomeDef {

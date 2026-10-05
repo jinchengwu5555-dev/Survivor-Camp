@@ -4,7 +4,7 @@ import { admitCandidate, candidateInfo } from './recruits';
 import { takeVisitor } from './visitors';
 import { addAnimals, removeAnimal } from './farming';
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
-import { addResource, bedCount, canAfford, hqLevel, pay } from './economy';
+import { addResource, bedCount, canAfford, foodConsumptionPerMinute, hqLevel, pay } from './economy';
 import { changeMood } from './mood';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, newSurvivorState, setFlag } from './state';
 import { pickOne, pickWeighted } from './rng';
@@ -27,6 +27,10 @@ export function conditionMet(config: GameConfig, state: GameState, cond: Conditi
     if (cond.minHq !== undefined && hqLevel(state) < cond.minHq) return false;
     if (cond.minBuilding && Object.entries(cond.minBuilding).some(([id, lv]) => (state.buildings[id]?.level ?? 0) < lv)) return false;
     if (cond.hasAnimals && !cond.hasAnimals.every((id) => (state.farm?.animals[id] ?? 0) > 0)) return false;
+    if (cond.maxFoodDays !== undefined) {
+        const perDay = foodConsumptionPerMinute(config, state) * config.balance.dayLengthMinutes;
+        if (perDay <= 0 || state.resources.food / perDay >= cond.maxFoodDays) return false;
+    }
     return true;
 }
 

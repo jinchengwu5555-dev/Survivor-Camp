@@ -10,7 +10,7 @@ import { changeMood, isBrokenDown } from './mood';
 import { currentDay } from './state';
 import { quirkRaidChance } from './recruits';
 import { nextRandom } from './rng';
-import { survivorName } from './roster';
+import { survivorInfo, survivorName } from './roster';
 import { GameConfig, GameState, SurvivorState, WatchMode } from './types';
 
 export const WATCH_MODE_NAMES: Record<WatchMode, string> = { auto: '轮班', always: '固定守夜', never: '不守夜' };
@@ -54,7 +54,9 @@ export function passNight(config: GameConfig, state: GameState, at: number): { w
     if (cfg) {
         for (const s of state.survivors) {
             const sleep = s.sleep ?? 100;
-            s.sleep = watchers.includes(s.id) ? Math.max(0, sleep - cfg.watchCost) : Math.min(100, sleep + cfg.restGain);
+            // 守卫守夜不怎么累
+            const cost = survivorInfo(config, state, s.id)?.specialty === 'guard' ? cfg.watchCost / 2 : cfg.watchCost;
+            s.sleep = watchers.includes(s.id) ? Math.max(0, sleep - cost) : Math.min(100, sleep + cfg.restGain);
             // 累垮了心情也会变差
             if (s.sleep < cfg.tiredBelow / 2) changeMood(state, s, -4, '守夜太累', at);
         }

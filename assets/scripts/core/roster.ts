@@ -8,6 +8,7 @@ import { nextRandom, pickOne } from './rng';
 import { siteDeathChance, siteInjuryRecovery } from './siteMods';
 import { addLog, addStat, currentDay, newSurvivorState, setFlag } from './state';
 import { recoveryMultiplier, wandererTalentPool } from './talents';
+import { isOnExpedition } from './combat';
 import { GameConfig, GameState, Specialty, SurvivorState } from './types';
 
 /** Fisher-Yates 洗牌（用存档里的随机数，结果可复现） */
@@ -45,6 +46,16 @@ export function survivorName(config: GameConfig, state: GameState, id: string): 
 }
 
 /** 随机生成一个流浪者（名字不和营地里的人重复） */
+/** 这个人的专长（有名有姓的角色、流浪者都能查） */
+export function specialtyOf(config: GameConfig, state: GameState, id: string): Specialty | undefined {
+    return survivorInfo(config, state, id)?.specialty as Specialty | undefined;
+}
+
+/** 在营地里（没受伤、没出门）有几个这种专长的人 */
+export function specialistsHome(config: GameConfig, state: GameState, spec: Specialty): number {
+    return state.survivors.filter((s) => !s.injured && !isOnExpedition(state, s.id) && specialtyOf(config, state, s.id) === spec).length;
+}
+
 export function generateWanderer(config: GameConfig, state: GameState, specialty?: Specialty): SurvivorState {
     const w = config.wanderers;
     const used = new Set(state.survivors.map((s) => survivorName(config, state, s.id)));

@@ -11,6 +11,7 @@
 import { gearCombat, gearScout, gearWork } from './gear';
 import { moodTier } from './mood';
 import { quirkCombat, quirkWork } from './recruits';
+import { survivorInfo } from './roster';
 import { GameConfig, GameState, SurvivorState, TalentDef } from './types';
 
 /** 精力的影响：精力不低于 tiredBelow 时没影响，越低越差，精力 0 时只剩 minFactor */
@@ -71,7 +72,9 @@ export function recoveryMultiplier(config: GameConfig, state: GameState, survivo
 }
 
 export function scoutMultiplier(config: GameConfig, state: GameState, survivorId: string): number {
-    return product(config, state, survivorId, 'scout') * gearScout(config, state, survivorId);
+    // 斥候：侦察跑得快
+    const scout = survivorInfo(config, state, survivorId)?.specialty === 'scout' ? 0.75 : 1;
+    return product(config, state, survivorId, 'scout') * gearScout(config, state, survivorId) * scout;
 }
 
 export function moodRecoveryMultiplier(config: GameConfig, state: GameState, survivorId: string): number {

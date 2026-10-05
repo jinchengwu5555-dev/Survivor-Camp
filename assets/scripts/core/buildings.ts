@@ -2,6 +2,7 @@
 
 import { ActionResult, BuildingDef, BuildingStage, GameConfig, GameState } from './types';
 import { canAfford, getBuildingDef, hqLevel, pay, workerSlots } from './economy';
+import { specialistsHome } from './roster';
 import { addLog, addStat } from './state';
 
 export function activeUpgrades(state: GameState): number {
@@ -31,7 +32,9 @@ export function startUpgrade(config: GameConfig, state: GameState, buildingId: s
     const b = state.buildings[buildingId];
     const next = def.levels[b.level];
     pay(state, next.cost);
-    b.upgradeEndsAt = now + next.buildSeconds * 1000;
+    // 木匠在营地：每个快 15%（最多算 2 个）
+    const carpenters = Math.min(2, specialistsHome(config, state, 'carpenter'));
+    b.upgradeEndsAt = now + next.buildSeconds * 1000 * (1 - 0.15 * carpenters);
     addStat(state, 'upgrades');
     return { ok: true };
 }

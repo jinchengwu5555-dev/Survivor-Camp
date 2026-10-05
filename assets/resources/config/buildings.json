@@ -173,7 +173,8 @@
         "name": "水站",
         "icon": "🛢️",
         "map": { "x": 90, "y": -105 },
-        "description": "营地的水源。每个人每天都要喝水，夏天喝得更多；断水比断粮更难熬。派人来打水、烧水、过滤。",
+        "specialty": "engineer",
+        "description": "营地的水源（水工效率更高）。每个人每天都要喝水，夏天喝得更多；断水比断粮更难熬。派人来打水、烧水、过滤。",
         "startLevel": 1,
         "levels": [
             { "cost": {}, "buildSeconds": 0, "production": { "water": 0.9 }, "passive": { "water": 0.6 }, "workerSlots": 2, "storage": { "water": 100 } },

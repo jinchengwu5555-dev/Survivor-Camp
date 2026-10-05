@@ -293,7 +293,7 @@
         "title": "不够分的晚饭",
         "text": "今晚的饭只够一半人吃饱。大家都盯着玛莎手里的勺子。",
         "weight": 8,
-        "conditions": { "minSurvivors": 5 },
+        "conditions": { "minSurvivors": 5 , "maxFoodDays": 1.5},
         "choices": [
             { "text": "平均分，大家都饿一点", "outcomes": [ { "weight": 1, "text": "每个人都没吃饱，但没人抱怨不公平。", "effects": [ { "type": "mood", "target": "all", "amount": -4 } ] } ] },
             { "text": "干活的人先吃", "outcomes": [ { "weight": 1, "text": "工作效率提高了，但有人在背后说你冷血。", "effects": [ { "type": "resource", "resource": "wood", "amount": 20 }, { "type": "mood", "target": "random", "amount": -20 } ] } ] },

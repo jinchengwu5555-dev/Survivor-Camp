@@ -14,7 +14,7 @@ import { isOnExpedition } from './combat';
 import { changeMoodAll } from './mood';
 import { addProp, propCount, propDef } from './props';
 import { nextRandom } from './rng';
-import { survivorInfo } from './roster';
+import { specialistsHome, survivorInfo } from './roster';
 import { seasonAt } from './seasons';
 import { addLog, addStat, currentDay } from './state';
 import { ActionResult, AnimalDef, CropDef, FarmState, GameConfig, GameState, ResourceBag, RESOURCE_IDS } from './types';
@@ -279,7 +279,9 @@ function feedDay(config: GameConfig, state: GameState, at: number): void {
         if (!def || n <= 0) continue;
         // 产出攒着，最多攒三天
         if (def.product) farm.produce[id] = Math.min(n * 3, (farm.produce[id] ?? 0) + n);
-        if (n >= 2 && nextRandom(state) < def.breed) {
+        // 牧民在营地：牲口更容易生崽
+        const herd = specialistsHome(config, state, 'herder') > 0 ? 1.5 : 1;
+        if (n >= 2 && nextRandom(state) < def.breed * herd) {
             const [lo, hi] = def.litter;
             const kids = addAnimals(config, state, id, lo + Math.floor(nextRandom(state) * (hi - lo + 1)), at);
             if (kids > 0) born.push(`${def.icon}${def.name}×${kids}`);
@@ -334,7 +336,7 @@ export function petBlocker(config: GameConfig, state: GameState, now: number): s
 export function petAnimals(config: GameConfig, state: GameState, now: number): ActionResult {
     const blocker = petBlocker(config, state, now);
     if (blocker) return { ok: false, reason: blocker };
-    const amount = config.farming!.petMood;
+    const amount = config.farming!.petMood + (specialistsHome(config, state, 'herder') > 0 ? 2 : 0);
     state.farm!.pettedDay = currentDay(config, state, now);
     changeMoodAll(state, amount, '照看了畜栏里的牲口', now);
     addStat(state, 'animals_petted');

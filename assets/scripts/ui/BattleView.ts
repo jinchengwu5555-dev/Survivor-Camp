@@ -17,11 +17,13 @@ const WIDTH = 680;
 /** 战场的 x 范围（战斗里的格子）映射到屏幕 */
 const FIELD_MIN = -4;
 const FIELD_MAX = 16;
-const FIELD_Y = 190;
-const FIELD_HEIGHT = 340;
-const UNIT_RADIUS = 20;
-/** 地面上沿（相对战场中心）；角色的脚站在地面上，按“车道”前后错开 */
-const GROUND_TOP = -FIELD_HEIGHT / 2 + 70;
+const FIELD_Y = 195;
+const FIELD_HEIGHT = 460;
+const UNIT_RADIUS = 22;
+/** 地面上沿（相对战场中心）：地面占下面一大块，角色按 4 条“车道”前后错开站在地面上 */
+const GROUND_TOP = -FIELD_HEIGHT / 2 + 200;
+const LANES = 4;
+const LANE_GAP = 40;
 /** 有图时角色的高度（再乘 appearance.scale） */
 const SPRITE_HEIGHT = 120;
 const BARRICADE_SIZE = { width: 90, height: 230 };
@@ -149,8 +151,10 @@ export class BattleView {
 
     /** 脚踩的位置：一维战场上的单位会叠在一起，按 uid 错开三条“车道”（越往上越靠后） */
     private feetY(u: BattleUnit): number {
-        if (u.tag === 'barricade') return GROUND_TOP - 20;
-        return GROUND_TOP - 34 + (u.uid % 3) * 22;
+        // 栅栏站在最后面，守夜的人在它前面
+        if (u.tag === 'barricade') return GROUND_TOP - 24;
+        const lane = u.uid % LANES;
+        return GROUND_TOP - 40 - lane * LANE_GAP;
     }
 
     /** 这个单位的图片（没有图返回 null） */
@@ -170,16 +174,59 @@ export class BattleView {
         return (this.feetY(u) + this.topY(u)) / 2;
     }
 
+    /** 夜晚的街道：天空、月亮、远处楼房的剪影、地面和马路 */
+    private drawBackdrop(g: Graphics): void {
+        const top = FIELD_HEIGHT / 2;
+        const bottom = -FIELD_HEIGHT / 2;
+        drawPanel(g, WIDTH, FIELD_HEIGHT, FIELD_BG, 12);
+        // 越往上越暗的天空
+        for (let i = 0; i < 6; i++) {
+            const y = GROUND_TOP + ((top - GROUND_TOP) * i) / 6;
+            g.fillColor = new Color(30 - i * 3, 36 - i * 3, 58 - i * 4);
+            g.rect(-WIDTH / 2, y, WIDTH, (top - GROUND_TOP) / 6 + 1);
+            g.fill();
+        }
+        // 月亮
+        g.fillColor = new Color(235, 230, 200, 220);
+        g.circle(WIDTH / 2 - 90, top - 70, 30);
+        g.fill();
+        g.fillColor = new Color(30, 36, 58);
+        g.circle(WIDTH / 2 - 78, top - 62, 26);
+        g.fill();
+        // 远处的楼房剪影（固定的高低，每次画都一样）
+        const heights = [90, 140, 70, 170, 110, 60, 150, 95, 130, 80, 160, 100];
+        const w = WIDTH / heights.length;
+        heights.forEach((h, i) => {
+            g.fillColor = new Color(22, 26, 34);
+            g.rect(-WIDTH / 2 + i * w, GROUND_TOP, w - 4, h);
+            g.fill();
+            // 零星亮着的窗户
+            if (i % 3 === 1) {
+                g.fillColor = new Color(200, 170, 90, 160);
+                g.rect(-WIDTH / 2 + i * w + 12, GROUND_TOP + h - 30, 8, 10);
+                g.fill();
+            }
+        });
+        // 地面和马路
+        g.fillColor = hexColor('#3a3228');
+        g.rect(-WIDTH / 2, bottom, WIDTH, GROUND_TOP - bottom);
+        g.fill();
+        g.fillColor = hexColor('#2c2a28');
+        g.rect(-WIDTH / 2, GROUND_TOP - 170, WIDTH, 120);
+        g.fill();
+        g.fillColor = new Color(190, 170, 90, 150);
+        for (let x = -WIDTH / 2 + 20; x < WIDTH / 2; x += 70) {
+            g.rect(x, GROUND_TOP - 113, 36, 5);
+            g.fill();
+        }
+    }
+
     private drawField(): void {
         const g = this.field;
         const bars = this.bars;
         g.clear();
         bars.clear();
-        drawPanel(g, WIDTH, FIELD_HEIGHT, FIELD_BG, 12);
-        // 地面
-        g.fillColor = hexColor('#3a3228');
-        g.rect(-WIDTH / 2, -FIELD_HEIGHT / 2, WIDTH, GROUND_TOP + FIELD_HEIGHT / 2);
-        g.fill();
+        this.drawBackdrop(g);
 
         const alive = new Set<number>();
         const withSprite: BattleUnit[] = [];
@@ -279,7 +326,7 @@ export class BattleView {
     private unitLabel(u: BattleUnit): Label {
         let label = this.unitLabels.get(u.uid);
         if (!label) {
-            const text = u.tag === 'barricade' ? '路\n障' : u.def.name.slice(0, 1);
+            const text = u.tag === 'barricade' ? '栅\n栏' : u.def.name.slice(0, 1);
             label = addLabel(this.fx, text, u.tag === 'barricade' ? 22 : 20, COLORS.text, { width: 40, height: u.tag === 'barricade' ? 60 : 30 });
             this.unitLabels.set(u.uid, label);
         }

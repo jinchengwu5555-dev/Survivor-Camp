@@ -88,7 +88,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.6 水·猎场·工坊分类';
+const GAME_VERSION = 'v2.7 战斗画面·新职业';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -169,6 +169,28 @@ const SPECIALTY_NAMES: Record<string, string> = {
     scavenger: '拾荒者',
     fighter: '战士',
     farmer: '农夫',
+    hunter: '猎人',
+    carpenter: '木匠',
+    herder: '牧民',
+    engineer: '水工',
+    scout: '斥候',
+    guard: '守卫',
+};
+/** 专长有什么用（显示在候选人卡片和个人档案里） */
+const SPECIALTY_TIPS: Record<string, string> = {
+    leader: '大家更听指挥',
+    cook: '在厨房产量更高',
+    medic: '在医务室产量更高',
+    mechanic: '在废料场、工坊产量更高',
+    scavenger: '打猎更准，搜东西更在行',
+    fighter: '打猎更准，能打',
+    farmer: '在营地时菜长得更快，钓鱼有耐心',
+    hunter: '打猎准得多，钓鱼也不错',
+    carpenter: '在营地时建筑升级更快',
+    herder: '在营地时牲口更容易生崽，照看牲口心情加更多',
+    engineer: '在水站产量更高',
+    scout: '侦察、勘察跑得更快',
+    guard: '守夜不怎么累',
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
@@ -1588,7 +1610,7 @@ export class GameRoot extends Component {
         const visitors = state.visitors?.event === event.id ? state.visitors.people : [];
         for (const v of visitors) {
             const info = candidateInfo(config, v);
-            this.text(`🚪 ${info.name} · ${info.title} · 专长：${SPECIALTY_NAMES[info.specialty] ?? '—'}${info.traits.length ? ` · 性格：${info.traits.join('、')}` : ''}`, 20, ACCENT);
+            this.text(`🚪 ${info.name} · ${info.title} · 专长：${SPECIALTY_NAMES[info.specialty] ?? '—'}（${SPECIALTY_TIPS[info.specialty] ?? ''}）${info.traits.length ? ` · 性格：${info.traits.join('、')}` : ''}`, 20, ACCENT);
             const looks = quirksOf(config, v.survivor).map((q) => (q.hidden ? `❓${q.hint}` : `${q.icon}${q.name}（${q.hint}）`));
             this.text(`　印象：${looks.length ? looks.join('；') : '看起来是个普通人'}`, 18, DIM);
         }
@@ -2197,7 +2219,8 @@ export class GameRoot extends Component {
         }
         this.cursorY -= headH + 12;
 
-        // 性格、天赋、介绍
+        // 专长、性格、天赋、介绍
+        if (info?.specialty && SPECIALTY_TIPS[info.specialty]) this.text(`🛠️ ${SPECIALTY_NAMES[info.specialty]}：${SPECIALTY_TIPS[info.specialty]}`, 20, WIN);
         this.text(`🧠 性格：${(info?.traits ?? []).join('、') || '—'}`, 22);
         const talents = talentsOf(config, state, id);
         this.text('✨ 天赋', 22, ACCENT);
@@ -2809,6 +2832,7 @@ export class GameRoot extends Component {
         for (const c of list) {
             const info = candidateInfo(config, c);
             this.text(`${info.name}  ·  ${info.title}  ·  专长：${SPECIALTY_NAMES[info.specialty] ?? '—'}`, 24, ACCENT);
+            if (SPECIALTY_TIPS[info.specialty]) this.text(`🛠️ ${SPECIALTY_NAMES[info.specialty]}：${SPECIALTY_TIPS[info.specialty]}`, 18, WIN);
             this.text(c.intro, 18, TEXT);
             const talents = info.talents.map((id) => config.talents.find((t) => t.id === id)).filter(Boolean).map((t) => `${t!.icon}${t!.name}`);
             if (talents.length) this.text(`✨ 天赋：${talents.join('、')}`, 18, WIN);

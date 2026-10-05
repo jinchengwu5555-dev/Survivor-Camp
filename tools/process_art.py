@@ -234,7 +234,7 @@ def main() -> int:
         category = rel.parts[0] if len(rel.parts) > 1 else 'units'
         # 背景图（bg）、营地地点图（sites）不需要抠图
         keep_background = category in ('bg', 'sites')
-        process(src, OUT_DIR / category / (src.stem.lower() + '.png'), keep_background, category, args.smooth)
+        process(src, OUT_DIR / category / (src.name.split('.')[0].lower() + '.png'), keep_background, category, args.smooth)
     return 0
 
 

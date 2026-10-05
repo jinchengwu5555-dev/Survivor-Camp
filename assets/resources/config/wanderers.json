@@ -11,10 +11,16 @@
         "medic": ["退休护士", "药剂师", "兽医助理"],
         "mechanic": ["电工", "修车学徒", "水管工"],
         "scavenger": ["快递员", "流浪少年", "邮递员"],
-        "fighter": ["商场保安", "拳击教练", "猎人"],
-        "farmer": ["果农", "园丁", "养蜂人"]
+        "fighter": ["拳击教练", "健身教练", "前橄榄球队员"],
+        "farmer": ["果农", "园丁", "养蜂人"],
+        "hunter": ["猎鹿人", "护林员", "射箭俱乐部教练"],
+        "carpenter": ["木匠", "装修工", "家具厂学徒"],
+        "herder": ["牧场帮工", "兽医助理", "养鸡场工人"],
+        "engineer": ["水厂技工", "钻井工", "管道工"],
+        "scout": ["越野跑选手", "地图测绘员", "外卖骑手"],
+        "guard": ["夜班保安", "狱警", "退伍兵"]
     },
     "traits": ["勤快", "胆小", "乐观", "沉默", "暴躁", "热心", "多疑", "幽默", "固执", "细心"],
-    "specialties": ["cook", "medic", "mechanic", "scavenger", "fighter", "farmer"],
+    "specialties": ["cook", "medic", "mechanic", "scavenger", "fighter", "farmer", "hunter", "carpenter", "herder", "engineer", "scout", "guard"],
     "battleUnit": "militia"
 }

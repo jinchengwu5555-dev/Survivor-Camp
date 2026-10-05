@@ -31,8 +31,10 @@ export function hunterSkill(config: GameConfig, state: GameState, id: string, ki
     let skill = 1;
     if (kind === 'fish') {
         if (spec === 'farmer') skill += 0.2;
+        if (spec === 'hunter') skill += 0.15;
         return skill;
     }
+    if (spec === 'hunter') skill += 0.35;
     if (spec === 'fighter' || spec === 'scavenger') skill += 0.15;
     const range = gearOf(config, state, id).reduce((m, d) => Math.max(m, d.gear?.range ?? 0), 0);
     if (range >= 5) skill += 0.25;

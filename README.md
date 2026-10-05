@@ -207,7 +207,7 @@ npm test
   - `stat`：累计一项统计数据（`amount` 默认 1），成就和悬赏都读统计。现有的：`diary_pages`（日记残页）、`quiet_moments`（宁静时刻）、`laughs`（欢笑）
   - `prop`：获得背包道具（`prop` 是 `props.json` 里的 id，`amount` 默认 1）
   - `livestock`：畜栏里加 / 减牲口（`animal` 是 `farming.json` 里的 id，`amount` 可以是负数；畜栏放不下的不算）
-- 可用的条件（`conditions`）：`minDay`、`minSurvivors`、`flags`、`notFlags`、`hasSurvivors`、`minHq`（指挥部至少几级）、`minBuilding`（比如 `{"garden": 1}` 有了菜园才会发生）、`hasAnimals`（畜栏里有这些牲口，比如 `["chicken"]`）。
+- 可用的条件（`conditions`）：`minDay`、`minSurvivors`、`flags`、`notFlags`、`hasSurvivors`、`minHq`（指挥部至少几级）、`minBuilding`（比如 `{"garden": 1}` 有了菜园才会发生）、`hasAnimals`（畜栏里有这些牲口，比如 `["chicken"]`）、`maxFoodDays`（存粮只够吃不到这么多天才会发生，比如“不够分的晚饭”只在缺粮时出现）。
 - **选项要有取舍**：随机事件（`weight > 0`，日记残页除外）至少 3 个选项，测试会检查。好的写法是“稳妥但收益小 / 冒险但可能大赚也可能有人受伤 / 花资源换确定的好处”。
 - **选项提示**：界面在每个选项下面自动标出 `💰花费` / `🎲结果随机`（`outcomes` 不止一个）/ `⚠️有风险`（可能受伤、离开、扣资源或心情）/ `🎁可能有收获`，由 `choiceHints()` 从配置算出来，不用手写，也不会剧透具体结果。
 - **结果卡片**：选完后弹出结果卡片，显示发生了什么和实际得失（`resolveChoice` 返回的 `effectsText`，对比选择前后的资源、道具、人员、心情），点“继续”再看下一个事件。
@@ -638,6 +638,21 @@ npm run economy
 - 状态栏显示现在几点和“🌙 X 后入夜”（`timeOfDay`）：尸潮在 22:00 来，按离下一次尸潮的时间倒推时钟；快入夜时变红。
 - “⏩ 跳到晚上”（状态栏和设置里都有，`CampGame.skipToNight`）：游戏时间直接快进到下一次尸潮；尸潮还没开始时跳到第二天。中间的产出、探索照常结算。统计 `time_skips`。
 - 设置里的倍速 ×1 / ×2 / ×4（`clock.speed`）。注意：排行榜按真实在线时长限制天数，长时间加速玩出来的天数可能会被截断。
+
+### 专长（职业）
+
+| 专长 | 作用 |
+|---|---|
+| 厨师 / 医生 / 机械师 / 水工 | 在厨房 / 医务室 / 废料场、工坊 / 水站产量更高（`specialtyBonus`） |
+| 农夫 | 在营地时菜长得更快，钓鱼有耐心 |
+| 战士 / 拾荒者 | 打猎 +15% |
+| 猎人 | 打猎 +35%，钓鱼 +15% |
+| 木匠 | 在营地时建筑升级快 15%（最多算 2 个） |
+| 牧民 | 在营地时牲口生崽概率 ×1.5，照看牲口心情多 +2 |
+| 斥候 | 侦察来回时间 ×0.75（走 `scoutMultiplier`），勘察小队里有斥候快 25% |
+| 守卫 | 守夜只累一半 |
+
+流浪者的专长和职业名在 `wanderers.json`。查专长用 `roster.ts` 的 `specialtyOf` / `specialistsHome`（在营地、没受伤的人数）。
 
 ### 满员时来了新人（`core/recruits.ts`）
 
