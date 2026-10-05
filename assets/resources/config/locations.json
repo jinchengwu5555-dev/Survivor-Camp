@@ -241,7 +241,7 @@
             {
                 "prop": "lumber_s",
                 "chance": 0.3
-            }, { "prop": "water", "chance": 0.4 } ],
+            }, { "prop": "water", "chance": 0.4 }, { "prop": "fry_bucket", "chance": 0.25 } ],
         "recruitChance": 0.1
     },
     {

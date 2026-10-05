@@ -1,5 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
+import { prepareVisitors } from './visitors';
 import { updateDiary } from './diary';
 import { autoFarm, clearPlot, collectProduce, harvestAll, petAnimals, plant, slaughter, updateFarm } from './farming';
 import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
@@ -30,10 +31,10 @@ import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
 import { checkSeasonChange } from './seasons';
-import { createNewState } from './state';
+import { addStat, createNewState } from './state';
 import { applyHardship } from './roster';
 import { relocate } from './sites';
-import { advanceClock } from './clock';
+import { advanceClock, timeOfDay } from './clock';
 import { grantOfflineReward } from './offline';
 
 export class CampGame {
@@ -59,6 +60,34 @@ export class CampGame {
         this.state.clock.paused = paused;
         this.state.clock.lastRealAt = realNow;
         this.state.clock.maxRealAt = Math.max(this.state.clock.maxRealAt, realNow);
+    }
+
+    /** 倍速：1 / 2 / 4（设置里选） */
+    setSpeed(speed: number): void {
+        this.state.clock.speed = Math.max(1, Math.min(4, Math.round(speed)));
+    }
+
+    get speed(): number {
+        return this.state.clock.speed ?? 1;
+    }
+
+    /**
+     * 直接跳到晚上：游戏时间快进到下一次尸潮（还没开始有尸潮时跳到第二天）。
+     * 中间的产出、探索、打猎照常结算。
+     */
+    skipToNight(now: number): ActionResult {
+        const s = this.state;
+        if (s.gameOver) return { ok: false, reason: '营地已经覆灭了' };
+        if (s.pendingRaid) return { ok: false, reason: '尸潮已经来了' };
+        const dayMs = this.config.balance.dayLengthMinutes * 60_000;
+        const night = timeOfDay(this.config, s, now).nightInMs;
+        const target = night !== null && night > 0 ? now + night : s.createdAt + Math.ceil((now - s.createdAt + 1) / dayMs) * dayMs;
+        if (target <= now) return { ok: false, reason: '已经是晚上了' };
+        s.clock.gameTime = Math.max(s.clock.gameTime, target);
+        return this.act(target, () => {
+            addStat(s, 'time_skips');
+            return { ok: true, message: night !== null ? '天黑了……' : '一天过去了' };
+        });
     }
 
     get paused(): boolean {
@@ -132,6 +161,7 @@ export class CampGame {
     /** 每个操作之后都检查一次剧情目标和成就 */
     private settle(now: number): void {
         checkEpisode(this.config, this.state, now);
+        prepareVisitors(this.config, this.state, now);
         scheduleFirstRaid(this.config, this.state, now);
         if (!this.state.gameOver) refreshDaily(this.config, this.state, now);
         this.newAchievements.push(...checkAchievements(this.config, this.state, now));

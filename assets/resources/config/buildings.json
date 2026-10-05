@@ -154,5 +154,18 @@
             { "cost": { "wood": 140, "parts": 30 }, "buildSeconds": 400, "requiresHq": 3, "pens": 6 }
         ],
         "scaling": { "maxLevel": 12, "costGrowth": 1.45, "timeGrowth": 1.3, "pensPerLevel": 2 }
+    },
+    {
+        "id": "pond", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "水缸", "icon": "🪣", "description": "几口接雨水的大缸，能养几条小鱼。"}, {"level": 3, "name": "鱼池", "icon": "🐟", "description": "停车场挖的水池，铺了防水布。"}, {"level": 6, "name": "鱼塘", "icon": "🎣", "description": "引了河水的鱼塘，四周种了芦苇。"}],
+        "name": "鱼塘",
+        "icon": "🪣",
+        "map": { "x": 230, "y": -240 },
+        "description": "养鱼的地方。钓鱼时有机会带活鱼回来，商人也卖鱼苗。鱼每天要喂一点食物，会自己繁殖，可以捞上来吃。等级越高养得越多，也能养更大的鱼。",
+        "startLevel": 0,
+        "levels": [
+            { "cost": { "wood": 50, "parts": 10 }, "buildSeconds": 100, "pens": 4 },
+            { "cost": { "wood": 110, "parts": 25 }, "buildSeconds": 360, "requiresHq": 3, "pens": 7 }
+        ],
+        "scaling": { "maxLevel": 10, "costGrowth": 1.45, "timeGrowth": 1.3, "pensPerLevel": 3 }
     }
 ]

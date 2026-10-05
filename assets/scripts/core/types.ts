@@ -48,6 +48,8 @@ export interface BalanceDef {
     baseStorage: ResourceBag;
     /** 探索打赢后，这个地点要过多少分钟才能再去（物资重新聚起来） */
     locationRestockMinutes: number;
+    /** 打下过的地点再去搜，战利品打几折（东西被搜得差不多了） */
+    repeatLootFactor?: number;
     /** 探索小队最多几个人 */
     maxSquadSize: number;
     /** 受伤后自然恢复需要的分钟数 */
@@ -917,6 +919,8 @@ export interface GameState {
     gold?: number;
     /** 探索时遇到、等玩家决定留不留的人（见 core/recruits.ts） */
     candidates?: CandidateState[];
+    /** 事件里上门的人：事件出现时就生成好，事件卡上先显示表面信息（见 core/visitors.ts） */
+    visitors?: { event: string; people: CandidateState[] };
     /** 这一局的随机地名（见 core/names.ts；老存档没有，用配置里的默认名字） */
     names?: { town: string; districts: Record<string, string>; locations: Record<string, string> };
     /** 死在外面的人留下的装备：地点 id → 道具 id → 数量（见 core/gear.ts） */
@@ -1257,6 +1261,10 @@ export interface AnimalDef {
     meat: number;
     /** 吃饱时每天生崽的概率（至少要有两只） */
     breed: number;
+    /** 住在畜栏（pen，默认）还是鱼塘（pond） */
+    space?: 'pen' | 'pond';
+    /** 畜栏 / 鱼塘至少几级才能养（先养小动物，升级后养大的） */
+    minLevel?: number;
     litter: [number, number];
     description: string;
 }

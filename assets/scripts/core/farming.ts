@@ -41,8 +41,17 @@ export function plotCount(config: GameConfig, state: GameState): number {
     return currentLevelDef(config, state, 'garden')?.plots ?? 0;
 }
 
-export function penCapacity(config: GameConfig, state: GameState): number {
-    return currentLevelDef(config, state, 'pen')?.pens ?? 0;
+export type AnimalSpace = 'pen' | 'pond';
+
+/** 牲口住哪：畜栏（pen）或者鱼塘（pond），建筑 id 和空间名一样 */
+export function spaceOf(def: AnimalDef | undefined): AnimalSpace {
+    return def?.space ?? 'pen';
+}
+
+export const SPACE_NAMES: Record<AnimalSpace, string> = { pen: '畜栏', pond: '鱼塘' };
+
+export function penCapacity(config: GameConfig, state: GameState, space: AnimalSpace = 'pen'): number {
+    return currentLevelDef(config, state, space)?.pens ?? 0;
 }
 
 export function isGreenhouse(config: GameConfig, state: GameState): boolean {
@@ -59,12 +68,30 @@ export function farmOf(config: GameConfig, state: GameState, now: number): FarmS
     return farm;
 }
 
-export function animalTotal(state: GameState): number {
-    return Object.values(state.farm?.animals ?? {}).reduce((a, b) => a + b, 0);
+/** 养了多少只（不写 space 就是全部） */
+export function animalTotal(state: GameState, config?: GameConfig, space?: AnimalSpace): number {
+    return Object.entries(state.farm?.animals ?? {})
+        .filter(([id]) => !space || !config || spaceOf(animalDef(config, id)) === space)
+        .reduce((a, [, n]) => a + n, 0);
 }
 
-export function penSpace(config: GameConfig, state: GameState): number {
-    return Math.max(0, penCapacity(config, state) - animalTotal(state));
+export function penSpace(config: GameConfig, state: GameState, space: AnimalSpace = 'pen'): number {
+    return Math.max(0, penCapacity(config, state, space) - animalTotal(state, config, space));
+}
+
+/**
+ * 现在能不能养这种牲口：要先建好畜栏 / 鱼塘，而且等级够（小动物先养，大动物要升级），还要有空位。
+ * 返回 null 表示可以。
+ */
+export function animalBlocker(config: GameConfig, state: GameState, animalId: string): string | null {
+    const def = animalDef(config, animalId);
+    if (!def) return '没有这种牲口';
+    const space = spaceOf(def);
+    const level = state.buildings[space]?.level ?? 0;
+    if (level <= 0) return `还没有${SPACE_NAMES[space]}`;
+    if (level < (def.minLevel ?? 1)) return `${SPACE_NAMES[space]}要升到 ${def.minLevel} 级才能养${def.name}`;
+    if (penSpace(config, state, space) <= 0) return `${SPACE_NAMES[space]}满了`;
+    return null;
 }
 
 /** 在营地里（没出门、没受伤）的农夫有几个 */
@@ -182,9 +209,9 @@ export function clearPlot(config: GameConfig, state: GameState, index: number, n
 
 /** 放进畜栏，返回实际放进去几只（畜栏满了放不下） */
 export function addAnimals(config: GameConfig, state: GameState, animalId: string, amount: number, now: number): number {
-    if (!animalDef(config, animalId)) return 0;
+    if (animalBlocker(config, state, animalId)) return 0;
     const farm = farmOf(config, state, now);
-    const n = Math.min(amount, penSpace(config, state));
+    const n = Math.min(amount, penSpace(config, state, spaceOf(animalDef(config, animalId))));
     if (n <= 0) return 0;
     farm.animals[animalId] = (farm.animals[animalId] ?? 0) + n;
     addStat(state, 'animals_raised', n);
@@ -313,7 +340,7 @@ export function updateFarm(config: GameConfig, state: GameState, now: number): v
     const f = config.farming;
     if (!f) return;
     const hasGarden = (state.buildings.garden?.level ?? 0) > 0;
-    const hasPen = (state.buildings.pen?.level ?? 0) > 0;
+    const hasPen = (state.buildings.pen?.level ?? 0) > 0 || (state.buildings.pond?.level ?? 0) > 0;
     if (!state.farm && !hasGarden && !hasPen) return;
     const farm = farmOf(config, state, now);
     if (hasGarden && !farm.starter) {

@@ -144,7 +144,14 @@ export function decideCandidate(config: GameConfig, state: GameState, candidateI
         addLog(state, now, `${name}背起包，一个人走远了。`);
         return { ok: true, message: `${name}走了` };
     }
+    admitCandidate(config, state, c, now);
+    return { ok: true, message: `${name}留下了` };
+}
+
+/** 让一个候选人（探索遇到的、事件里上门的）正式加入营地：记加入时间、发特质的见面礼、写日志。床位要调用方先检查 */
+export function admitCandidate(config: GameConfig, state: GameState, c: CandidateState, now: number): void {
     const s = c.survivor;
+    const name = candidateName(config, state, c);
     s.joinedAt = now;
     s.revealed = [];
     state.survivors.push(s);
@@ -159,7 +166,6 @@ export function decideCandidate(config: GameConfig, state: GameState, candidateI
         extras.push(q.description);
     }
     addLog(state, now, `🙋 ${name}留在了营地。${extras.join('')}`);
-    return { ok: true, message: `${name}留下了` };
 }
 
 /** 没有界面时（测试、模拟）自动决定：床位够就留下，看得出有坏毛病的不要 */

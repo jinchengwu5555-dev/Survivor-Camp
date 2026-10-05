@@ -60,8 +60,8 @@ export function pixelSize(size: number): number {
 }
 
 /** 统一设置字体、字号、行高；所有 Label 都要经过这里 */
-export function styleLabel(label: Label, size: number): void {
-    const px = pixelSize(size);
+export function styleLabel(label: Label, size: number, exact = false): void {
+    const px = exact ? Math.max(8, Math.round(size)) : pixelSize(size);
     if (uiFont) {
         label.font = uiFont;
         label.useSystemFont = false;
@@ -70,18 +70,57 @@ export function styleLabel(label: Label, size: number): void {
     label.lineHeight = px + 8;
 }
 
+/** 一个字大约占几个字号宽：中文 1、英文数字 0.6、emoji 1.2（宁可估大一点） */
+function charUnits(c: string): number {
+    const code = c.codePointAt(0)!;
+    if (code < 0x80) return 0.6;
+    if (code >= 0x1f000) return 1.2;
+    if (code >= 0xfe00 && code <= 0xfe0f) return 0; // emoji 变体选择符
+    return 1;
+}
+
+/** 估算一行文字的宽度 */
+export function textWidth(text: string, px: number): number {
+    let longest = 0;
+    for (const line of text.split('\n')) {
+        let w = 0;
+        for (const c of line) w += charUnits(c) * px;
+        longest = Math.max(longest, w);
+    }
+    return longest;
+}
+
+/**
+ * 单行文字放不下时缩小字号（代替 Cocos 的 SHRINK：换了像素字体后 SHRINK 不生效，
+ * 文字会冲出边界，空字符串开头的按钮还会缩成看不见）。
+ */
+export function fitLabel(label: Label, text: string, width: number, size: number): void {
+    const px = pixelSize(size);
+    const w = textWidth(text, px);
+    if (w <= width || w <= 0) {
+        styleLabel(label, size);
+        return;
+    }
+    // 先试着降到像素网格（6 的倍数）上，还放不下就按比例缩
+    const snapped = Math.floor((px * width) / w / 6) * 6;
+    if (snapped >= 12) styleLabel(label, snapped);
+    else styleLabel(label, (px * width) / w, true);
+}
+
+/** 改单行文字的内容（顺便重新按宽度算字号） */
+export function setLabelText(label: Label, text: string, width: number, size: number): void {
+    if (label.string === text) return;
+    label.string = text;
+    fitLabel(label, text, width - 4, size);
+}
+
 /**
  * 自己按宽度插入换行：Cocos 的自动换行在某些字体 / 设备上不生效，长文字会排成一行冲出屏幕。
  * 中文和全角符号按 1 个字号宽，英文数字按 0.6 个，emoji 按 1.2 个估算，宁可早一点换行。
  */
 export function wrapText(text: string, width: number, size: number): string {
     const px = pixelSize(size);
-    const charWidth = (c: string) => {
-        const code = c.codePointAt(0)!;
-        if (code < 0x80) return px * 0.6;
-        if (code >= 0x1f000) return px * 1.2;
-        return px;
-    };
+    const charWidth = (c: string) => charUnits(c) * px;
     const out: string[] = [];
     for (const para of text.split('\n')) {
         let line = '';
@@ -107,7 +146,8 @@ export function addLabel(parent: Node, text: string, size: number, color: Color,
     const node = makeNode('Label', parent, opts.width ?? 600, opts.height ?? size + 10);
     const label = node.addComponent(Label);
     label.string = opts.wrap ? wrapText(text, (opts.width ?? 600) - 4, size) : text;
-    styleLabel(label, size);
+    if (opts.wrap) styleLabel(label, size);
+    else fitLabel(label, text, (opts.width ?? 600) - 4, size);
     label.color = color;
     label.horizontalAlign =
         opts.align === 'left' ? Label.HorizontalAlign.LEFT : opts.align === 'right' ? Label.HorizontalAlign.RIGHT : Label.HorizontalAlign.CENTER;
@@ -116,7 +156,8 @@ export function addLabel(parent: Node, text: string, size: number, color: Color,
         label.overflow = Label.Overflow.RESIZE_HEIGHT;
         label.enableWrapText = true;
     } else {
-        label.overflow = Label.Overflow.SHRINK;
+        // 字号已经按宽度算好了；CLAMP 保持框的大小，对齐方式才有效
+        label.overflow = Label.Overflow.CLAMP;
         label.enableWrapText = false;
     }
     return label;
@@ -159,7 +200,7 @@ export class UIButton {
         readonly width: number,
         readonly height: number,
         onClick: () => void,
-        size = 22,
+        private readonly size = 22,
     ) {
         this.node = makeNode('Button', parent, width, height);
         this.g = this.node.addComponent(Graphics);
@@ -172,7 +213,10 @@ export class UIButton {
     }
 
     set(text: string, style: ButtonStyle = 'normal', progress = 0): void {
-        if (this.label.string !== text) this.label.string = text;
+        if (this.label.string !== text) {
+            this.label.string = text;
+            fitLabel(this.label, text, this.width - 16, this.size);
+        }
         if (style === this.style && Math.abs(progress - this.progress) < 0.02) return;
         this.style = style;
         this.progress = progress;

@@ -162,7 +162,9 @@ export function expeditionEnemyBonus(config: GameConfig, state: GameState): numb
 
 /** 探索随指挥部成长：实际战利品（和升级花费一样按指数增长，后期才不会变得没意义） */
 export function expeditionLoot(config: GameConfig, state: GameState, loc: LocationDef): ResourceBag {
-    return scaleBag(loc.loot, Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1));
+    // 打下过的地方再去，好东西已经被搜走了
+    const repeat = (state.stats[`clear_${loc.id}`] ?? 0) > 0 ? config.balance.repeatLootFactor ?? 1 : 1;
+    return scaleBag(loc.loot, Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1) * repeat);
 }
 
 /** 无尽尸潮：只按天数算的等级加成 */
@@ -374,6 +376,8 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
 
     if (result === 'win') {
         addStat(state, 'expeditions_won');
+        // 先按“打下前”算战利品（第一次打下拿全额，之后再来打折）
+        const lootBag = scaleBag(expeditionLoot(config, state, loc), lootBonus(config, state, squad));
         addStat(state, `clear_${loc.id}`);
         // 战利品要装进背包才能带回来（见 packing.ts）
         const drops = rollDrops(state, loc.drops, false);
@@ -381,7 +385,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
         const recovered = takeDroppedGear(state, loc.id);
         for (const [id, n] of Object.entries(recovered)) drops[id] = (drops[id] ?? 0) + n;
         if (Object.keys(recovered).length) addLog(state, at, `小队在${locationName(config, state, loc)}找到了战友留下的装备：${formatProps(config, recovered)}。`);
-        const pieces = makePieces(config, state, scaleBag(expeditionLoot(config, state, loc), lootBonus(config, state, squad)), drops);
+        const pieces = makePieces(config, state, lootBag, drops);
         const cap = haulSections(config, state, squad, vehicleDef(config, ex.vehicle));
         const haul = newHaul(config, state, locationName(config, state, loc), at, pieces, cap.sections, cap.maxWeight);
         if (live) {

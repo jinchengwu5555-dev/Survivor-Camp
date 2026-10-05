@@ -10,7 +10,7 @@ import { battleRegistry } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
 import { LiveRaid } from '../core/liveRaid';
 import { BattleReport, GameConfig } from '../core/types';
-import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, UIButton } from './widgets';
+import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelText, UIButton } from './widgets';
 import { addSprite, fitSize, getSprite, preloadSprites, SPRITE_DIRS } from './sprites';
 
 const WIDTH = 680;
@@ -325,16 +325,16 @@ export class BattleView {
         const wall = this.opts.live?.barricade ?? b.units.find((u) => u.tag === 'barricade');
         const wallText = wall ? `栅栏 ${Math.max(0, Math.round((wall.hp / wall.stats.maxHp) * 100))}%` : '';
         const goal = b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
-        this.status.string = this.finished ? '' : `${goal}   ${wallText}`;
+        setLabelText(this.status, this.finished ? '' : `${goal}   ${wallText}`, WIDTH, 24);
 
         this.speedButton.set(`速度 ×${this.speed}`, this.finished ? 'disabled' : 'normal');
         this.skipButton.set(this.opts.live ? '跳过（自动打完）' : '跳到结尾', this.finished ? 'disabled' : 'normal');
         const live = this.opts.live;
         if (!live) {
-            this.hint.string = this.finished ? '' : '战斗回放';
+            setLabelText(this.hint, this.finished ? '' : '战斗回放', WIDTH, 20);
             return;
         }
-        this.hint.string = this.finished ? '' : '技能好了就点！栅栏快撑不住时花木材修补';
+        setLabelText(this.hint, this.finished ? '' : '技能好了就点！栅栏快撑不住时花木材修补', WIDTH, 20);
         this.autoButton!.set(`自动技能：${b.autoCastActive ? '开' : '关'}`, this.finished ? 'disabled' : b.autoCastActive ? 'ready' : 'normal');
 
         const { hp, wood } = live.repairCost();

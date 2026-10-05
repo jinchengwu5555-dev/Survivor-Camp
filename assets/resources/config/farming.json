@@ -20,9 +20,12 @@
     "starveDays": 2,
     "animals": [
         { "id": "chicken", "name": "鸡", "icon": "🐔", "feed": 3, "product": { "name": "鸡蛋", "icon": "🥚", "food": 9 }, "meat": 15, "breed": 0.15, "litter": [1, 2], "description": "每天下蛋，吃得少。" },
-        { "id": "duck", "name": "鸭", "icon": "🦆", "feed": 3, "product": { "name": "鸭蛋", "icon": "🥚", "food": 8 }, "meat": 16, "breed": 0.1, "litter": [1, 2], "description": "和鸡差不多，肉多一点。" },
+        { "id": "duck", "name": "鸭", "icon": "🦆", "minLevel": 2, "feed": 3, "product": { "name": "鸭蛋", "icon": "🥚", "food": 8 }, "meat": 16, "breed": 0.1, "litter": [1, 2], "description": "和鸡差不多，肉多一点。" },
         { "id": "rabbit", "name": "兔子", "icon": "🐇", "feed": 2, "meat": 14, "breed": 0.35, "litter": [1, 3], "description": "不下蛋，但生得飞快。" },
-        { "id": "goat", "name": "山羊", "icon": "🐐", "feed": 6, "product": { "name": "羊奶", "icon": "🥛", "food": 18 }, "meat": 45, "breed": 0.06, "litter": [1, 1], "description": "每天产奶，什么草都吃。" },
-        { "id": "pig", "name": "猪", "icon": "🐖", "feed": 8, "meat": 120, "breed": 0.1, "litter": [1, 3], "description": "吃得多，一头够全营地吃好几天。" }
+        { "id": "goat", "name": "山羊", "icon": "🐐", "minLevel": 3, "feed": 6, "product": { "name": "羊奶", "icon": "🥛", "food": 18 }, "meat": 45, "breed": 0.06, "litter": [1, 1], "description": "每天产奶，什么草都吃。" },
+        { "id": "pig", "name": "猪", "icon": "🐖", "minLevel": 6, "feed": 8, "meat": 120, "breed": 0.1, "litter": [1, 3], "description": "吃得多，一头够全营地吃好几天。" },
+        { "id": "crucian", "name": "鲫鱼", "icon": "🐟", "space": "pond", "feed": 1, "meat": 8, "breed": 0.4, "litter": [2, 4], "description": "好养，生得快，鱼塘刚挖好就能养。" },
+        { "id": "grass_carp", "name": "草鱼", "icon": "🐠", "space": "pond", "minLevel": 3, "feed": 2, "meat": 22, "breed": 0.2, "litter": [1, 3], "description": "吃草长得快，鱼池够大才养得下。" },
+        { "id": "catfish", "name": "鲶鱼", "icon": "🐡", "space": "pond", "minLevel": 5, "feed": 3, "meat": 40, "breed": 0.12, "litter": [1, 2], "description": "个头大，要有像样的鱼塘。" }
     ]
 }

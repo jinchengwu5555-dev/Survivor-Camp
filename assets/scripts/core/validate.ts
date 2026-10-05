@@ -407,6 +407,11 @@ export function validateConfig(config: GameConfig): string[] {
             if (a.feed <= 0 || a.meat <= 0) errors.push(`${where}：feed、meat 必须大于 0`);
             if (a.breed < 0 || a.breed > 1) errors.push(`${where}：breed 要在 0～1 之间`);
             if (a.litter[0] < 1 || a.litter[1] < a.litter[0]) errors.push(`${where}：litter 写错了`);
+            const home = a.space ?? 'pen';
+            if (home !== 'pen' && home !== 'pond') errors.push(`${where}：space 只能是 pen / pond`);
+            const building = config.buildings.find((b) => b.id === home);
+            if (!building) errors.push(`${where}：没有 ${home} 建筑`);
+            else if ((a.minLevel ?? 1) > (building.scaling?.maxLevel ?? building.levels.length)) errors.push(`${where}：minLevel 超过了 ${home} 的最高等级`);
         }
         for (const id of Object.keys(f.starterSeeds)) checkProp('开局种子', id);
         for (const se of Object.keys(f.seasonGrowth)) if (!config.seasons.some((x) => x.id === se)) errors.push(`farming.json：未知季节 ${se}`);

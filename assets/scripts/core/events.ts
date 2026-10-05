@@ -1,5 +1,7 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
+import { admitCandidate, candidateInfo } from './recruits';
+import { takeVisitor } from './visitors';
 import { addAnimals, removeAnimal } from './farming';
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
 import { addResource, bedCount, canAfford, hqLevel, pay } from './economy';
@@ -167,9 +169,14 @@ export function resolveChoice(config: GameConfig, state: GameState, choiceIndex:
     addStat(state, 'events_resolved');
 
     const outcome = pickWeighted(state, choice.outcomes);
-    if (!outcome) return { ok: true, effectsText: describeChanges(config, state, before) };
+    if (!outcome) {
+        state.visitors = undefined;
+        return { ok: true, effectsText: describeChanges(config, state, before) };
+    }
     addLog(state, now, `【${event.title}】${outcome.text}`);
     for (const effect of outcome.effects) applyEffect(config, state, effect, now, `事件：${event.title}`);
+    // 没收留的人就走了
+    state.visitors = undefined;
     return { ok: true, outcomeText: outcome.text, effectsText: describeChanges(config, state, before) };
 }
 
@@ -214,9 +221,21 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             addLog(state, now, `${name}加入了营地。`);
             break;
         }
-        case 'addWanderer':
-            addWanderer(config, state, now, effect.specialty);
+        case 'addWanderer': {
+            // 事件卡上已经展示过的人（visitors.ts）；没有就当场生成
+            const visitor = takeVisitor(state);
+            if (!visitor) {
+                addWanderer(config, state, now, effect.specialty);
+                break;
+            }
+            const name = candidateInfo(config, visitor).name;
+            if (state.survivors.length >= bedCount(config, state)) {
+                addLog(state, now, `${name}想留下来，但营地没有空床位了。`);
+                break;
+            }
+            admitCandidate(config, state, visitor, now);
             break;
+        }
         case 'discoverSite':
             discoverSite(config, state, effect.site, now);
             break;

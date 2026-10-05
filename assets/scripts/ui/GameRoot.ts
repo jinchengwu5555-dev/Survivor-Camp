@@ -44,7 +44,7 @@ import { survivorInfo, survivorName } from '../core/roster';
 import { currentSite } from '../core/siteMods';
 import { relocationBlocker, relocationFoodCost, relocationTargets } from '../core/sites';
 import { expandConfig } from '../core/configExpand';
-import { realSeconds } from '../core/clock';
+import { realSeconds, timeOfDay } from '../core/clock';
 import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { GuideHint, nextHint } from '../core/guide';
 import { eventSpeaker, portraitOf } from '../core/portrait';
@@ -74,7 +74,7 @@ import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup, farmTodos } from '../core/badges';
 import { latestEntries } from '../core/diary';
 import { todayIntel } from '../core/intel';
-import { animalDef, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
+import { AnimalSpace, SPACE_NAMES, spaceOf, animalDef, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
 import { formatProps, propBlocker, propCount, propDef, propReward, treasureValue } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
@@ -87,7 +87,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.4.3 竖屏适配';
+const GAME_VERSION = 'v2.5 试玩反馈';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -108,6 +108,8 @@ const MAP_TOP = HUD_BOTTOM;
 const MAP_BOTTOM = -150;
 /** 闲聊气泡在营地地图上显示多久（游戏分钟） */
 const CHAT_SHOW_MINUTES = 4;
+/** 本地设置：闲聊气泡开关 */
+const CHAT_SETTING_KEY = 'doomsday_camp_chat_bubbles';
 const CHAT_KIND_ICON: Record<string, string> = { chat: '💬', gossip: '🤫', joke: '😂', warm: '💛', worry: '😟', quarrel: '💢' };
 const MAP_WIDTH = 720;
 const MAP_HEIGHT = MAP_TOP - MAP_BOTTOM;
@@ -260,6 +262,7 @@ export class GameRoot extends Component {
                 if (online && !this.config) this.loadConfig();
                 this.render();
             });
+            this.chatBubbles = this.storage.getItem(CHAT_SETTING_KEY) !== '0';
             this.loadFont();
             this.connect();
         } catch (e) {
@@ -594,6 +597,10 @@ export class GameRoot extends Component {
         return this.eventShowing(camp) || this.tab !== 'camp' || this.sheet !== null;
     }
 
+    /** 闲聊气泡：开关（设置里改，存在本地）、是否展开 */
+    private chatBubbles = true;
+    private chatExpanded = false;
+
     /** 稀有品（出大红）的数量：背包里的 + 等着装包的；变多了就全屏提示 */
     private rareCounts: Record<string, number> | null = null;
 
@@ -671,11 +678,9 @@ export class GameRoot extends Component {
         this.mapLayer!.destroyAllChildren();
         this.target = this.content;
         if (this.sheetOpen(camp)) {
-            // 面板：状态栏和导航之间，可以上下拖动（探索页是地图，不滚动）
-            const townMap = this.tab === 'explore' && !this.eventShowing(camp);
+            // 面板：状态栏和导航之间，可以上下拖动（探索页上面是地图，往上拖能看到下面选中地点的详情和出发按钮）
             this.viewTop = SHEET_TOP;
-            this.viewHeight = townMap ? 0 : SHEET_TOP - NAV_TOP;
-            if (townMap) this.scrollY = 0;
+            this.viewHeight = SHEET_TOP - NAV_TOP;
             this.cursorY = SHEET_TOP;
             this.renderSheet(camp, now);
         } else {
@@ -703,14 +708,15 @@ export class GameRoot extends Component {
         drawPanel(bar.addComponent(Graphics), 720, height, COLORS.panel, 0);
         const { season, dayInSeason } = seasonAt(config, state, now);
         const site = currentSite(config, state);
-        const line = (text: string, size: number, color: Color, y: number) =>
-            addLabel(bar, text, size, color, { width: WIDTH, align: 'left' }).node.setPosition(0, y - centerY);
-        line(`${GAME_VERSION}${camp.paused ? '   ⏸ 已暂停' : ''}`, 14, camp.paused ? LOSE : DIM, 630);
-        // 右上角：设置（暂停、重新开始、玩法说明）
-        const gear = makeNode('Settings', bar, 70, 30);
-        gear.setPosition(WIDTH / 2 - 35, 640 - centerY);
-        drawPanel(gear.addComponent(Graphics), 70, 30, this.sheet === 'settings' ? COLORS.highlight : COLORS.button, 8, ACCENT, 2);
-        addLabel(gear, camp.paused ? '▶' : '⚙️', 18, TEXT, { width: 66 });
+        // 左边的文字只占到右边按钮前面，按钮不会压住文字
+        const line = (text: string, size: number, color: Color, y: number, width = WIDTH) =>
+            addLabel(bar, text, size, color, { width, align: 'left' }).node.setPosition(-WIDTH / 2 + width / 2, y - centerY);
+        line(`${GAME_VERSION}${camp.paused ? '   ⏸ 已暂停' : ''}${camp.speed > 1 ? `   ⏩×${camp.speed}` : ''}`, 14, camp.paused ? LOSE : DIM, 628, WIDTH - 260);
+        // 右上角：设置（暂停、倍速、重新开始、玩法说明），放在背包左边，不贴着屏幕顶
+        const gear = makeNode('Settings', bar, 56, 46);
+        gear.setPosition(WIDTH / 2 - 158, 603 - centerY);
+        drawPanel(gear.addComponent(Graphics), 56, 46, this.sheet === 'settings' ? COLORS.highlight : COLORS.button, 10, ACCENT, 2);
+        addLabel(gear, camp.paused ? '▶' : '⚙️', 22, TEXT, { width: 52 });
         gear.on(Node.EventType.TOUCH_END, () => {
             punch(gear);
             this.tab = 'camp';
@@ -719,9 +725,29 @@ export class GameRoot extends Component {
             this.resetScroll();
             this.render();
         });
-        line(`第 ${currentDay(config, state, now)} 天  ${season.icon}${season.name}·第${dayInSeason}天   ${site?.icon ?? ''}${site?.name ?? ''}`, 26, ACCENT, 603);
+        // 第几天、几点、离入夜还有多久（入夜 = 尸潮可能来的时候）
+        const tod = timeOfDay(config, state, now);
+        const clock = `${String(tod.hour).padStart(2, '0')}:${String(tod.minute).padStart(2, '0')}`;
+        const nightSoon = tod.nightInMs !== null && tod.nightInMs < 15 * 60_000;
+        const nightText = tod.nightInMs === null ? '' : tod.nightInMs <= 0 ? '  🌙 夜里' : `  🌙 ${formatTime(realSeconds(config, tod.nightInMs))} 后入夜`;
+        line(`第 ${currentDay(config, state, now)} 天  🕗${clock}${nightText}`, 24, nightSoon ? LOSE : ACCENT, 603, WIDTH - 196);
         line(this.resourceLine(config, camp, now), 20, TEXT, 570);
-        line(`士气 ${Math.round(morale(state))}  安全 ${safety(config, state)}  人数 ${state.survivors.length}/${bedCount(config, state)}  战斗 Lv${survivorBattleLevel(config, state)}  🏆${this.records.bestDays} 天`, 18, DIM, 538);
+        line(`${season.icon}${season.name}·第${dayInSeason}天 ${site?.icon ?? ''}${site?.name ?? ''}  士气 ${Math.round(morale(state))}  安全 ${safety(config, state)}  人数 ${state.survivors.length}/${bedCount(config, state)}  战斗 Lv${survivorBattleLevel(config, state)}  🏆${this.records.bestDays}天`, 17, DIM, 538, WIDTH - 230);
+
+        // 跳到晚上（数值按钮左边）
+        const skip = makeNode('Skip', bar, 100, 34);
+        skip.setPosition(WIDTH / 2 - 172, 538 - centerY);
+        drawPanel(skip.addComponent(Graphics), 100, 34, nightSoon ? COLORS.highlight : COLORS.button, 8, ACCENT, 2);
+        addLabel(skip, tod.nightInMs === null ? '⏩ 下一天' : '⏩ 跳到晚上', 16, TEXT, { width: 96 });
+        skip.on(Node.EventType.TOUCH_END, () => {
+            if (this.eventShowing(camp)) return;
+            punch(skip);
+            const res = camp.skipToNight(camp.now);
+            if (res.ok) this.effect(`🌙 ${res.message ?? ''}`, ACCENT, 30);
+            else this.showToast(res.reason);
+            this.save();
+            this.render();
+        });
 
         // 右下角：全部数值
         const statsBtn = makeNode('Stats', bar, 110, 34);
@@ -848,18 +874,24 @@ export class GameRoot extends Component {
             addLabel(pill, `🌙 ${formatTime(left)} 后入夜：${chance}% 会有${name}`, left <= 15 ? 21 : 18, LOSE, { width: 440 });
         }
 
-        // 营地闲聊：最近一段对话显示成气泡
+        // 营地闲聊：默认只显示一条细细的气泡（不挡建筑），点一下展开整段，再点收起；设置里可以关掉
         const talk = (state.chatter ?? [])[(state.chatter ?? []).length - 1];
-        if (talk && now - talk.at < CHAT_SHOW_MINUTES * 60_000) {
-            const lines = talk.lines.slice(0, 4);
-            const h = 16 + lines.length * 28;
-            const bubble = makeNode('Chat', map, 640, h);
-            bubble.setPosition(0, MAP_HEIGHT / 2 - 64 - h / 2);
-            drawPanel(bubble.addComponent(Graphics), 640, h, new Color(250, 246, 232, 225), 14, new Color(120, 100, 70), 2);
+        if (this.chatBubbles && talk && now - talk.at < CHAT_SHOW_MINUTES * 60_000) {
             const tag = CHAT_KIND_ICON[talk.kind] ?? '💬';
-            lines.forEach((l, i) => {
-                const who = survivorName(config, state, l.who);
-                addLabel(bubble, `${i === 0 ? tag : '　'} ${who}：${l.text}`, 18, new Color(50, 40, 30), { width: 620, align: 'left' }).node.setPosition(0, h / 2 - 22 - i * 28);
+            const all = talk.lines.slice(0, 4).map((l, i) => `${i === 0 ? tag : '　'} ${survivorName(config, state, l.who)}：${l.text}`);
+            const lines = this.chatExpanded ? all : [`${all[0]}${all.length > 1 ? '  ▼' : ''}`];
+            const h = 12 + lines.length * 26;
+            const bw = this.chatExpanded ? 640 : 520;
+            const bubble = makeNode('Chat', map, bw, h);
+            bubble.setPosition(0, MAP_HEIGHT / 2 - 62 - h / 2);
+            drawPanel(bubble.addComponent(Graphics), bw, h, new Color(250, 246, 232, this.chatExpanded ? 230 : 170), 12, new Color(120, 100, 70), 2);
+            lines.forEach((text, i) => {
+                addLabel(bubble, text, 17, new Color(50, 40, 30), { width: bw - 20, align: 'left' }).node.setPosition(0, h / 2 - 19 - i * 26);
+            });
+            bubble.on(Node.EventType.TOUCH_END, () => {
+                if (this.dragDistance > DRAG_THRESHOLD) return;
+                this.chatExpanded = !this.chatExpanded;
+                this.render();
             });
         }
 
@@ -883,7 +915,7 @@ export class GameRoot extends Component {
         const diaryEntries = state.diary ?? [];
         if (diaryEntries.length > 0) {
             const book = makeNode('Diary', map, 110, 64);
-            book.setPosition(255, -245);
+            book.setPosition(-100, -300);
             drawPanel(book.addComponent(Graphics), 106, 60, new Color(80, 64, 44, 230), 12, new Color(180, 150, 110), 2);
             addLabel(book, '📖', 26, TEXT, { width: 100 }).node.setPosition(0, 10);
             addLabel(book, `日记 ${diaryEntries.length}`, 16, TEXT, { width: 100 }).node.setPosition(0, -18);
@@ -1203,6 +1235,39 @@ export class GameRoot extends Component {
             this.render();
         }, LEFT, 'normal', 24, 56);
         this.gap(10);
+        // 倍速：时间走得更快（尸潮、产出、探索都一起变快）
+        this.text(`⏩ 时间倍速：现在 ×${camp.speed}（加速玩的天数，排行榜可能按真实时长截断）`, 20, DIM);
+        const third = (WIDTH - 20) / 3;
+        const speedRow = this.cursorY;
+        [1, 2, 4].forEach((sp, i) => {
+            this.cursorY = speedRow;
+            this.button(`×${sp}`, third, () => {
+                camp.setSpeed(sp);
+                this.save();
+                this.render();
+            }, LEFT + i * (third + 10), camp.speed === sp ? 'highlight' : 'normal', 24, 50);
+        });
+        this.gap(10);
+        this.button('🌙 直接跳到晚上', WIDTH, () => {
+            const res = camp.skipToNight(camp.now);
+            if (res.ok) {
+                this.sheet = null;
+                this.effect(`🌙 ${res.message ?? ''}`, ACCENT, 30);
+            } else this.showToast(res.reason);
+            this.save();
+            this.render();
+        }, LEFT, 'normal', 24, 56);
+        this.gap(10);
+        this.button(this.chatBubbles ? '💬 营地闲聊气泡：开（点一下关掉）' : '💬 营地闲聊气泡：关（点一下打开）', WIDTH, () => {
+            this.chatBubbles = !this.chatBubbles;
+            try {
+                this.storage.setItem(CHAT_SETTING_KEY, this.chatBubbles ? '1' : '0');
+            } catch {
+                // 存不了也没关系
+            }
+            this.render();
+        }, LEFT, 'normal', 22, 52);
+        this.gap(10);
         this.button(camp.paused ? '▶ 继续游戏' : '⏸ 暂停游戏（时间停住，尸潮也不会来）', WIDTH, () => {
             camp.setPaused(!camp.paused, Date.now());
             this.save();
@@ -1494,6 +1559,15 @@ export class GameRoot extends Component {
         bodyLabel.node.setPosition(-WIDTH / 2 + 160 + textWidth / 2, cardHeight / 2 - 70 - textHeight / 2);
 
         this.cursorY = top - cardHeight - 16;
+        // 有人上门：先看看他们的表面信息（隐藏的毛病看不出来，只有一个印象）
+        const visitors = state.visitors?.event === event.id ? state.visitors.people : [];
+        for (const v of visitors) {
+            const info = candidateInfo(config, v);
+            this.text(`🚪 ${info.name} · ${info.title} · 专长：${SPECIALTY_NAMES[info.specialty] ?? '—'}${info.traits.length ? ` · 性格：${info.traits.join('、')}` : ''}`, 20, ACCENT);
+            const looks = quirksOf(config, v.survivor).map((q) => (q.hidden ? `❓${q.hint}` : `${q.icon}${q.name}（${q.hint}）`));
+            this.text(`　印象：${looks.length ? looks.join('；') : '看起来是个普通人'}`, 18, DIM);
+        }
+        if (visitors.length) this.gap(6);
         event.choices.forEach((choice, i) => {
             const affordable = canAfford(state, choice.cost);
             this.button(choice.text, WIDTH, () => {
@@ -1597,7 +1671,7 @@ export class GameRoot extends Component {
             this.button(`🔨 升级中 ${formatTime(left)} · 看广告加速`, WIDTH, () => this.speedUp(def.id), LEFT, this.isGuided(`speedup:${def.id}`) ? 'highlight' : 'normal', 24, 56);
         } else if (next) {
             const blocker = upgradeBlocker(config, state, def.id);
-            const label = `${b.level === 0 ? '建造' : '升级'}  ${formatCost(config, next.cost)}`;
+            const label = `${b.level === 0 ? '建造' : '升级'}  ${formatCostHave(config, state.resources, next.cost)}`;
             const style: ButtonStyle = blocker !== null ? 'disabled' : this.isGuided(`upgrade:${def.id}`) ? 'highlight' : 'normal';
             this.button(blocker ? `${label}（${blocker}）` : label, WIDTH, () => {
                 const res = camp.upgrade(def.id, camp.now);
@@ -1610,7 +1684,8 @@ export class GameRoot extends Component {
         }
         this.gap(8);
         if (def.id === 'garden' && b.level > 0) this.renderGarden(camp, now);
-        if (def.id === 'pen' && b.level > 0) this.renderPen(camp, now);
+        if (def.id === 'pen' && b.level > 0) this.renderPen(camp, now, 'pen');
+        if (def.id === 'pond' && b.level > 0) this.renderPen(camp, now, 'pond');
     }
 
     /** 菜园：每块地种着什么、还要多久；收获；用种子种下 */
@@ -1677,25 +1752,40 @@ export class GameRoot extends Component {
     }
 
     /** 畜栏：养了什么、每天吃多少；收蛋、照看、宰杀 */
-    private renderPen(camp: CampGame, now: number): void {
+    private renderPen(camp: CampGame, now: number, space: AnimalSpace = 'pen'): void {
         const { config, state } = camp;
         const f = config.farming;
         const farm = state.farm;
         if (!f || !farm) return;
-        const total = Object.values(farm.animals).reduce((a, b) => a + b, 0);
-        this.text(`—— 畜栏 ${total}/${penCapacity(config, state)} ——`, 22, DIM);
+        const place = SPACE_NAMES[space];
+        const level = state.buildings[space]?.level ?? 0;
+        const kinds = f.animals.filter((a) => spaceOf(a) === space);
+        const mine = Object.entries(farm.animals).filter(([id, n]) => n > 0 && spaceOf(animalDef(config, id)) === space);
+        const total = mine.reduce((sum, [, n]) => sum + n, 0);
+        this.text(`—— ${place} ${total}/${penCapacity(config, state, space)} ——`, 22, DIM);
+        // 能养什么：先养小的，升级后能养大的
+        this.text(
+            `能养：${kinds.map((a) => (level >= (a.minLevel ?? 1) ? `${a.icon}${a.name}` : `🔒${a.name}(${a.minLevel}级)`)).join('  ')}`,
+            18,
+            TEXT,
+        );
         if (total === 0) {
-            this.text('还没有牲口。打猎时有机会活捉（走失的鸡、野兔、山羊……），商人有时也卖小鸡、猪崽。', 20, DIM);
+            this.text(
+                space === 'pond'
+                    ? '还没有鱼。钓鱼时有机会带活鱼回来（鲫鱼、草鱼、鲶鱼），商人和河边码头有鱼苗。'
+                    : '还没有牲口。打猎时有机会活捉（走失的鸡、野兔、山羊……），商人有时也卖小鸡、兔子。',
+                20,
+                DIM,
+            );
         } else {
             const feed = dailyFeed(config, state);
-            this.text(`每天换日时喂一次：🍞${feed}${farm.hunger > 0 ? `  ⚠️ 已经饿了 ${farm.hunger} 天，再饿下去会饿死！` : ''}`, 20, farm.hunger > 0 ? LOSE : TEXT);
+            this.text(`每天换日时喂一次（畜栏和鱼塘一起）：🍞${feed}${farm.hunger > 0 ? `  ⚠️ 已经饿了 ${farm.hunger} 天，再饿下去会饿死！` : ''}`, 20, farm.hunger > 0 ? LOSE : TEXT);
             const growth = foodGrowth(config, state);
-            for (const [id, n] of Object.entries(farm.animals)) {
-                const a = animalDef(config, id);
-                if (!a || n <= 0) continue;
+            for (const [id, n] of mine) {
+                const a = animalDef(config, id)!;
                 const product = a.product ? `每只每天 ${a.product.icon}${a.product.name}` : '不产东西';
-                this.text(`${a.icon}${a.name} ×${n}  · 每只吃🍞${a.feed} · ${product} · 两只以上会生崽`, 20);
-                this.button(`🔪 宰一只${a.name}（🍞+${Math.round(a.meat * growth)}）`, WIDTH, () => {
+                this.text(`${a.icon}${a.name} ×${n}  · 每只吃🍞${a.feed} · ${product} · 两只以上会${space === 'pond' ? '产卵' : '生崽'}`, 20);
+                this.button(`${space === 'pond' ? '🎣 捞一条' : '🔪 宰一只'}${a.name}（🍞+${Math.round(a.meat * growth)}）`, WIDTH, () => {
                     const res = camp.slaughter(id, camp.now);
                     if (res.ok) this.effect(`🔪 ${res.message}`, ACCENT);
                     else this.showToast(res.reason);
@@ -1704,14 +1794,25 @@ export class GameRoot extends Component {
                 this.gap(4);
             }
         }
-        const produce = produceFood(config, state);
-        this.button(produce > 0 ? `🥚 收鸡蛋、羊奶（🍞+${produce}）` : '🥚 还没有可以收的', WIDTH, () => {
-            const res = camp.collectProduce(camp.now);
-            if (res.ok) this.effect(`🧺 ${res.message}`, WIN, 24);
-            else this.showToast(res.reason);
-            this.render();
-        }, LEFT, produce > 0 ? 'highlight' : 'disabled', 22, 52);
-        this.gap(6);
+        if (space !== 'pen') {
+            this.gap(8);
+            return;
+        }
+        // 收蛋 / 奶：只有养了会下蛋、产奶的牲口才显示
+        if (mine.some(([id]) => animalDef(config, id)?.product)) {
+            const produce = produceFood(config, state);
+            const items = Object.entries(farm.produce)
+                .filter(([, n]) => n > 0)
+                .map(([id, n]) => `${animalDef(config, id)?.product?.icon ?? ''}${animalDef(config, id)?.product?.name ?? ''}×${n}`)
+                .join(' ');
+            this.button(produce > 0 ? `🧺 收 ${items}（🍞+${produce}）` : '🧺 还没有可以收的（吃饱了每天换日时下蛋、产奶）', WIDTH, () => {
+                const res = camp.collectProduce(camp.now);
+                if (res.ok) this.effect(`🧺 ${res.message}`, WIN, 24);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, produce > 0 ? 'highlight' : 'disabled', 22, 52);
+            this.gap(6);
+        }
         const petBlock = petBlocker(config, state, now);
         this.button(petBlock ? `🤗 照看牲口（${petBlock}）` : `🤗 照看牲口（全员心情 +${f.petMood}，每天一次）`, WIDTH, () => {
             const res = camp.petAnimals(camp.now);
@@ -2368,7 +2469,30 @@ export class GameRoot extends Component {
         drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
         addLabel(title, `🗺️ ${townName(state)} · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
 
-        // 下方：今日情报 + 选中地点的详情
+        // 地图底部：选中的地点 / 分区 + “去出发”按钮（点一下把下面的详情卷上来）
+        const picked = this.selectedDistrict
+            ? (() => {
+                  const d = districtDef(config, this.selectedDistrict!);
+                  return d ? `${d.icon} ${districtName(state, d)}：勘察 / 打猎` : null;
+              })()
+            : this.selectedLocation
+              ? (() => {
+                    const l = config.locations.find((x) => x.id === this.selectedLocation);
+                    return l && statusOf.get(l.id) !== 'rumor' ? `${l.icon ?? '📍'} ${locationName(config, state, l)}` : null;
+                })()
+              : null;
+        const actionBar = makeNode('PickedBar', map, MAP_WIDTH - 40, 56);
+        actionBar.setPosition(0, -TOWN_HEIGHT / 2 + 40);
+        drawPanel(actionBar.addComponent(Graphics), MAP_WIDTH - 40, 56, new Color(20, 22, 20, 225), 14, picked ? ACCENT : DIM, 2);
+        addLabel(actionBar, picked ? `${picked}   👇 点这里去出发` : '点地图上的地点或分区名牌，选一个要去的地方', 20, picked ? ACCENT : DIM, { width: MAP_WIDTH - 60 });
+        actionBar.on(Node.EventType.TOUCH_END, () => {
+            if (this.dragDistance > DRAG_THRESHOLD || !picked) return;
+            punch(actionBar);
+            this.scrollY = TOWN_HEIGHT - 40;
+            this.applyScroll();
+        });
+
+        // 下方：今日情报 + 选中地点的详情（往上拖，或者点上面的条）
         this.cursorY = TOWN_CENTER_Y - TOWN_HEIGHT / 2 - 8;
         const intel = todayIntel(config, state, now);
         if (intel.length) {
@@ -2477,16 +2601,17 @@ export class GameRoot extends Component {
             const tier = locationTier(config, loc);
             const d = districtAt(config, loc.map);
             this.text(`${d ? `${d.icon}${districtName(state, d)} · ` : ''}要${TIER_NAMES[tier]}才能到`, 18, tier > maxTierOwned(config, state) ? LOSE : DIM);
-            this.renderSquadPicker(camp, now);
-            this.renderVehiclePicker(camp, tier, squad);
             const guided = this.isGuided(`explore:${loc.id}`);
-            this.button(`${guided ? '👉 ' : ''}派出小队（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
+            this.button(`${guided ? '👉 ' : ''}⚔️ 出发探索（${names.join('、') || '没有能出发的人'}）`, WIDTH, () => {
                 const res = camp.explore(loc.id, camp.now, squad, this.selectedVehicle);
                 if (res.ok) this.pickedSquad = null;
                 if (res.ok) this.effect(`🚶 小队出发前往${locationName(config, state, loc)}`, ACCENT);
                 else this.showToast(res.reason);
                 this.render();
-            }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 22, 52);
+            }, LEFT, squad.length === 0 ? 'disabled' : guided ? 'highlight' : 'normal', 24, 56);
+            this.text('下面可以自己挑队员、选交通工具（不挑就自动编队）：', 17, DIM);
+            this.renderSquadPicker(camp, now);
+            this.renderVehiclePicker(camp, tier, squad);
         }
     }
 
@@ -2930,6 +3055,16 @@ function pieceColor(p: LootPiece): Color {
 function sleepText(sleep: number | undefined): string {
     const v = Math.round(sleep ?? 100);
     return `${v < 50 ? '🥱' : '⚡'} 精力 ${v}`;
+}
+
+/** 花费和现有：🪵19/150 ⚙️23/60（不够的打个 ✗） */
+function formatCostHave(config: GameConfig, have: Record<string, number>, cost: ResourceBag): string {
+    const parts = RESOURCE_IDS.filter((id) => cost[id]).map((id) => {
+        const icon = config.resources.find((r) => r.id === id)?.icon ?? id;
+        const own = Math.floor(have[id] ?? 0);
+        return `${icon}${own}/${cost[id]}${own < cost[id]! ? '✗' : ''}`;
+    });
+    return parts.length > 0 ? parts.join(' ') : '免费';
 }
 
 function formatCost(config: GameConfig, cost: ResourceBag): string {

@@ -18,6 +18,8 @@ export interface ClockState {
     onlineMs: number;
     /** 玩家按了暂停：游戏时间不走，也不算离线收益 */
     paused?: boolean;
+    /** 玩家选的倍速（设置里的 ×1 / ×2 / ×4），不写 = 1 */
+    speed?: number;
 }
 
 export interface ClockStep {
@@ -38,7 +40,7 @@ export function advanceClock(config: GameConfig, state: GameState, realNow: numb
     if (c.paused) {
         // 暂停中：时间不走；暂停期间也不算离线（不然暂停挂着就能白拿离线收益）
     } else if (gap > 0 && gap <= onlineGapSeconds * 1000) {
-        c.gameTime += gap * onlineTimeScale;
+        c.gameTime += gap * onlineTimeScale * (c.speed ?? 1);
         c.onlineMs += gap;
     } else if (gap > 0) {
         offlineMs = Math.max(0, realNow - c.maxRealAt);
@@ -51,4 +53,25 @@ export function advanceClock(config: GameConfig, state: GameState, realNow: numb
 /** 游戏时间的毫秒数换算成在线的真实秒数（界面倒计时用） */
 export function realSeconds(config: GameConfig, gameMs: number): number {
     return Math.max(0, Math.ceil(gameMs / config.balance.clock.onlineTimeScale / 1000));
+}
+
+/**
+ * 现在几点（给界面显示）：尸潮在晚上 22:00 来，按“离下一次尸潮还有多久”倒推时钟；
+ * 尸潮还没开始时按天的进度算（一天结束是 22:00）。nightInMs = 离入夜还有多少游戏毫秒（没有尸潮安排时为 null）。
+ */
+export function timeOfDay(config: GameConfig, state: GameState, now: number): { hour: number; minute: number; nightInMs: number | null } {
+    const interval = config.balance.raidIntervalMinutes * 60_000;
+    const dayMs = config.balance.dayLengthMinutes * 60_000;
+    const scheduled = state.nextRaidAt - now <= interval * 1.5 && state.nextRaidAt > now - interval;
+    let fraction: number;
+    let nightInMs: number | null = null;
+    if (scheduled) {
+        const remaining = Math.max(0, Math.min(interval, state.nextRaidAt - now));
+        fraction = 1 - remaining / interval;
+        nightInMs = remaining;
+    } else {
+        fraction = (((now - state.createdAt) % dayMs) + dayMs) % dayMs / dayMs;
+    }
+    const minutes = Math.floor((22 * 60 + fraction * 24 * 60) % (24 * 60));
+    return { hour: Math.floor(minutes / 60), minute: minutes % 60, nightInMs };
 }

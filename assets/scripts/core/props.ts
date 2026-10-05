@@ -5,7 +5,7 @@
 import { completeUpgrades } from './buildings';
 import { finishExpeditionNow, formatBag } from './combat';
 import { grantResources, hqLevel } from './economy';
-import { addAnimals, animalDef, cropOfSeed, penSpace, plant, plantBlocker } from './farming';
+import { addAnimals, animalBlocker, animalDef, cropOfSeed, plant, plantBlocker } from './farming';
 import { fireFlare, flareBlocker } from './familiar';
 import { changeMoodAll } from './mood';
 import { traderPresent } from './trader';
@@ -93,8 +93,7 @@ export function propBlocker(config: GameConfig, state: GameState, id: string, no
         case 'seed':
             return plantBlocker(config, state, cropOfSeed(config, id)?.id ?? '', now);
         case 'animal':
-            if ((state.buildings.pen?.level ?? 0) <= 0) return '还没有畜栏';
-            return penSpace(config, state) > 0 ? null : '畜栏满了';
+            return animalBlocker(config, state, def.animal ?? '');
         default:
             return null;
     }
@@ -163,7 +162,8 @@ export function useProp(config: GameConfig, state: GameState, id: string, now: n
         }
         case 'animal': {
             const n = addAnimals(config, state, def.animal ?? '', def.amount ?? 1, now);
-            message = `${n} 只${animalDef(config, def.animal ?? '')?.name ?? '牲口'}进了畜栏`;
+            const a = animalDef(config, def.animal ?? '');
+            message = `${n} 只${a?.name ?? '牲口'}进了${a?.space === 'pond' ? '鱼塘' : '畜栏'}`;
             break;
         }
         case 'chest': {

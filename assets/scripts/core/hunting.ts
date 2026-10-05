@@ -9,7 +9,7 @@
 import { addResource, hqLevel } from './economy';
 import { gearOf } from './gear';
 import { districtDef, surveyCandidates } from './districts';
-import { addAnimals, animalDef, penSpace } from './farming';
+import { addAnimals, animalBlocker, animalDef } from './farming';
 import { intelMods } from './intel';
 import { districtName } from './names';
 import { nextRandom, pickWeighted } from './rng';
@@ -105,7 +105,7 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
                 const tip = animal.kind === 'fish' ? intel.fish : intel.hunt;
                 if (nextRandom(state) >= cfg.baseChance * hunterSkill(config, state, id, animal.kind) * season * tip) continue;
                 // 畜栏有空位：有机会活捉回去养
-                if (animal.capture && penSpace(config, state) > 0 && nextRandom(state) < animal.capture.chance) {
+                if (animal.capture && !animalBlocker(config, state, animal.capture.animal) && nextRandom(state) < animal.capture.chance) {
                     const n = addAnimals(config, state, animal.capture.animal, 1, at);
                     if (n > 0) {
                         const kept = animalDef(config, animal.capture.animal);
@@ -130,7 +130,7 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
             const g = game.find((x) => x.id === id)!;
             return `${g.icon}${g.name}${n > 1 ? `×${n}` : ''}`;
         });
-        addLog(state, at, `🏹 去${d.icon}${districtName(state, d)}打猎的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : captured.length ? '' : '空手而归。'}${captured.length ? `活捉了${captured.join('、')}，关进了畜栏！` : ''}${hurt.length ? `${hurt.join('，')}。` : ''}`);
+        addLog(state, at, `🏹 去${d.icon}${districtName(state, d)}打猎的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : captured.length ? '' : '空手而归。'}${captured.length ? `活捉了${captured.join('、')}，带回去养了！` : ''}${hurt.length ? `${hurt.join('，')}。` : ''}`);
     }
 }
 

@@ -63,5 +63,7 @@
     { "id": "gold_bar", "rare": true, "size": [1, 2], "weight": 2, "name": "金条", "icon": "🟨", "type": "treasure", "reward": { "food": 500, "wood": 300, "parts": 150 }, "description": "银行金库里的金条。末日里不能吃，但总有人愿意拿一车物资来换。" },
     { "id": "military_radio", "rare": true, "size": [2, 2], "weight": 6, "name": "军用电台", "icon": "📡", "type": "treasure", "reward": { "parts": 400, "medicine": 40 }, "description": "还能用的军用电台，拆开全是好零件。" },
     { "id": "generator_core", "rare": true, "size": [2, 2], "weight": 10, "name": "发电机组件", "icon": "⚙️", "type": "treasure", "reward": { "parts": 500, "wood": 200 }, "description": "柴油发电机的核心部件，懂行的人眼睛都会发光。" },
-    { "id": "antibiotics_case", "rare": true, "size": [2, 1], "weight": 3, "name": "一箱抗生素", "icon": "💉", "type": "treasure", "reward": { "medicine": 180 }, "description": "整箱没开封的抗生素。比金子还值钱。" }
+    { "id": "antibiotics_case", "rare": true, "size": [2, 1], "weight": 3, "name": "一箱抗生素", "icon": "💉", "type": "treasure", "reward": { "medicine": 180 }, "description": "整箱没开封的抗生素。比金子还值钱。" },
+    { "id": "fry_bucket", "size": [1, 2], "weight": 3, "name": "一桶鲫鱼苗", "icon": "🪣", "type": "animal", "animal": "crucian", "amount": 4, "description": "一桶活蹦乱跳的鲫鱼苗。放进鱼塘。" },
+    { "id": "carp_fry", "size": [1, 2], "weight": 3, "name": "一桶草鱼苗", "icon": "🐠", "type": "animal", "animal": "grass_carp", "amount": 2, "description": "两条草鱼苗，鱼池（鱼塘 3 级）才养得下。" }
 ]
