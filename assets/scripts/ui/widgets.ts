@@ -70,11 +70,43 @@ export function styleLabel(label: Label, size: number): void {
     label.lineHeight = px + 8;
 }
 
+/**
+ * 自己按宽度插入换行：Cocos 的自动换行在某些字体 / 设备上不生效，长文字会排成一行冲出屏幕。
+ * 中文和全角符号按 1 个字号宽，英文数字按 0.6 个，emoji 按 1.2 个估算，宁可早一点换行。
+ */
+export function wrapText(text: string, width: number, size: number): string {
+    const px = pixelSize(size);
+    const charWidth = (c: string) => {
+        const code = c.codePointAt(0)!;
+        if (code < 0x80) return px * 0.6;
+        if (code >= 0x1f000) return px * 1.2;
+        return px;
+    };
+    const out: string[] = [];
+    for (const para of text.split('\n')) {
+        let line = '';
+        let w = 0;
+        for (const c of para) {
+            const cw = charWidth(c);
+            // 不让中文标点出现在行首
+            if (w + cw > width && line && !'，。、！？；：”）》…'.includes(c)) {
+                out.push(line);
+                line = '';
+                w = 0;
+            }
+            line += c;
+            w += cw;
+        }
+        out.push(line);
+    }
+    return out.join('\n');
+}
+
 /** 在 parent 下放一个文字节点（锚点在中心） */
 export function addLabel(parent: Node, text: string, size: number, color: Color, opts: LabelOptions = {}): Label {
     const node = makeNode('Label', parent, opts.width ?? 600, opts.height ?? size + 10);
     const label = node.addComponent(Label);
-    label.string = text;
+    label.string = opts.wrap ? wrapText(text, (opts.width ?? 600) - 4, size) : text;
     styleLabel(label, size);
     label.color = color;
     label.horizontalAlign =

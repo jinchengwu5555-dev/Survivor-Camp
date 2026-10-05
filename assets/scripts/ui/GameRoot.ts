@@ -81,13 +81,13 @@ import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
-import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch, setUiFont, styleLabel } from './widgets';
+import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch, setUiFont, styleLabel, wrapText } from './widgets';
 import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.4.2 自动启动';
+const GAME_VERSION = 'v2.4.3 竖屏适配';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -2856,7 +2856,7 @@ export class GameRoot extends Component {
         tf.width = width;
         node.setPosition(x, this.cursorY);
         const label = node.addComponent(Label);
-        label.string = str;
+        label.string = wrapText(str, width - 4, size);
         styleLabel(label, size);
         label.color = color;
         label.horizontalAlign = Label.HorizontalAlign.LEFT;
