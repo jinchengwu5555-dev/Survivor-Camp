@@ -13,7 +13,7 @@ import { dailyClaimable } from './daily';
 import { todayIntel } from './intel';
 import { currentDay } from './state';
 import { bestCrop, petBlocker, produceFood, readyPlots } from './farming';
-import { workerSlots } from './economy';
+import { bedCount, workerSlots } from './economy';
 import { relocationTargets } from './sites';
 import { traderPresent } from './trader';
 import { activeScoutSpots } from './scouting';
@@ -74,6 +74,8 @@ export function badgeCounts(config: GameConfig, state: GameState, now: number): 
     const idle = idleSurvivors(state).length;
     const freeSlot = config.buildings.some((b) => workerSlots(config, state, b.id) > workersIn(state, b.id).length);
     if (idle > 0 && freeSlot) counts.survivors += 1;
+    // 门口有人等着，而且现在有空床位了
+    if ((state.candidates ?? []).some((c) => c.waiting) && state.survivors.length < bedCount(config, state)) counts.survivors += 1;
     const canExplore =
         state.expeditions.length === 0 &&
         suggestSquad(config, state).length > 0 &&

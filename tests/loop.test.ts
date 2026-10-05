@@ -3,7 +3,7 @@ import { CampGame } from '../assets/scripts/core/CampGame';
 import { activePickups, pickupKind, pickupReward } from '../assets/scripts/core/pickups';
 import { dailyClaimable, dailyProgress, refreshDaily } from '../assets/scripts/core/daily';
 import { idleSurvivors, workersIn } from '../assets/scripts/core/workers';
-import { economyRates } from '../assets/scripts/core/economy';
+import { economyRates, workerSlots } from '../assets/scripts/core/economy';
 import { DAY, dayStart, loadConfig, MIN, T0 } from './helpers';
 
 function newGame() {
@@ -105,10 +105,11 @@ describe('安排工作', () => {
     it('一键安排：岗位排满，食物不会在减少', () => {
         const game = newGame();
         expect(game.autoAssign(T0).ok).toBe(true);
-        // 开局只有厨房 2 个、废料场 2 个岗位，5 个人里剩 1 个
-        expect(idleSurvivors(game.state)).toHaveLength(1);
+        // 开局只有厨房、废料场、水站的岗位，排满后剩下的人闲着
+        const slots = ['kitchen', 'scrapyard', 'well', 'infirmary'].reduce((n, b) => n + workerSlots(game.config, game.state, b), 0);
+        expect(idleSurvivors(game.state)).toHaveLength(Math.max(0, game.state.survivors.length - slots));
         expect(economyRates(game.config, game.state, T0).net.food).toBeGreaterThan(0);
-        expect(game.autoAssign(T0)).toEqual({ ok: false, reason: '岗位都满了' });
+        expect(game.autoAssign(T0).ok).toBe(false);
     });
 
     it('开始升级会记统计（每日目标用）', () => {

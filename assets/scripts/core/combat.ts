@@ -4,6 +4,7 @@
 // 所有战斗都是按种子自动结算的，战报里保存了完整的 BattleSetup，
 // 界面以后可以用同一个种子把整场战斗重放出来（结果完全一致）。
 
+import { recordWallDamage, wallWear } from './wall';
 import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
 import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
 import { BattleRegistry } from './battle/registry';
@@ -504,6 +505,9 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
     const enemyBonus = raidEnemyBonus(config, state, at) + flareBonus;
     const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
+    // 上一晚没修好的栅栏：带着伤出场（wall.ts）
+    const wear = wallWear(state);
+    if (wear > 0) setup.allies[0] = { ...setup.allies[0], hpRatio: 1 - wear };
     // 死在外面的熟人可能混在尸群里（familiar.ts）
     const familiar = addFamiliar(config, state, setup, Math.max(1, ...setup.enemies.map((e) => e.level ?? 1)), at);
     const carried = equipItems(config, state, setup.allies).map((c) => ({ tag: c.tag, item: c.item.id }));
@@ -551,6 +555,9 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         }
         changeMoodAll(state, -10, '尸群冲破了栅栏', at);
     }
+    // 栅栏的损伤留到下一晚
+    const wallUnit = battle.side('ally').find((u) => u.tag === BARRICADE_UNIT);
+    recordWallDamage(config, state, wallUnit && wallUnit.alive ? wallUnit.hp / wallUnit.stats.maxHp : 0, result === 'lose' || !wallUnit?.alive);
     const defenderIds = pending.setup.allies.map((u) => u.tag).filter((t): t is string => !!t && survivorIds.has(t));
     recordSharedBattle(state, defenderIds);
     const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了', true, undefined, hasMedic(config, state, defenderIds) ? 0.5 : 1);

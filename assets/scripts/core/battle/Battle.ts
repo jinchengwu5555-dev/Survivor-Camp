@@ -22,6 +22,8 @@ export interface UnitSetup {
     spawnAt?: number;
     /** 覆盖最大生命（比如栅栏的生命由营地安全值决定） */
     maxHp?: number;
+    /** 出场时的生命比例（0～1，比如栅栏上次没修好的损伤）；不写 = 满血 */
+    hpRatio?: number;
     /** 调用方自定义标记，会原样放到 BattleUnit.tag 上（营地用它记录幸存者 id） */
     tag?: string;
     /** 额外携带的技能（比如工坊做的燃烧瓶、急救包） */
@@ -241,6 +243,7 @@ export class Battle implements BattleContext {
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
             if (p.setup.hpMult) unit.stats.maxHp = unit.hp = Math.round(unit.stats.maxHp * p.setup.hpMult);
+            if (p.setup.hpRatio !== undefined) unit.hp = Math.max(1, Math.round(unit.stats.maxHp * Math.min(1, p.setup.hpRatio)));
             if (p.setup.atkMult) unit.stats.atk = unit.stats.atk * p.setup.atkMult;
             if (p.setup.range) unit.stats.attackRange = Math.max(unit.stats.attackRange, p.setup.range);
             unit.tag = p.setup.tag;

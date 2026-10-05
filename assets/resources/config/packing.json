@@ -2,6 +2,7 @@
     "handsGrid": [2, 2],
     "bundles": {
         "food": { "amount": 20, "size": [1, 1], "weight": 2 },
+        "water": { "amount": 20, "size": [1, 1], "weight": 3 },
         "wood": { "amount": 25, "size": [2, 1], "weight": 4 },
         "parts": { "amount": 15, "size": [1, 1], "weight": 3 },
         "medicine": { "amount": 8, "size": [1, 1], "weight": 1 },

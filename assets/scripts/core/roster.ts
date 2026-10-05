@@ -206,7 +206,7 @@ export function applyHardship(config: GameConfig, state: GameState, hardshipMinu
     state.hardshipMinutes += hardshipMinutes;
     while (state.hardshipMinutes >= config.balance.hardshipDeathMinutes && state.survivors.length > 0 && !state.gameOver) {
         state.hardshipMinutes -= config.balance.hardshipDeathMinutes;
-        if (!killRandom(config, state, now, '没能熬过饥寒')) break;
+        if (!killRandom(config, state, now, '没能熬过饥渴和寒冷')) break;
     }
 }
 

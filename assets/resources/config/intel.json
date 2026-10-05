@@ -1,6 +1,6 @@
 {
-    "_doc": "今日情报（资料库 R79），见 core/intel.ts。每天给几个分区一条情报，当天派人去（打猎、钓鱼、勘察）收益或危险会变。倍率：hunt 打猎成功率、fish 钓鱼成功率、loot 勘察带回的资源、danger 受伤概率。{d} 是分区名。",
-    "perDay": 2,
+    "_doc": "今日情报（资料库 R79），见 core/intel.ts。每天给几个探索分区或狩猎场一条情报（有 hunt / fish 而没有 loot 的给狩猎场），当天派人去（打猎、钓鱼、勘察）收益或危险会变。倍率：hunt 打猎成功率、fish 钓鱼成功率、loot 勘察带回的资源、danger 受伤概率。{d} 是分区名。",
+    "perDay": 3,
     "kinds": [
         { "id": "game_rich", "icon": "🦌", "text": "有人看见{d}的林子里有动物在跑，今天打猎收获多。", "hunt": 1.6, "needs": "hunt" },
         { "id": "fish_bite", "icon": "🐟", "text": "{d}的水面一直在冒泡，今天鱼特别好钓。", "fish": 1.8, "needs": "fish" },

@@ -1,5 +1,6 @@
 // 打猎和钓鱼：派 1～3 个人去某个区，过一阵带回猎物（食物）。
-// 每个区适合打的东西不一样（districts.json 的 hunting）：公园有野兔野鸭，河边能钓鱼，水库有鹿和野猪……
+// 狩猎场和钓鱼点单独配置（hunting.json，和探索的分区分开）：后院有野兔走失的鸡，湖边河滩能钓鱼，水库有鹿和野猪……
+// 远的猎场要交通工具（tier），有的要指挥部等级（minHq）。
 // 季节有影响（冬天难打），也有危险（野猪、野狗会伤人）。
 // 每个猎人试 triesPerHunter 次，每次成功率 = baseChance × 猎人本事 × 季节。
 //   猎人本事：战士、拾荒者 +15%；拿远程武器 +15%（猎弓这种射程 5 的 +25%）；神枪手天赋 +10%
@@ -8,16 +9,16 @@
 
 import { addResource, hqLevel } from './economy';
 import { gearOf } from './gear';
-import { districtDef, surveyCandidates } from './districts';
+import { surveyCandidates } from './districts';
 import { addAnimals, animalBlocker, animalDef } from './farming';
 import { intelMods } from './intel';
-import { districtName } from './names';
 import { nextRandom, pickWeighted } from './rng';
 import { injureSurvivor, survivorInfo, survivorName } from './roster';
 import { seasonAt } from './seasons';
 import { addLog, addStat } from './state';
 import { talentsOf } from './talents';
-import { ActionResult, DistrictDef, GameAnimalDef, GameConfig, GameState } from './types';
+import { ActionResult, GameAnimalDef, GameConfig, GameState, HuntingGround } from './types';
+import { hqLevel as campHq } from './economy';
 import { pickVehicle, useVehicle } from './vehicles';
 
 export function isHunting(state: GameState, id: string): boolean {
@@ -41,14 +42,29 @@ export function hunterSkill(config: GameConfig, state: GameState, id: string, ki
 }
 
 /** 这个季节这个区能打到的东西 */
-export function huntableGame(config: GameConfig, state: GameState, d: DistrictDef, now: number): GameAnimalDef[] {
+export function huntingGrounds(config: GameConfig): HuntingGround[] {
+    return config.hunting?.grounds ?? [];
+}
+
+export function groundDef(config: GameConfig, id: string): HuntingGround | undefined {
+    return huntingGrounds(config).find((g) => g.id === id);
+}
+
+/** 还没开放的原因（指挥部等级不够）；开放了返回 null */
+export function groundLockReason(state: GameState, g: HuntingGround): string | null {
+    return g.minHq && campHq(state) < g.minHq ? `指挥部 ${g.minHq} 级开放` : null;
+}
+
+export function huntableGame(config: GameConfig, state: GameState, d: HuntingGround, now: number): GameAnimalDef[] {
     const season = seasonAt(config, state, now).season.id;
-    return (d.hunting?.game ?? []).filter((g) => !g.seasons || g.seasons.includes(season));
+    return d.game.filter((g) => !g.seasons || g.seasons.includes(season));
 }
 
 export function huntBlocker(config: GameConfig, state: GameState, districtId: string, hunters: string[], now: number, vehicle?: string): string | null {
-    const d = districtDef(config, districtId);
-    if (!d?.hunting || huntableGame(config, state, d, now).length === 0) return '这里打不到什么';
+    const d = groundDef(config, districtId);
+    if (!d || huntableGame(config, state, d, now).length === 0) return '这个季节这里打不到什么';
+    const locked = groundLockReason(state, d);
+    if (locked) return locked;
     if ((state.hunts ?? []).some((h) => h.district === districtId)) return '已经有人在这里打猎了';
     if (hunters.length === 0) return '没有能派出去的人';
     if (hunters.length > 3) return '打猎最多去 3 个人';
@@ -60,13 +76,13 @@ export function huntBlocker(config: GameConfig, state: GameState, districtId: st
 export function startHunt(config: GameConfig, state: GameState, districtId: string, hunters: string[], now: number, vehicle?: string): ActionResult {
     const blocker = huntBlocker(config, state, districtId, hunters, now, vehicle);
     if (blocker) return { ok: false, reason: blocker };
-    const d = districtDef(config, districtId)!;
+    const d = groundDef(config, districtId)!;
     const v = pickVehicle(config, state, d.tier, vehicle).vehicle;
     useVehicle(state, v);
     for (const s of state.survivors) if (hunters.includes(s.id)) s.assignment = null;
-    const minutes = config.districts?.hunt?.minutes ?? 6;
+    const minutes = d.minutes ?? config.hunting?.minutes ?? 6;
     state.hunts = [...(state.hunts ?? []), { id: state.nextId++, district: d.id, squad: [...hunters], vehicle: v?.id, startedAt: now, returnsAt: now + minutes * (v?.speed ?? 1) * 60_000 }];
-    addLog(state, now, `🏹 ${hunters.map((id) => survivorName(config, state, id)).join('、')}去${d.icon}${districtName(state, d)}打猎了。`);
+    addLog(state, now, `🏹 ${hunters.map((id) => survivorName(config, state, id)).join('、')}去${d.icon}${d.name}${d.fishing ? '钓鱼' : '打猎'}了。`);
     return { ok: true };
 }
 
@@ -83,10 +99,10 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
     const due = (state.hunts ?? []).filter((h) => h.returnsAt <= now);
     if (due.length === 0) return;
     state.hunts = (state.hunts ?? []).filter((h) => h.returnsAt > now);
-    const cfg = config.districts?.hunt ?? { minutes: 6, triesPerHunter: 2, baseChance: 0.4, seasonChance: {} };
+    const cfg = config.hunting ?? { minutes: 6, triesPerHunter: 2, baseChance: 0.4, seasonChance: {} as Record<string, number> };
     const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
     for (const h of due) {
-        const d = districtDef(config, h.district);
+        const d = groundDef(config, h.district);
         const hunters = h.squad.filter((id) => state.survivors.some((s) => s.id === id));
         if (!d || hunters.length === 0) continue;
         const at = h.returnsAt;
@@ -130,7 +146,7 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
             const g = game.find((x) => x.id === id)!;
             return `${g.icon}${g.name}${n > 1 ? `×${n}` : ''}`;
         });
-        addLog(state, at, `🏹 去${d.icon}${districtName(state, d)}打猎的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : captured.length ? '' : '空手而归。'}${captured.length ? `活捉了${captured.join('、')}，带回去养了！` : ''}${hurt.length ? `${hurt.join('，')}。` : ''}`);
+        addLog(state, at, `🏹 去${d.icon}${d.name}${d.fishing ? '钓鱼' : '打猎'}的人回来了：${list.length ? `打到了${list.join('、')}，带回 🍞${food}。` : captured.length ? '' : '空手而归。'}${captured.length ? `活捉了${captured.join('、')}，带回去养了！` : ''}${hurt.length ? `${hurt.join('，')}。` : ''}`);
     }
 }
 

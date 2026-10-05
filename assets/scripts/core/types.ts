@@ -5,8 +5,8 @@ import type { BattleResult, SkillDef, StatusDef, UnitDef } from './battle/types'
 import type { BattleSetup, UnitSetup } from './battle/Battle';
 import type { ClockState } from './clock';
 
-export type ResourceId = 'food' | 'wood' | 'parts' | 'medicine' | 'cans';
-export const RESOURCE_IDS: ResourceId[] = ['food', 'wood', 'parts', 'medicine', 'cans'];
+export type ResourceId = 'food' | 'water' | 'wood' | 'parts' | 'medicine' | 'cans';
+export const RESOURCE_IDS: ResourceId[] = ['food', 'water', 'wood', 'parts', 'medicine', 'cans'];
 
 export type ResourceBag = Partial<Record<ResourceId, number>>;
 
@@ -17,6 +17,8 @@ export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' |
 export interface BalanceDef {
     /** 每个幸存者每分钟吃掉的食物 */
     foodPerSurvivorPerMinute: number;
+    /** 每个人每分钟喝多少水（老配置没有 = 不喝水） */
+    waterPerSurvivorPerMinute?: number;
     /**
      * 在线时钟：游戏时间只在在线时走，1 秒真实时间 = onlineTimeScale 秒游戏时间；
      * 两次心跳间隔超过 onlineGapSeconds 秒就算离线（见 core/clock.ts）
@@ -121,6 +123,8 @@ export interface BalanceDef {
      * 用 unit 战斗单位，生命 / 攻击乘倍率，第 spawnAt 秒出场。打倒就能把遗体带回来安葬。
      */
     familiarZombie?: { delayDays: number; chance: number; unit: string; hpMult: number; atkMult: number; spawnAt: number };
+    /** 栅栏修补：每 1% 损伤要多少木材（再乘 1 + 栅栏等级 × perLevel），损伤最多 maxWear */
+    wallRepair?: { woodPerPercent: number; perLevel: number; maxWear: number };
     /** 信号弹：招来几个人 [最少, 最多]，当晚一定有尸潮，尸潮等级 +raidBonus */
     flare?: { candidates: [number, number]; raidBonus: number };
     nightWatch?: {
@@ -167,6 +171,8 @@ export interface BuildingLevelDef {
     spoilReduction?: number;
     /** 工坊等级：决定能做哪些物品 */
     workshopLevel?: number;
+    /** 不需要工人、每分钟自己产出的资源（水站接雨水） */
+    passive?: ResourceBag;
     /** 菜园：有几块菜地 */
     plots?: number;
     /** 畜栏：能养几只牲口 */
@@ -517,6 +523,8 @@ export interface GameConfig {
     vehicles?: VehicleDef[];
     /** 种菜和养殖（老配置没有） */
     farming?: FarmingConfig;
+    /** 狩猎场和钓鱼点（老配置没有） */
+    hunting?: HuntingConfig;
     /** 今日情报（老配置没有） */
     intel?: IntelConfig;
     /** 伊森的日记（老配置没有） */
@@ -913,6 +921,8 @@ export interface GameState {
     diarySnap?: DiarySnapshot;
     /** 放过信号弹：下一次尸潮一定会来，而且更大（见 core/familiar.ts 的 fireFlare） */
     flare?: boolean;
+    /** 栅栏的损伤（0 = 完好，最多 wallRepair.maxWear）：守夜打坏了留到下一晚，用木材修补（见 core/wall.ts） */
+    wallWear?: number;
     surveyed?: { x: number; y: number; r: number }[];
     districtsCompleted?: string[];
     /** 黄金（见 core/gold.ts；老存档没有 = 0） */
@@ -995,8 +1005,6 @@ export interface DistrictDef {
     drops?: PropDrop[];
     /** 整个区都探索完的一次性奖励 */
     complete?: { resources?: ResourceBag; props?: Record<string, number> };
-    /** 打猎 / 钓鱼：这个区适不适合、能打到什么（见 core/hunting.ts） */
-    hunting?: { rating: string; note: string; game: GameAnimalDef[] };
 }
 
 export interface GameAnimalDef {
@@ -1024,7 +1032,6 @@ export interface DistrictsConfig {
     /** 每个人能背多重 */
     carryPerPerson: number;
     /** 打猎：出去多久、每人试几次、基础成功率、季节影响 */
-    hunt?: { minutes: number; triesPerHunter: number; baseChance: number; seasonChance: Record<string, number> };
     districts: DistrictDef[];
 }
 
@@ -1093,6 +1100,8 @@ export interface CandidateState {
     survivor: SurvivorState;
     intro: string;
     at: number;
+    /** 营地满了，让他在门口等一会儿（不挡界面，有空床位再决定） */
+    waiting?: boolean;
 }
 
 export interface NamesConfig {
@@ -1246,6 +1255,9 @@ export interface CropDef {
     seedsBack: [number, number];
     /** 只有这些季节能露天种（大棚里不限） */
     seasons?: string[];
+    /** 能收几茬（不写 = 1）：收完一茬留在地里接着长 regrowMinutes 分钟，最后一茬才拿回种子 */
+    harvests?: number;
+    regrowMinutes?: number;
     description: string;
 }
 
@@ -1294,6 +1306,8 @@ export interface FarmPlot {
     crop: string;
     plantedAt: number;
     readyAt: number;
+    /** 这一茬收完后还能再收几次 */
+    left?: number;
 }
 
 export interface FarmState {
@@ -1364,4 +1378,30 @@ export interface DiarySnapshot {
     survivors: string[];
     graves: number;
     food: number;
+}
+
+/** 狩猎场 / 钓鱼点（hunting.json），见 core/hunting.ts。和探索的分区分开 */
+export interface HuntingGround {
+    id: string;
+    name: string;
+    icon: string;
+    /** 要什么交通工具（和分区一样：0 走路、1 自行车、2 汽车） */
+    tier: number;
+    /** 指挥部几级才开放 */
+    minHq?: number;
+    rating: string;
+    note: string;
+    /** 主要是钓鱼的地方 */
+    fishing?: boolean;
+    /** 去一趟多少游戏分钟（不写用 hunting.minutes） */
+    minutes?: number;
+    game: GameAnimalDef[];
+}
+
+export interface HuntingConfig {
+    minutes: number;
+    triesPerHunter: number;
+    baseChance: number;
+    seasonChance: Record<string, number>;
+    grounds: HuntingGround[];
 }

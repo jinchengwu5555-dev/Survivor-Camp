@@ -181,16 +181,16 @@ describe('养殖', () => {
 
     it('打猎时能活捉牲口（畜栏有空位才行）', () => {
         const config = loadConfig();
-        config.districts!.hunt!.baseChance = 10;
-        for (const g of config.districts!.districts.find((d) => d.id === 'south_church')!.hunting!.game) {
+        config.hunting!.baseChance = 10;
+        for (const g of config.hunting!.grounds.find((d) => d.id === 'backyards')!.game) {
             if (g.capture) g.capture.chance = 1;
         }
         const game = CampGame.newGame(config, T0, 3);
         game.state.nextRandomEventAt = Number.MAX_SAFE_INTEGER;
         game.state.nextRaidAt = Number.MAX_SAFE_INTEGER;
         game.state.buildings.pen.level = 1;
-        expect(game.hunt('south_church', T0, ['derek', 'toby']).ok).toBe(true);
-        game.tick(T0 + (config.districts!.hunt!.minutes + 1) * MIN);
+        expect(game.hunt('backyards', T0, ['derek', 'toby']).ok).toBe(true);
+        game.tick(T0 + (config.hunting!.minutes + 1) * MIN);
         const caught = Object.values(game.state.farm?.animals ?? {}).reduce((a, b) => a + b, 0);
         expect(caught).toBeGreaterThan(0);
         expect(game.state.stats.animals_captured).toBe(caught);

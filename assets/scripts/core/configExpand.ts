@@ -37,6 +37,7 @@ export function generatedLevel(def: BuildingDef, baseLevel: number, level: numbe
     };
     if (def.id !== 'hq') lv.requiresHq = Math.max(base.requiresHq ?? 0, level);
     if (base.production) lv.production = scaleBag(base.production, g(s.productionGrowth), twoDecimals);
+    if (base.passive) lv.passive = scaleBag(base.passive, g(s.productionGrowth), twoDecimals);
     if (base.storage) lv.storage = scaleBag(base.storage, g(s.storageGrowth), niceRound);
     if (base.safety !== undefined) lv.safety = Math.round(base.safety * g(s.safetyGrowth));
     if (base.beds !== undefined) lv.beds = base.beds + (s.bedsPerLevel ?? 0) * k;

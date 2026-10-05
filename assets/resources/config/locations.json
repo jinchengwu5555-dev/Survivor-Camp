@@ -8,7 +8,7 @@
         "durationMinutes": 3,
         "enemies": [ { "unit": "walker" }, { "unit": "walker" } ],
         "timeLimit": 60,
-        "loot": { "food": 50, "wood": 10 },
+        "loot": { "water": 20, "food": 50, "wood": 10 },
         "drops": [ { "prop": "ration_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.2 }, { "prop": "gasoline", "chance": 0.3 }, { "prop": "waist_pouch", "chance": 0.2 }, { "prop": "seed_potato", "chance": 0.2 } ],
         "discoversSite": "garage",
         "recruitChance": 0.1
@@ -98,7 +98,7 @@
             { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "runner", "level": 2, "spawnAt": 6 }, { "unit": "fatty", "level": 2, "spawnAt": 12 }
         ],
         "timeLimit": 90,
-        "loot": { "wood": 50, "parts": 30 },
+        "loot": { "water": 15, "wood": 50, "parts": 30 },
         "drops": [ { "prop": "flyer", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.5 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "bat", "chance": 0.25 }, { "prop": "school_bag", "chance": 0.3 } ],
         "recruitChance": 0.2
     },
@@ -115,7 +115,7 @@
             { "unit": "runner", "level": 2, "spawnAt": 8 }, { "unit": "walker", "level": 3, "spawnAt": 8 }
         ],
         "timeLimit": 90,
-        "loot": { "food": 60, "medicine": 10, "cans": 3 },
+        "loot": { "water": 25, "food": 60, "medicine": 10, "cans": 3 },
         "drops": [ { "prop": "ration_l", "chance": 0.4 }, { "prop": "coffee", "chance": 0.4 }, { "prop": "walkie", "chance": 0.2 }, { "prop": "leather_jacket", "chance": 0.25 }, { "prop": "courier_bag", "chance": 0.2 }, { "prop": "flare", "chance": 0.1 }, { "prop": "gold_watch", "chance": 0.01 } ],
         "recruitChance": 0.2
     },
@@ -229,7 +229,7 @@
             }
         ],
         "timeLimit": 90,
-        "loot": {
+        "loot": { "water": 40,
             "food": 80,
             "wood": 25
         },
@@ -348,7 +348,7 @@
             }
         ],
         "timeLimit": 110,
-        "loot": {
+        "loot": { "water": 40,
             "food": 100,
             "parts": 45,
             "cans": 6

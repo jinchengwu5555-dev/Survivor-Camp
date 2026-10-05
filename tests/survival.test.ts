@@ -164,7 +164,7 @@ describe('换营地', () => {
         const game = newGame();
         const { config, state } = game;
         state.discoveredSites.push('farm', 'police');
-        state.resources = { food: 400, wood: 300, parts: 100, medicine: 20, cans: 10 };
+        state.resources = { food: 400, water: 400, wood: 300, parts: 100, medicine: 20, cans: 10 };
         state.buildings.wall.level = 6;
         state.buildings.training.level = 3;
         state.episodeIndex = config.episodes.length; // 避免搬家顺带完成剧情目标、发奖励干扰计算

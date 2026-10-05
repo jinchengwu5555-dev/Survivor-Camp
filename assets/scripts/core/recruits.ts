@@ -12,7 +12,9 @@ import { addResource, bedCount, grantResources } from './economy';
 import { changeMoodAll } from './mood';
 import { addProp } from './props';
 import { nextRandom, pickOne } from './rng';
-import { generateWanderer, injureSurvivor, survivorName } from './roster';
+import { generateWanderer, injureSurvivor, survivorInfo, survivorName } from './roster';
+import { isOnExpedition } from './combat';
+import { dropGear } from './gear';
 import { addLog, addStat, hasFlag, newSurvivorState, setFlag } from './state';
 import { ActionResult, CandidateState, GameConfig, GameState, QuirkDef, RESOURCE_IDS, SurvivorState } from './types';
 
@@ -200,4 +202,35 @@ export function nightQuirks(config: GameConfig, state: GameState, at: number): v
             reveal(config, state, s, q, at);
         }
     }
+}
+
+/** 营地满了：让候选人先在门口等（去升级宿舍，或者之后再决定） */
+export function waitCandidate(state: GameState, candidateId: number): ActionResult {
+    const c = (state.candidates ?? []).find((x) => x.id === candidateId);
+    if (!c) return { ok: false, reason: '这个人已经走了' };
+    c.waiting = true;
+    return { ok: true };
+}
+
+/** 能不能请这个人离开营地（给新人腾床位） */
+export function dismissBlocker(config: GameConfig, state: GameState, survivorId: string): string | null {
+    const s = state.survivors.find((x) => x.id === survivorId);
+    if (!s) return '没有这个人';
+    if (survivorInfo(config, state, s.id)?.isHero) return '伊森不能离开';
+    if (isOnExpedition(state, s.id)) return '正在外面';
+    return null;
+}
+
+/** 请一个人离开营地：装备留在营地，大家心情差一点 */
+export function dismissSurvivor(config: GameConfig, state: GameState, survivorId: string, now: number): ActionResult {
+    const blocker = dismissBlocker(config, state, survivorId);
+    if (blocker) return { ok: false, reason: blocker };
+    const s = state.survivors.find((x) => x.id === survivorId)!;
+    const name = survivorName(config, state, s.id);
+    dropGear(state, s);
+    state.survivors = state.survivors.filter((x) => x !== s);
+    addStat(state, 'survivors_dismissed');
+    changeMoodAll(state, -3, `${name}被请出了营地`, now);
+    addLog(state, now, `👋 ${name}收拾好东西，离开了营地。`);
+    return { ok: true, message: `${name}离开了` };
 }

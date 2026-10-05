@@ -230,7 +230,9 @@ export function applyEffect(config: GameConfig, state: GameState, effect: Effect
             }
             const name = candidateInfo(config, visitor).name;
             if (state.survivors.length >= bedCount(config, state)) {
-                addLog(state, now, `${name}想留下来，但营地没有空床位了。`);
+                // 没床位：先放进候选人名单，让玩家决定换掉谁还是让他等
+                state.candidates = [...(state.candidates ?? []), visitor];
+                addLog(state, now, `${name}想留下来，但营地没有空床位了。去决定换掉谁，或者让他在门口等。`);
                 break;
             }
             admitCandidate(config, state, visitor, now);

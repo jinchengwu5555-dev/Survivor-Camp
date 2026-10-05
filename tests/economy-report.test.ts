@@ -26,7 +26,7 @@ const showReport = (import.meta as unknown as { env: { MODE: string } }).env.MOD
 const REAL_DAYS = 60;
 const SESSION_HOURS = [8, 10, 12, 14, 16, 18, 20, 22];
 const HOUR = 60 * MIN;
-const PRODUCERS = ['kitchen', 'scrapyard', 'infirmary'];
+const PRODUCERS = ['kitchen', 'well', 'scrapyard', 'infirmary'];
 
 const lootValue = (bag: Partial<Record<string, number>>) => Object.values(bag).reduce((sum: number, n) => sum + (n ?? 0), 0);
 
@@ -84,7 +84,12 @@ function session(game: CampGame, now: number): void {
         if (economyRates(config, state, now).net.food > 0.5 && state.resources.food >= foodGoal) break;
         game.assign(s.id, 'kitchen', now);
     }
-    for (const b of PRODUCERS.filter((x) => x !== 'kitchen')) {
+    // 水站：够喝就行
+    for (const s of idleFor('well').slice(0, workerSlots(config, state, 'well'))) {
+        if (economyRates(config, state, now).net.water > 0.3) break;
+        game.assign(s.id, 'well', now);
+    }
+    for (const b of PRODUCERS.filter((x) => x !== 'kitchen' && x !== 'well')) {
         for (const s of idleFor(b).slice(0, workerSlots(config, state, b))) game.assign(s.id, b, now);
     }
     // 人少的时候干活的人也得出去（开局只有伊森一个人）
@@ -110,7 +115,7 @@ function session(game: CampGame, now: number): void {
     for (const v of config.vehicles ?? []) if (buildVehicleBlocker(config, state, v.id) === null) game.buildVehicle(v.id, now);
     // 升级：缺粮先升厨房，缺零件先升废料场，其余挑最便宜的（花费总和最小）
     const rates = economyRates(config, state, now).net;
-    const urgent = rates.food < 0 ? 'kitchen' : rates.parts < 0.5 ? 'scrapyard' : null;
+    const urgent = rates.food < 0 ? 'kitchen' : rates.water < 0 ? 'well' : rates.parts < 0.5 ? 'scrapyard' : null;
     if (urgent && game.upgrade(urgent, now).ok) return;
     const options = config.buildings
         .filter((b) => upgradeBlocker(config, state, b.id) === null)

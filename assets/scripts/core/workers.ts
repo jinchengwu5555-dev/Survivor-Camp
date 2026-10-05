@@ -45,8 +45,13 @@ export function removeWorker(config: GameConfig, state: GameState, buildingId: s
 export function autoAssign(config: GameConfig, state: GameState, now: number): ActionResult {
     let count = 0;
     for (const s of idleSurvivors(state)) {
-        const foodLow = economyRates(config, state, now).net.food < 0.3;
+        const net = economyRates(config, state, now).net;
+        const foodLow = net.food < 0.3;
+        const waterLow = net.water < 0.2;
         const order = foodLow ? ['kitchen', 'scrapyard', 'infirmary'] : ['scrapyard', 'kitchen', 'infirmary'];
+        // 水不够喝：先派人去水站
+        if (waterLow) order.unshift('well');
+        else order.push('well');
         // 专长对口的建筑有空位就优先去
         const own = config.buildings.find((b) => matches(config, state, s, b.id));
         if (own) order.unshift(own.id);

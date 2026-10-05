@@ -272,15 +272,6 @@ export function validateConfig(config: GameConfig): string[] {
         for (const id of Object.keys(d.complete?.props ?? {})) checkProp(where, id);
         if (d.rect.x2 <= d.rect.x1 || d.rect.y2 <= d.rect.y1) errors.push(`${where}：rect 范围不对`);
         if (d.surveyMinutes <= 0) errors.push(`${where}：surveyMinutes 必须大于 0`);
-        for (const g of d.hunting?.game ?? []) {
-            if (g.weight <= 0 || g.food <= 0) errors.push(`${where} 猎物 ${g.id}：weight、food 必须大于 0`);
-            if (g.kind !== 'hunt' && g.kind !== 'fish') errors.push(`${where} 猎物 ${g.id}：kind 只能是 hunt / fish`);
-            for (const se of g.seasons ?? []) if (!config.seasons.some((x) => x.id === se)) errors.push(`${where} 猎物 ${g.id}：未知季节 ${se}`);
-            if (g.capture) {
-                checkAnimal(`${where} 猎物 ${g.id}`, g.capture.animal);
-                if (g.capture.chance <= 0 || g.capture.chance > 1) errors.push(`${where} 猎物 ${g.id}：capture.chance 要在 0～1 之间`);
-            }
-        }
     }
     const vehicleList = config.vehicles ?? [];
     checkUnique('交通工具', vehicleList.map((v) => v.id));
@@ -295,6 +286,22 @@ export function validateConfig(config: GameConfig): string[] {
     if (districtList.length && !vehicleList.length && districtList.some((d) => d.tier > 0)) errors.push('有远的分区但没有交通工具');
     for (const tier of new Set(districtList.map((d) => d.tier))) {
         if (tier > 0 && !vehicleList.some((v) => v.tier >= tier)) errors.push(`分区等级 ${tier} 没有交通工具能到`);
+    }
+    const grounds = config.hunting?.grounds ?? [];
+    checkUnique('狩猎场', grounds.map((g) => g.id));
+    for (const ground of grounds) {
+        const where = `狩猎场 ${ground.id}`;
+        if (!ground.game.length) errors.push(`${where}：没有猎物`);
+        if (ground.tier > 0 && !vehicleList.some((v) => v.tier >= ground.tier)) errors.push(`${where}：没有交通工具能到`);
+        for (const g of ground.game) {
+            if (g.weight <= 0 || g.food <= 0) errors.push(`${where} 猎物 ${g.id}：weight、food 必须大于 0`);
+            if (g.kind !== 'hunt' && g.kind !== 'fish') errors.push(`${where} 猎物 ${g.id}：kind 只能是 hunt / fish`);
+            for (const se of g.seasons ?? []) if (!config.seasons.some((x) => x.id === se)) errors.push(`${where} 猎物 ${g.id}：未知季节 ${se}`);
+            if (g.capture) {
+                checkAnimal(`${where} 猎物 ${g.id}`, g.capture.animal);
+                if (g.capture.chance <= 0 || g.capture.chance > 1) errors.push(`${where} 猎物 ${g.id}：capture.chance 要在 0～1 之间`);
+            }
+        }
     }
     // 探索背包：每件道具至少要能放进某一块格子区（两只手、某种包、某辆车的后备箱）
     const areas: [number, number][] = [config.packing?.handsGrid ?? [2, 2], ...vehicleList.map((v) => v.grid)];

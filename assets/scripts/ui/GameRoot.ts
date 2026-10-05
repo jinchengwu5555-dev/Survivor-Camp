@@ -37,7 +37,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
+import { CandidateState, GearSlot, HuntingGround, BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo, survivorName } from '../core/roster';
@@ -58,11 +58,11 @@ import { campStats } from '../core/campStats';
 import { allDialogues } from '../core/chatter';
 import { moodFactors, moodTier } from '../core/mood';
 import { districtName, locationName, objectiveText, townName } from '../core/names';
-import { candidateInfo, quirksOf } from '../core/recruits';
+import { candidateInfo, dismissBlocker, quirksOf } from '../core/recruits';
 import { bondOf, bondPoints, bondTier, BOND_TIERS, daysWithLeader, isFounder, LEADER, prayBlocker, sharedBattles } from '../core/bonds';
 import { ROW_NAMES, rowOf, squadSynergies, weaponRange } from '../core/formation';
 import { phoenixReady } from '../core/roster';
-import { huntableGame, huntBlocker, suggestHunters } from '../core/hunting';
+import { groundLockReason, huntableGame, huntBlocker, huntingGrounds, suggestHunters } from '../core/hunting';
 import { goldBlocker, goldOffer, goldValue } from '../core/gold';
 import { districtAt, districtDef, districtExplored, suggestSurveyors, surveyBlocker } from '../core/districts';
 import { buildVehicleBlocker, FUEL_PROP, haulSections, maxTierOwned, ownedVehicles, pickVehicle, TIER_NAMES, vehicleBlocker, vehicleDef } from '../core/vehicles';
@@ -73,8 +73,9 @@ import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, r
 import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup, farmTodos } from '../core/badges';
 import { latestEntries } from '../core/diary';
+import { repairBlocker, wallDurability, wallRepairCost } from '../core/wall';
 import { todayIntel } from '../core/intel';
-import { AnimalSpace, SPACE_NAMES, spaceOf, animalDef, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
+import { AnimalSpace, SPACE_NAMES, spaceOf, animalDef, gardenKeepers, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
 import { formatProps, propBlocker, propCount, propDef, propReward, treasureValue } from '../core/props';
 import { createAdService } from '../platform/AdService';
 import { CocosStorage } from '../platform/CocosStorage';
@@ -87,7 +88,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.5 试玩反馈';
+const GAME_VERSION = 'v2.6 水·猎场·工坊分类';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -173,7 +174,17 @@ const SPECIALTY_NAMES: Record<string, string> = {
 /** 营地页上打开的面板：建筑详情、营地地点 */
 type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | 'graveyard' | 'diary' | null;
 
-type ButtonStyle = 'normal' | 'disabled' | 'highlight';
+type ButtonStyle = 'normal' | 'disabled' | 'highlight' | 'danger';
+/** 工坊的分类页 */
+type WorkshopTab = 'items' | 'weapon' | 'armor' | 'tool' | 'bag' | 'garage';
+const WORKSHOP_TABS: { id: WorkshopTab; name: string }[] = [
+    { id: 'items', name: '🧪 战斗物品' },
+    { id: 'weapon', name: '⚔️ 武器' },
+    { id: 'armor', name: '🛡️ 护甲' },
+    { id: 'tool', name: '🔧 工具' },
+    { id: 'bag', name: '🎒 背包' },
+    { id: 'garage', name: '🚗 车库' },
+];
 
 @ccclass('GameRoot')
 export class GameRoot extends Component {
@@ -589,7 +600,7 @@ export class GameRoot extends Component {
 
     /** 正在处理事件（或者在看事件选择的结果） */
     private eventShowing(camp: CampGame): boolean {
-        return !!camp.currentEvent || this.eventResult !== null || !!camp.currentHaul || camp.candidates.length > 0;
+        return !!camp.currentEvent || this.eventResult !== null || !!camp.currentHaul || camp.pendingCandidates.length > 0;
     }
 
     /** 有没有打开的面板（事件、页签、建筑详情……）；没有就显示营地地图 */
@@ -597,6 +608,12 @@ export class GameRoot extends Component {
         return this.eventShowing(camp) || this.tab !== 'camp' || this.sheet !== null;
     }
 
+    /** 探索页：小镇地图，还是狩猎钓鱼页 */
+    private exploreMode: 'map' | 'hunt' = 'map';
+    /** 换人要点两次：候选人 id:要离开的人 id */
+    private confirmSwap: string | null = null;
+    /** 宰杀要点两次：第一次点记下是哪一种 */
+    private confirmSlaughter: string | null = null;
     /** 闲聊气泡：开关（设置里改，存在本地）、是否展开 */
     private chatBubbles = true;
     private chatExpanded = false;
@@ -915,7 +932,7 @@ export class GameRoot extends Component {
         const diaryEntries = state.diary ?? [];
         if (diaryEntries.length > 0) {
             const book = makeNode('Diary', map, 110, 64);
-            book.setPosition(-100, -300);
+            book.setPosition(-150, -292);
             drawPanel(book.addComponent(Graphics), 106, 60, new Color(80, 64, 44, 230), 12, new Color(180, 150, 110), 2);
             addLabel(book, '📖', 26, TEXT, { width: 100 }).node.setPosition(0, 10);
             addLabel(book, `日记 ${diaryEntries.length}`, 16, TEXT, { width: 100 }).node.setPosition(0, -18);
@@ -934,7 +951,7 @@ export class GameRoot extends Component {
         const graves = state.graveyard ?? [];
         if (graves.length > 0) {
             const yard = makeNode('Graveyard', map, 120, 70);
-            yard.setPosition(-255, -245);
+            yard.setPosition(-270, -245);
             drawPanel(yard.addComponent(Graphics), 116, 64, new Color(60, 66, 60, 230), 12, new Color(150, 160, 150), 2);
             addLabel(yard, '🪦'.repeat(Math.min(3, graves.length)), 26, TEXT, { width: 110 }).node.setPosition(0, 10);
             addLabel(yard, `墓地 ${graves.length}`, 16, TEXT, { width: 110 }).node.setPosition(0, -20);
@@ -1093,6 +1110,10 @@ export class GameRoot extends Component {
         const lockReason = buildingLockReason(def, state);
         addLabel(plate, b.level > 0 ? `${buildingStage(def, b.level).name} Lv${b.level}` : lockReason ? `🔒${buildingStage(def, 0).name}` : `${buildingStage(def, 0).name}（未建）`, 18, b.level > 0 ? TEXT : DIM, { width: plateW - 8 });
         if (lockReason) addLabel(node, lockReason.replace('才能建', ''), 15, DIM, { width: bw + 30 }).node.setPosition(0, -bh / 2 - 22);
+        // 栅栏带伤：名牌下面写耐久
+        if (def.id === 'wall' && b.level > 0 && wallDurability(state) < 100) {
+            addLabel(node, `🧱 耐久 ${wallDurability(state)}% 点我修`, 16, wallDurability(state) < 60 ? LOSE : ACCENT, { width: bw + 40 }).node.setPosition(0, -bh / 2 - 22);
+        }
 
         // 状态角标：升级倒计时 / 可以升级 / 引导
         if (upgrading) {
@@ -1174,8 +1195,8 @@ export class GameRoot extends Component {
             this.renderHaul(camp);
             return;
         }
-        if (camp.candidates.length > 0) {
-            this.renderCandidates(camp);
+        if (camp.pendingCandidates.length > 0) {
+            this.renderCandidates(camp, camp.pendingCandidates);
             return;
         }
         if (camp.currentEvent) {
@@ -1556,7 +1577,11 @@ export class GameRoot extends Component {
         addLabel(body, speaker.name, 22, ACCENT, { width: 150 }).node.setPosition(faceX, faceY - 72);
         if (speaker.title) addLabel(body, speaker.title, 18, DIM, { width: 150 }).node.setPosition(faceX, faceY - 98);
         // 正文
-        bodyLabel.node.setPosition(-WIDTH / 2 + 160 + textWidth / 2, cardHeight / 2 - 70 - textHeight / 2);
+        // 左上角对齐：不管 Cocos 算出来的框多宽，文字都从头像右边开始
+        const bodyTf = bodyLabel.node.getComponent(UITransform)!;
+        bodyTf.setAnchorPoint(0, 1);
+        bodyTf.width = textWidth;
+        bodyLabel.node.setPosition(-WIDTH / 2 + 160, cardHeight / 2 - 70);
 
         this.cursorY = top - cardHeight - 16;
         // 有人上门：先看看他们的表面信息（隐藏的毛病看不出来，只有一个印象）
@@ -1683,9 +1708,28 @@ export class GameRoot extends Component {
             this.text('已经是最高等级了', 20, DIM);
         }
         this.gap(8);
+        if (def.id === 'wall' && b.level > 0) this.renderWallRepair(camp);
         if (def.id === 'garden' && b.level > 0) this.renderGarden(camp, now);
         if (def.id === 'pen' && b.level > 0) this.renderPen(camp, now, 'pen');
         if (def.id === 'pond' && b.level > 0) this.renderPen(camp, now, 'pond');
+    }
+
+    /** 栅栏：耐久和修补（守夜打坏的部分会留到下一晚） */
+    private renderWallRepair(camp: CampGame): void {
+        const { config, state } = camp;
+        const durability = wallDurability(state);
+        this.text(`🧱 耐久 ${durability}%${durability < 100 ? '：守夜时被打坏了，不修的话下一晚栅栏会带着伤出场' : '：完好'}`, 22, durability < 60 ? LOSE : durability < 100 ? ACCENT : WIN);
+        if (durability < 100) {
+            const blocker = repairBlocker(config, state);
+            const cost = wallRepairCost(config, state);
+            this.button(blocker ? `🔨 修补栅栏 🪵${Math.floor(state.resources.wood)}/${cost}（${blocker}）` : `🔨 修补栅栏（🪵${cost}）`, WIDTH, () => {
+                const res = camp.repairWall(camp.now);
+                if (res.ok) this.effect(`🔨 ${res.message}`, WIN);
+                else this.showToast(res.reason);
+                this.render();
+            }, LEFT, blocker ? 'disabled' : 'highlight', 22, 52);
+        }
+        this.gap(8);
     }
 
     /** 菜园：每块地种着什么、还要多久；收获；用种子种下 */
@@ -1712,9 +1756,18 @@ export class GameRoot extends Component {
             }
             const crop = cropDef(config, p.crop);
             const name = `${crop?.icon ?? ''}${crop?.name ?? p.crop}`;
-            if (p.readyAt > now) this.text(`第 ${i + 1} 块：${name} · 还要 ${formatTime(realSeconds(config, p.readyAt - now))}`, 20);
+            const more = p.left ? `（之后还能收 ${p.left} 次）` : '';
+            if (p.readyAt > now) this.text(`第 ${i + 1} 块：${name} · 还要 ${formatTime(realSeconds(config, p.readyAt - now))}${more}`, 20);
             else this.text(`第 ${i + 1} 块：${name} ✅ 熟了！${formatTime(realSeconds(config, p.readyAt + f.witherMinutes * 60_000 - now))} 后会烂在地里`, 20, WIN);
         });
+        const keepers = gardenKeepers(state);
+        this.text(
+            keepers.length
+                ? `👷 ${keepers.map((id) => survivorName(config, state, id)).join('、')}在看守菜园：熟了自动收，空地自动种上最划算的种子`
+                : '💡 在上面“派一个人来”看守菜园，就不用每次自己种、自己收了',
+            18,
+            keepers.length ? WIN : DIM,
+        );
         const ready = readyPlots(config, state, now);
         this.button(ready > 0 ? `🧺 收获（${ready} 块熟了）` : '🧺 还没有熟的', WIDTH, () => {
             const res = camp.harvest(camp.now);
@@ -1738,7 +1791,7 @@ export class GameRoot extends Component {
                 .join(' ');
             const minutes = growMinutes(config, state, crop, now);
             const time = Number.isFinite(minutes) ? formatTime(realSeconds(config, minutes * 60_000)) : '—';
-            const label = `${crop.icon}种${crop.name}（种子×${seeds} · ${time} · ${yieldText}）`;
+            const label = `${crop.icon}种${crop.name}（种子×${seeds} · ${time} · ${yieldText}${crop.harvests && crop.harvests > 1 ? ` · 能收 ${crop.harvests} 次` : ''}）`;
             this.button(blocker ? `${label} ${blocker}` : label, WIDTH, () => {
                 const res = camp.plant(crop.id, camp.now);
                 if (res.ok) this.effect(`🌱 ${res.message}`, WIN);
@@ -1785,19 +1838,51 @@ export class GameRoot extends Component {
                 const a = animalDef(config, id)!;
                 const product = a.product ? `每只每天 ${a.product.icon}${a.product.name}` : '不产东西';
                 this.text(`${a.icon}${a.name} ×${n}  · 每只吃🍞${a.feed} · ${product} · 两只以上会${space === 'pond' ? '产卵' : '生崽'}`, 20);
-                this.button(`${space === 'pond' ? '🎣 捞一条' : '🔪 宰一只'}${a.name}（🍞+${Math.round(a.meat * growth)}）`, WIDTH, () => {
-                    const res = camp.slaughter(id, camp.now);
-                    if (res.ok) this.effect(`🔪 ${res.message}`, ACCENT);
-                    else this.showToast(res.reason);
-                    this.render();
-                }, LEFT, 'normal', 20, 44);
+            }
+            void growth;
+        }
+        if (space === 'pen') this.renderPenCare(camp, now, mine);
+        // 宰杀放在最下面，而且要点两次确认，免得点错
+        if (mine.length) {
+            this.gap(16);
+            this.text(space === 'pond' ? '—— 🎣 捞鱼（捞上来就吃掉了）——' : '—— 🔪 宰杀（宰了就没了，点两次确认）——', 18, LOSE);
+            const growth = foodGrowth(config, state);
+            for (const [id] of mine) {
+                const a = animalDef(config, id)!;
+                const key = `${space}:${id}`;
+                const confirming = this.confirmSlaughter === key;
+                this.button(
+                    confirming ? `⚠️ 真的要${space === 'pond' ? '捞' : '宰'}一只${a.name}吗？再点一次确认` : `${space === 'pond' ? '🎣 捞一条' : '🔪 宰一只'}${a.name}（🍞+${Math.round(a.meat * growth)}）`,
+                    WIDTH,
+                    () => {
+                        if (!confirming) {
+                            this.confirmSlaughter = key;
+                            this.render();
+                            return;
+                        }
+                        this.confirmSlaughter = null;
+                        const res = camp.slaughter(id, camp.now);
+                        if (res.ok) this.effect(`🔪 ${res.message}`, ACCENT);
+                        else this.showToast(res.reason);
+                        this.render();
+                    },
+                    LEFT,
+                    confirming ? 'danger' : 'disabled',
+                    18,
+                    40,
+                    true,
+                );
                 this.gap(4);
             }
         }
-        if (space !== 'pen') {
-            this.gap(8);
-            return;
-        }
+        this.gap(8);
+    }
+
+    /** 畜栏：收蛋奶、照看 */
+    private renderPenCare(camp: CampGame, now: number, mine: [string, number][]): void {
+        const { config, state } = camp;
+        const f = config.farming!;
+        const farm = state.farm!;
         // 收蛋 / 奶：只有养了会下蛋、产奶的牲口才显示
         if (mine.some(([id]) => animalDef(config, id)?.product)) {
             const produce = produceFood(config, state);
@@ -1884,47 +1969,75 @@ export class GameRoot extends Component {
         }
     }
 
+    /** 工坊：分类，每一类一个页面（战斗物品、武器、护甲、工具、背包、车库） */
+    private workshopTab: WorkshopTab = 'items';
+
     private renderWorkshop(camp: CampGame): void {
         const { config, state } = camp;
         const level = workshopLevel(config, state);
-        this.text(level > 0 ? `—— 工坊 ${level} 级（物品在战斗中自动使用，用掉才扣）——` : '—— 工坊（先在营地里建造工坊）——', 22, DIM);
-        for (const item of config.items) {
-            this.text(`${item.icon}${item.name} ×${itemCount(state, item.id)}  ${item.description}`, 22);
-            const blocker = craftBlocker(config, state, item.id);
-            this.button(`制作 ${formatCost(config, item.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
-                const res = camp.craft(item.id, camp.now);
-                if (res.ok) this.effect(`${item.icon} 做好了一个${item.name}`, WIN);
-                else this.showToast(res.reason);
+        this.text(level > 0 ? `🔧 工坊 ${level} 级` : '🔧 工坊（先在营地里建造工坊）', 24, ACCENT);
+        // 分类按钮：两行，每行三个
+        const per = 3;
+        const w = (WIDTH - 10 * (per - 1)) / per;
+        WORKSHOP_TABS.forEach((t, i) => {
+            if (i % per === 0 && i > 0) this.gap(8);
+            const row = this.cursorY;
+            this.button(t.name, w, () => {
+                this.workshopTab = t.id;
+                this.resetScroll();
                 this.render();
-            }, LEFT, blocker !== null ? 'disabled' : 'normal');
-            this.gap(10);
-        }
-        // 车库：交通工具决定能去多远、背包多大
-        this.gap(10);
-        this.text(`—— 🚗 车库（⛽ 汽油 ${propCount(state, FUEL_PROP)} 桶）——`, 22, DIM);
-        const owned = new Set(ownedVehicles(config, state).map((v) => v.id));
-        for (const v of config.vehicles ?? []) {
-            const has = owned.has(v.id);
-            this.text(`${v.icon}${v.name}${has ? ' ✅' : ''}  能到：${TIER_NAMES[v.tier]}能去的地方 · 背包 ${v.grid[0]}×${v.grid[1]} · 多装 ${v.cargo} 重 · ${v.fuel ? `每趟 ⛽${v.fuel}` : '不用油'}`, 20, has ? WIN : TEXT);
-            this.text(v.description, 17, DIM);
-            if (!has && v.obtain) {
-                const blocker = buildVehicleBlocker(config, state, v.id);
-                this.button(`🔧 修好它 ${formatCost(config, v.obtain.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
-                    const res = camp.buildVehicle(v.id, camp.now);
-                    if (res.ok) this.effect(`🔧 修好了${res.message}！`, WIN, 30);
+            }, LEFT + (i % per) * (w + 10), this.workshopTab === t.id ? 'highlight' : 'normal', 20, 44);
+            if (i % per !== per - 1 && i !== WORKSHOP_TABS.length - 1) this.cursorY = row;
+        });
+        this.gap(12);
+        const tab = this.workshopTab;
+        if (tab === 'items') {
+            this.text('战斗物品：守夜和探索时自动使用，用掉才扣。', 18, DIM);
+            this.gap(4);
+            for (const item of config.items) {
+                this.text(`${item.icon}${item.name} ×${itemCount(state, item.id)}  ${item.description}`, 22);
+                const blocker = craftBlocker(config, state, item.id);
+                this.button(`制作 ${formatCost(config, item.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
+                    const res = camp.craft(item.id, camp.now);
+                    if (res.ok) this.effect(`${item.icon} 做好了一个${item.name}`, WIN);
                     else this.showToast(res.reason);
                     this.render();
-                }, LEFT, blocker ? 'disabled' : 'normal', 20, 46);
-            } else if (!has && v.comesWith) {
-                this.text(`（${survivorName(config, state, v.comesWith)}加入营地时会开过来）`, 17, DIM);
+                }, LEFT, blocker !== null ? 'disabled' : 'normal');
+                this.gap(10);
             }
-            this.gap(8);
+            return;
         }
+        if (tab === 'garage') {
+            this.text(`交通工具决定能去多远、背包多大。⛽ 汽油 ${propCount(state, FUEL_PROP)} 桶`, 18, DIM);
+            this.gap(4);
+            const owned = new Set(ownedVehicles(config, state).map((v) => v.id));
+            for (const v of config.vehicles ?? []) {
+                const has = owned.has(v.id);
+                this.text(`${v.icon}${v.name}${has ? ' ✅' : ''}  能到：${TIER_NAMES[v.tier]}能去的地方 · 背包 ${v.grid[0]}×${v.grid[1]} · 多装 ${v.cargo} 重 · ${v.fuel ? `每趟 ⛽${v.fuel}` : '不用油'}`, 20, has ? WIN : TEXT);
+                this.text(v.description, 17, DIM);
+                if (!has && v.obtain) {
+                    const blocker = buildVehicleBlocker(config, state, v.id);
+                    this.button(`🔧 修好它 ${formatCost(config, v.obtain.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
+                        const res = camp.buildVehicle(v.id, camp.now);
+                        if (res.ok) this.effect(`🔧 修好了${res.message}！`, WIN, 30);
+                        else this.showToast(res.reason);
+                        this.render();
+                    }, LEFT, blocker ? 'disabled' : 'normal', 20, 46);
+                } else if (!has && v.comesWith) {
+                    this.text(`（${survivorName(config, state, v.comesWith)}加入营地时会开过来）`, 17, DIM);
+                }
+                this.gap(8);
+            }
 
-        // 打造装备：做好放进背包，到幸存者档案里给人穿上
-        this.gap(10);
-        this.text('—— 打造装备（做好放进背包，到幸存者档案里穿上）——', 22, DIM);
-        for (const def of craftableGear(config)) {
+            return;
+        }
+        // 装备：按位置分页（做好放进背包，到幸存者档案里穿上）
+        const slot = tab as GearSlot;
+        this.text(`${GEAR_SLOT_NAMES[slot]}：做好放进背包，到幸存者档案里给人穿上。`, 18, DIM);
+        this.gap(4);
+        const list = craftableGear(config).filter((d) => d.slot === slot);
+        if (!list.length) this.text('这一类暂时没有能打造的，只能在外面找到。', 20, DIM);
+        for (const def of craftableGear(config).filter((d) => d.slot === slot)) {
             this.text(`${def.icon}${def.name} ×${propCount(state, def.id)}  ${GEAR_SLOT_NAMES[def.slot!]}：${gearStatsText(config, def)}`, 22);
             const blocker = forgeBlocker(config, state, def.id);
             this.button(`打造 ${formatCost(config, def.craft!.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {
@@ -1956,6 +2069,12 @@ export class GameRoot extends Component {
     private renderSurvivors(camp: CampGame, now: number): void {
         const { config, state } = camp;
         const picked = this.selectedSurvivor ? state.survivors.find((s) => s.id === this.selectedSurvivor) : undefined;
+        // 门口等着的人（营地满了让他们先等）：有空床位就能留下
+        const waiting = camp.candidates.filter((c) => c.waiting);
+        if (!picked && waiting.length) {
+            this.renderCandidates(camp, waiting, true);
+            this.gap(10);
+        }
         if (picked) {
             this.renderSurvivorDetail(camp, picked.id, now);
             return;
@@ -2301,6 +2420,10 @@ export class GameRoot extends Component {
     /** 探索页：枫谷镇地图（迷雾、道路、地点、在路上的小队、侦察点）+ 下方选中地点的详情 */
     private renderExplore(camp: CampGame, now: number): void {
         const { config, state } = camp;
+        if (this.exploreMode === 'hunt') {
+            this.renderHunting(camp, now);
+            return;
+        }
         const map = makeNode('TownMap', this.content!, MAP_WIDTH, TOWN_HEIGHT);
         map.setPosition(0, TOWN_CENTER_Y);
         map.addComponent(Mask).type = Mask.Type.GRAPHICS_RECT;
@@ -2468,6 +2591,19 @@ export class GameRoot extends Component {
         title.setPosition(-MAP_WIDTH / 2 + 175, TOWN_HEIGHT / 2 - 26);
         drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
         addLabel(title, `🗺️ ${townName(state)} · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
+        // 右上角：去狩猎钓鱼页（猎场和探索地点分开）
+        const huntBtn = makeNode('HuntBtn', map, 190, 44);
+        huntBtn.setPosition(MAP_WIDTH / 2 - 105, TOWN_HEIGHT / 2 - 28);
+        drawPanel(huntBtn.addComponent(Graphics), 190, 44, COLORS.button, 12, ACCENT, 2);
+        const huntingNow = (state.hunts ?? []).length;
+        addLabel(huntBtn, `🏹 狩猎钓鱼${huntingNow ? ` (${huntingNow})` : ''}`, 20, TEXT, { width: 180 });
+        huntBtn.on(Node.EventType.TOUCH_END, () => {
+            if (this.dragDistance > DRAG_THRESHOLD) return;
+            punch(huntBtn);
+            this.exploreMode = 'hunt';
+            this.resetScroll();
+            this.render();
+        });
 
         // 地图底部：选中的地点 / 分区 + “去出发”按钮（点一下把下面的详情卷上来）
         const picked = this.selectedDistrict
@@ -2663,12 +2799,12 @@ export class GameRoot extends Component {
         this.gap(4);
     }
 
-    /** 探索时遇到的人：看介绍、专长、天赋和印象，决定留下谁 */
-    private renderCandidates(camp: CampGame): void {
+    /** 探索时遇到的人、上门的人：看介绍、专长、天赋和印象，决定留下谁；营地满了可以换掉一个人，或者让他在门口等 */
+    private renderCandidates(camp: CampGame, list: CandidateState[], waitingList = false): void {
         const { config, state } = camp;
-        const list = camp.candidates;
-        this.text(`🙋 路上遇到了 ${list.length} 个幸存者`, 28, ACCENT);
-        this.text(`床位 ${state.survivors.length}/${bedCount(config, state)}。留下谁由你决定——有人带着好本事，也有人藏着坏毛病。`, 18, DIM);
+        const full = state.survivors.length >= bedCount(config, state);
+        this.text(waitingList ? `🚪 门口有 ${list.length} 个人在等` : `🙋 遇到了 ${list.length} 个幸存者`, 28, ACCENT);
+        this.text(`床位 ${state.survivors.length}/${bedCount(config, state)}。${full ? '营地满了：可以请一个人离开换他进来，或者让他先在门口等（去升级宿舍）。' : '留下谁由你决定——有人带着好本事，也有人藏着坏毛病。'}`, 18, full ? LOSE : DIM);
         this.gap(8);
         for (const c of list) {
             const info = candidateInfo(config, c);
@@ -2685,17 +2821,53 @@ export class GameRoot extends Component {
             const half = (WIDTH - 10) / 2;
             const row = this.cursorY - 6;
             this.cursorY = row;
-            this.button('✅ 留下', half, () => {
+            this.button(full ? '✅ 留下（没床位）' : '✅ 留下', half, () => {
                 const res = camp.decideCandidate(c.id, true, camp.now);
                 if (res.ok) this.effect(`🙋 ${res.message}`, WIN, 28);
                 else this.showToast(res.reason);
                 this.render();
-            }, LEFT, state.survivors.length >= bedCount(config, state) ? 'disabled' : 'highlight', 22, 50);
+            }, LEFT, full ? 'disabled' : 'highlight', 22, 50);
             this.cursorY = row;
             this.button('👋 让他走', half, () => {
                 camp.decideCandidate(c.id, false, camp.now);
                 this.render();
             }, LEFT + half + 10, 'normal', 22, 50);
+            if (full) {
+                this.gap(8);
+                if (!waitingList) {
+                    this.button('🛏️ 让他先在门口等（去升级宿舍，回头在“幸存者”页决定）', WIDTH, () => {
+                        camp.waitCandidate(c.id, camp.now);
+                        this.render();
+                    }, LEFT, 'normal', 20, 46);
+                    this.gap(6);
+                }
+                // 换掉一个人：点名字，再点一次确认
+                this.text('🔁 或者请一个人离开，换他进来：', 18, DIM);
+                const others = state.survivors.filter((s) => !dismissBlocker(config, state, s.id));
+                const per = 3;
+                const w = (WIDTH - 10 * (per - 1)) / per;
+                others.forEach((s, i) => {
+                    if (i % per === 0 && i > 0) this.gap(6);
+                    const r = this.cursorY;
+                    const key = `${c.id}:${s.id}`;
+                    const confirming = this.confirmSwap === key;
+                    this.button(confirming ? `确认请${survivorName(config, state, s.id)}走？` : `👋 ${survivorName(config, state, s.id)}`, w, () => {
+                        if (!confirming) {
+                            this.confirmSwap = key;
+                            this.render();
+                            return;
+                        }
+                        this.confirmSwap = null;
+                        const res = camp.dismiss(s.id, camp.now);
+                        if (res.ok) {
+                            const kept = camp.decideCandidate(c.id, true, camp.now);
+                            this.effect(`🔁 ${res.message}，${kept.ok ? kept.message : ''}`, ACCENT, 26);
+                        } else this.showToast(res.reason);
+                        this.render();
+                    }, LEFT + (i % per) * (w + 10), confirming ? 'danger' : 'normal', 18, 42);
+                    if (i % per !== per - 1 && i !== others.length - 1) this.cursorY = r;
+                });
+            }
             this.gap(18);
         }
     }
@@ -2851,28 +3023,51 @@ export class GameRoot extends Component {
     }
 
     /** 分区里的打猎 / 钓鱼：适不适合、能打到什么、派人去 */
-    private renderHuntingCard(camp: CampGame, d: DistrictDef, now: number): void {
+    /** 狩猎钓鱼页：所有猎场一张张列出来（和探索地图分开） */
+    private renderHunting(camp: CampGame, now: number): void {
         const { config, state } = camp;
-        if (!d.hunting) return;
-        const game = huntableGame(config, state, d, now);
-        this.text(`🏹 打猎：${d.hunting.rating} · ${d.hunting.note}`, 18, ACCENT);
-        if (game.length) this.text(`这个季节能打到：${game.map((g) => `${g.icon}${g.name}${g.risk >= 0.2 ? '⚠️' : ''}`).join(' ')}`, 17, DIM);
-        const busy = (state.hunts ?? []).find((h) => h.district === d.id);
+        this.button('🗺️ 回到探索地图', WIDTH, () => {
+            this.exploreMode = 'map';
+            this.resetScroll();
+            this.render();
+        }, LEFT, 'normal', 22, 48);
+        this.gap(6);
+        this.text('🏹 狩猎和钓鱼：派 1～3 个人去，过一阵带回猎物（食物），有机会活捉回去养。远的地方要交通工具。', 18, DIM);
+        const tips = todayIntel(config, state, now).filter((x) => x.target === 'ground');
+        for (const t of tips) this.text(`📻 ${t.kind.icon} ${t.text}`, 18, WIN);
+        this.gap(6);
+        for (const g of huntingGrounds(config)) this.renderGroundCard(camp, g, now);
+    }
+
+    private renderGroundCard(camp: CampGame, g: HuntingGround, now: number): void {
+        const { config, state } = camp;
+        const locked = groundLockReason(state, g);
+        const far = g.tier > maxTierOwned(config, state);
+        this.text(`${g.icon} ${g.name}  ${g.fishing ? '🎣' : '🏹'}${g.rating}${locked ? `  🔒${locked}` : ''}`, 22, locked ? DIM : ACCENT);
+        this.text(`${g.note}（要${TIER_NAMES[g.tier]}才能到）`, 17, far ? LOSE : DIM);
+        const game = huntableGame(config, state, g, now);
+        this.text(game.length ? `这个季节能打到：${game.map((x) => `${x.icon}${x.name}${x.risk >= 0.2 ? '⚠️' : ''}${x.capture ? '🪤' : ''}`).join(' ')}` : '这个季节这里打不到什么', 17, TEXT);
+        const busy = (state.hunts ?? []).find((h) => h.district === g.id);
         if (busy) {
-            this.text(`🏹 ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}正在打猎，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 18, ACCENT);
-            this.gap(8);
+            this.text(`🏹 ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}在这里，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 18, ACCENT);
+            this.gap(12);
+            return;
+        }
+        if (locked) {
+            this.gap(12);
             return;
         }
         const hunters = suggestHunters(config, state);
-        const blocker = huntBlocker(config, state, d.id, hunters, now, this.selectedVehicle);
+        const blocker = huntBlocker(config, state, g.id, hunters, now, this.selectedVehicle);
         const names = hunters.map((id) => survivorName(config, state, id)).join('、') || '没有能派的人';
-        this.button(blocker ? `🏹 打猎（${blocker}）` : `🏹 派 ${names} 去打猎`, WIDTH, () => {
-            const res = camp.hunt(d.id, camp.now, hunters, this.selectedVehicle);
-            if (res.ok) this.effect(`🏹 出发去${districtName(state, d)}打猎`, ACCENT);
+        const verb = g.fishing ? '钓鱼' : '打猎';
+        this.button(blocker ? `${g.fishing ? '🎣' : '🏹'} ${verb}（${blocker}）` : `${g.fishing ? '🎣' : '🏹'} 派 ${names} 去${verb}`, WIDTH, () => {
+            const res = camp.hunt(g.id, camp.now, hunters, this.selectedVehicle);
+            if (res.ok) this.effect(`${g.fishing ? '🎣' : '🏹'} 出发去${g.name}${verb}`, ACCENT);
             else this.showToast(res.reason);
             this.render();
         }, LEFT, blocker ? 'disabled' : 'normal', 20, 48);
-        this.gap(10);
+        this.gap(14);
     }
 
     /** 分区详情：探索进度、要什么车、危险程度、派人勘察 */
@@ -2881,12 +3076,11 @@ export class GameRoot extends Component {
         const explored = districtExplored(config, state, d, now);
         this.text(`${d.icon} ${districtName(state, d)}  已探索 ${Math.round(explored * 100)}%${state.districtsCompleted?.includes(d.id) ? ' ✅' : ''}`, 24, ACCENT);
         this.text(d.description, 18, DIM);
-        const tip = todayIntel(config, state, now).find((x) => x.district.id === d.id);
+        const tip = todayIntel(config, state, now).find((x) => x.id === d.id);
         if (tip) this.text(`📻 今日情报：${tip.kind.icon} ${tip.text}`, 18, WIN);
         this.text(`要${TIER_NAMES[d.tier]}才能到 · 勘察一趟 ${formatTime(realSeconds(config, d.surveyMinutes * 60_000))} · 受伤概率 ${Math.round(d.danger * 100)}%`, 18, d.tier > maxTierOwned(config, state) ? LOSE : TEXT);
         const reward = [formatBag(config, d.complete?.resources ?? {}), formatProps(config, d.complete?.props ?? {})].filter(Boolean).join(' ');
         if (reward) this.text(`全部探索完奖励：${reward}`, 18, WIN);
-        this.renderHuntingCard(camp, d, now);
         const busy = (state.surveys ?? []).find((s) => s.district === d.id);
         if (busy) {
             this.text(`🗺️ ${busy.squad.map((id) => survivorName(config, state, id)).join('、')}正在勘察，${formatTime(realSeconds(config, busy.returnsAt - now))} 后回来`, 20, ACCENT);
@@ -3015,7 +3209,7 @@ export class GameRoot extends Component {
     ): void {
         const node = makeNode('Button', this.target!, width, height);
         node.setPosition(x + width / 2, this.cursorY - height / 2);
-        const fill = style === 'highlight' ? COLORS.highlight : style === 'disabled' ? COLORS.disabled : COLORS.button;
+        const fill = style === 'highlight' ? COLORS.highlight : style === 'disabled' ? COLORS.disabled : style === 'danger' ? COLORS.danger : COLORS.button;
         drawPanel(node.addComponent(Graphics), width, height, fill, 8, style === 'highlight' ? ACCENT : undefined);
         addLabel(node, str, size, textColor, { width: width - 12, height });
         addBadge(node, width / 2 - 8, height / 2 - 6, badge);

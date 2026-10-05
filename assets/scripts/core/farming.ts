@@ -140,7 +140,7 @@ export function plant(config: GameConfig, state: GameState, cropId: string, now:
     if (index < 0 || index >= farm.plots.length) return { ok: false, reason: '没有空地' };
     const crop = cropDef(config, cropId)!;
     state.props![crop.seed] -= 1;
-    farm.plots[index] = { crop: crop.id, plantedAt: now, readyAt: now + growMinutes(config, state, crop, now) * 60_000 };
+    farm.plots[index] = { crop: crop.id, plantedAt: now, readyAt: now + growMinutes(config, state, crop, now) * 60_000, left: Math.max(0, (crop.harvests ?? 1) - 1) };
     addStat(state, 'crops_planted');
     return { ok: true, message: `种下了${crop.icon}${crop.name}` };
 }
@@ -173,11 +173,17 @@ function harvestPlot(config: GameConfig, state: GameState, index: number, now: n
     const bag: ResourceBag = {};
     for (const id of RESOURCE_IDS) if (crop.yield[id]) bag[id] = Math.round(crop.yield[id]! * (id === 'food' ? growth : 1));
     const got = grantBag(config, state, bag);
+    addStat(state, 'harvests');
+    addStat(state, `crop_${crop.id}`);
+    // 能收好几茬的（番茄、草莓……）：留在地里接着长，最后一茬才拿回种子
+    const rate = growthRate(config, state, crop, now);
+    if ((plot.left ?? 0) > 0 && rate > 0) {
+        farm.plots[index] = { ...plot, readyAt: now + Math.round((crop.regrowMinutes ?? crop.minutes) / rate) * 60_000, left: plot.left! - 1 };
+        return `${crop.icon}${crop.name}（${bagText(config, got)}，还能再收 ${plot.left} 次）`;
+    }
     const [lo, hi] = crop.seedsBack;
     const seeds = lo + Math.floor(nextRandom(state) * (hi - lo + 1));
     if (seeds > 0) addProp(state, crop.seed, seeds);
-    addStat(state, 'harvests');
-    addStat(state, `crop_${crop.id}`);
     return `${crop.icon}${crop.name}（${bagText(config, got)}${seeds > 0 ? `，种子×${seeds}` : ''}）`;
 }
 
@@ -355,6 +361,8 @@ export function updateFarm(config: GameConfig, state: GameState, now: number): v
         const crop = cropDef(config, p.crop);
         addLog(state, p.readyAt + f.witherMinutes * 60_000, `🥀 ${crop?.icon ?? ''}${crop?.name ?? '菜'}熟了没人收，烂在地里了。`);
     });
+    // 有人看守菜园：熟了就收、空地就种（不用玩家每次手动）
+    if (hasGarden && gardenKeepers(state).length > 0) tendGarden(config, state, now);
     const today = currentDay(config, state, now);
     const dayMs = config.balance.dayLengthMinutes * 60_000;
     while (farm.day < today) {
@@ -367,6 +375,20 @@ export function updateFarm(config: GameConfig, state: GameState, now: number): v
 export function bestCrop(config: GameConfig, state: GameState, now: number): CropDef | undefined {
     const value = (c: CropDef) => ((c.yield.food ?? 0) + (c.yield.medicine ?? 0) * 4) / c.minutes;
     return (config.farming?.crops ?? []).filter((c) => !plantBlocker(config, state, c.id, now)).sort((a, b) => value(b) - value(a))[0];
+}
+
+/** 在菜园干活的人（看守菜园） */
+export function gardenKeepers(state: GameState): string[] {
+    return state.survivors.filter((s) => s.assignment === 'garden').map((s) => s.id);
+}
+
+/** 看守菜园：收熟了的菜，空地种上现在最划算的种子 */
+export function tendGarden(config: GameConfig, state: GameState, now: number): void {
+    if (readyPlots(config, state, now) > 0) harvestAll(config, state, now);
+    for (let guard = 0; guard < 20; guard++) {
+        const crop = bestCrop(config, state, now);
+        if (!crop || !plant(config, state, crop.id, now).ok) break;
+    }
 }
 
 /** 没有界面在看（测试、模拟）：收熟了的菜、收蛋、种满空地 */

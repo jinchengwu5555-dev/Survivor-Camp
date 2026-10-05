@@ -1,0 +1,105 @@
+{
+    "_doc": "狩猎场和钓鱼点（和探索的分区分开），见 core/hunting.ts。tier 是要什么交通工具，minHq 是指挥部几级才开放；game 里 capture 是活捉回去养的概率。",
+    "minutes": 6,
+    "triesPerHunter": 2,
+    "baseChance": 0.4,
+    "seasonChance": {"summer": 1, "autumn": 1.1, "winter": 0.6, "spring": 1.2},
+    "grounds": [
+        {
+            "id": "backyards",
+            "name": "住宅区后院",
+            "icon": "🏡",
+            "tier": 0,
+            "rating": "一般",
+            "note": "住宅区的后院和菜地里跑着野兔、走失的鸡，屋檐下全是鸽子。",
+            "game": [
+                {"id": "rabbit", "name": "野兔", "icon": "🐇", "weight": 3, "food": 15, "risk": 0.01, "kind": "hunt", "capture": {"animal": "rabbit", "chance": 0.25}},
+                {"id": "chicken", "name": "走失的鸡", "icon": "🐔", "weight": 2, "food": 18, "risk": 0, "kind": "hunt", "capture": {"animal": "chicken", "chance": 0.6}},
+                {"id": "pigeon", "name": "鸽子", "icon": "🕊️", "weight": 2, "food": 8, "risk": 0, "kind": "hunt"},
+                {"id": "rat", "name": "老鼠", "icon": "🐀", "weight": 3, "food": 4, "risk": 0.02, "kind": "hunt"}
+            ]
+        },
+        {
+            "id": "park_woods",
+            "name": "公园树林",
+            "icon": "🌳",
+            "tier": 0,
+            "rating": "好",
+            "note": "公园的树林里有野兔、松鼠和野鸭，也有一群野狗。",
+            "game": [
+                {"id": "rabbit", "name": "野兔", "icon": "🐇", "weight": 3, "food": 15, "risk": 0.01, "kind": "hunt", "capture": {"animal": "rabbit", "chance": 0.25}},
+                {"id": "squirrel", "name": "松鼠", "icon": "🐿️", "weight": 3, "food": 6, "risk": 0, "kind": "hunt"},
+                {"id": "duck", "name": "野鸭", "icon": "🦆", "weight": 2, "food": 14, "risk": 0, "kind": "hunt", "capture": {"animal": "duck", "chance": 0.2}},
+                {"id": "wild_dog", "name": "野狗", "icon": "🐕", "weight": 1, "food": 25, "risk": 0.25, "kind": "hunt"}
+            ]
+        },
+        {
+            "id": "lake",
+            "name": "公园湖边",
+            "icon": "🎣",
+            "tier": 0,
+            "rating": "好（钓鱼）",
+            "note": "湖边安静，坐一下午能钓上不少鱼。",
+            "fishing": true,
+            "game": [
+                {"id": "duck", "name": "野鸭", "icon": "🦆", "weight": 2, "food": 14, "risk": 0, "kind": "hunt", "capture": {"animal": "duck", "chance": 0.2}},
+                {"id": "fish", "name": "湖里的鱼", "icon": "🐟", "weight": 2, "food": 12, "risk": 0, "kind": "fish", "capture": {"animal": "crucian", "chance": 0.3}}
+            ]
+        },
+        {
+            "id": "roadside",
+            "name": "公路边的林子",
+            "icon": "🛣️",
+            "tier": 0,
+            "minHq": 2,
+            "rating": "一般",
+            "note": "公路两边的林子里有鹿出没，乌鸦成群。",
+            "game": [
+                {"id": "crow", "name": "乌鸦", "icon": "🐦‍⬛", "weight": 2, "food": 5, "risk": 0, "kind": "hunt"},
+                {"id": "deer", "name": "鹿", "icon": "🦌", "weight": 1, "food": 60, "risk": 0.06, "kind": "hunt"},
+                {"id": "rabbit", "name": "野兔", "icon": "🐇", "weight": 2, "food": 15, "risk": 0.01, "kind": "hunt", "capture": {"animal": "rabbit", "chance": 0.25}}
+            ]
+        },
+        {
+            "id": "riverbank",
+            "name": "河滩",
+            "icon": "🌊",
+            "tier": 1,
+            "rating": "很好（钓鱼）",
+            "note": "老城外的河滩，能钓到大鲶鱼，桥洞下有野鸭。要骑车去。",
+            "fishing": true,
+            "game": [
+                {"id": "fish", "name": "河鱼", "icon": "🐟", "weight": 4, "food": 14, "risk": 0, "kind": "fish", "capture": {"animal": "crucian", "chance": 0.3}},
+                {"id": "catfish", "name": "大鲶鱼", "icon": "🐠", "weight": 1, "food": 40, "risk": 0.01, "kind": "fish", "capture": {"animal": "catfish", "chance": 0.25}},
+                {"id": "duck", "name": "野鸭", "icon": "🦆", "weight": 2, "food": 14, "risk": 0, "kind": "hunt", "capture": {"animal": "duck", "chance": 0.2}}
+            ]
+        },
+        {
+            "id": "hill_forest",
+            "name": "北山森林",
+            "icon": "🌲",
+            "tier": 1,
+            "rating": "一般",
+            "note": "诊所后面的山林，浣熊和鹿很多。要骑车去。",
+            "game": [
+                {"id": "raccoon", "name": "浣熊", "icon": "🦝", "weight": 3, "food": 12, "risk": 0.05, "kind": "hunt"},
+                {"id": "deer", "name": "鹿", "icon": "🦌", "weight": 1, "food": 60, "risk": 0.06, "kind": "hunt"}
+            ]
+        },
+        {
+            "id": "reservoir",
+            "name": "水库和农场",
+            "icon": "🏞️",
+            "tier": 2,
+            "rating": "很好",
+            "note": "水库和废弃农场：鹿、野猪、走失的山羊，水库里有大鱼。野猪很凶。要开车去。",
+            "game": [
+                {"id": "deer", "name": "鹿", "icon": "🦌", "weight": 3, "food": 60, "risk": 0.06, "kind": "hunt"},
+                {"id": "boar", "name": "野猪", "icon": "🐗", "weight": 1, "food": 110, "risk": 0.3, "kind": "hunt", "capture": {"animal": "pig", "chance": 0.12}},
+                {"id": "fish", "name": "水库的鱼", "icon": "🐟", "weight": 3, "food": 16, "risk": 0, "kind": "fish", "capture": {"animal": "grass_carp", "chance": 0.25}},
+                {"id": "goat", "name": "走失的山羊", "icon": "🐐", "weight": 2, "food": 40, "risk": 0.02, "kind": "hunt", "capture": {"animal": "goat", "chance": 0.5}},
+                {"id": "goose", "name": "大雁", "icon": "🪿", "weight": 2, "food": 25, "risk": 0, "kind": "hunt", "seasons": ["autumn", "spring"]}
+            ]
+        }
+    ]
+}

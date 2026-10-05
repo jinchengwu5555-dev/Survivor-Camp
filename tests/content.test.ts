@@ -32,7 +32,7 @@ describe('流浪商人（R07）', () => {
         const game = newGame();
         const at = dayStart(game.config.trader.firstDay) + MIN;
         game.tick(at);
-        game.state.resources = { food: 199, wood: 199, parts: 99, medicine: 20, cans: 30 };
+        game.state.resources = { food: 199, water: 199, wood: 199, parts: 99, medicine: 20, cans: 30 };
         const offer = game.state.trader!.offers[0];
         const before = { ...game.state.resources };
         expect(game.trade(0, at).ok).toBe(true);
@@ -45,7 +45,7 @@ describe('流浪商人（R07）', () => {
         const game = newGame();
         const at = dayStart(game.config.trader.firstDay) + MIN;
         game.tick(at);
-        game.state.resources = { food: 0, wood: 0, parts: 0, medicine: 0, cans: 0 };
+        game.state.resources = { food: 0, water: 0, wood: 0, parts: 0, medicine: 0, cans: 0 };
         expect(game.trade(0, at)).toEqual({ ok: false, reason: '东西不够换' });
         expect(game.refreshTrader(at).ok).toBe(true);
         expect(game.refreshTrader(at)).toEqual({ ok: false, reason: '这次已经刷新过了' });

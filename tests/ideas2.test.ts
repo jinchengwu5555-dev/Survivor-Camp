@@ -112,11 +112,11 @@ describe('R79 今日情报', () => {
     it('每天固定几条，同一天结果一样，换一天会变', () => {
         const game = newGame();
         const { config, state } = game;
-        const day1 = todayIntel(config, state, T0 + MIN).map((x) => `${x.district.id}:${x.kind.id}`);
+        const day1 = todayIntel(config, state, T0 + MIN).map((x) => `${x.id}:${x.kind.id}`);
         expect(day1).toHaveLength(config.intel!.perDay);
-        expect(todayIntel(config, state, T0 + 30 * MIN).map((x) => `${x.district.id}:${x.kind.id}`)).toEqual(day1);
+        expect(todayIntel(config, state, T0 + 30 * MIN).map((x) => `${x.id}:${x.kind.id}`)).toEqual(day1);
         const days = new Set<string>();
-        for (let d = 1; d <= 8; d++) days.add(todayIntel(config, state, dayStart(d) + MIN).map((x) => `${x.district.id}:${x.kind.id}`).join(','));
+        for (let d = 1; d <= 8; d++) days.add(todayIntel(config, state, dayStart(d) + MIN).map((x) => `${x.id}:${x.kind.id}`).join(','));
         expect(days.size).toBeGreaterThan(1);
     });
 
@@ -125,9 +125,9 @@ describe('R79 今日情报', () => {
         const { config, state } = game;
         const intel = todayIntel(config, state, T0 + MIN);
         const hit = intel[0];
-        const m = intelMods(config, state, hit.district.id, T0 + MIN);
+        const m = intelMods(config, state, hit.id, T0 + MIN);
         expect([m.hunt, m.fish, m.loot, m.danger].some((v) => v !== 1)).toBe(true);
-        const other = config.districts!.districts.find((d) => !intel.some((x) => x.district.id === d.id))!;
+        const other = config.districts!.districts.find((d) => !intel.some((x) => x.id === d.id))!;
         expect(intelMods(config, state, other.id, T0 + MIN)).toEqual({ hunt: 1, fish: 1, loot: 1, danger: 1 });
     });
 });

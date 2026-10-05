@@ -3,13 +3,13 @@
         "id": "hq", "stages": [{"level": 1, "name": "经理办公室", "icon": "📋", "description": "超市经理的小办公室，墙上钉着一张镇地图。"}, {"level": 5, "name": "指挥中心", "icon": "🏢", "description": "打通了隔壁的会议室，有了对讲机和值班表。"}, {"level": 10, "name": "营地总部", "icon": "🏛️", "description": "整层楼都是指挥部，大家在这里开会、分配物资。"}, {"level": 18, "name": "要塞司令部", "icon": "🏰", "description": "加固过的指挥所，屋顶有探照灯和无线电天线。"}],
         "name": "指挥部",
         "icon": "🏪",
-        "map": { "x": 0, "y": 170, "scale": 1.35 },
+        "map": { "x": 0, "y": 175, "scale": 1.35 },
         "description": "超市的经理办公室。决定营地等级和仓库容量。",
         "startLevel": 1,
         "levels": [
             { "cost": {}, "buildSeconds": 0 },
-            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "storage": { "food": 150, "wood": 150, "parts": 80, "medicine": 40 } },
-            { "cost": { "wood": 250, "parts": 80, "food": 200 }, "buildSeconds": 900, "storage": { "food": 350, "wood": 350, "parts": 180, "medicine": 90 } }
+            { "cost": { "wood": 80, "parts": 20 }, "buildSeconds": 120, "storage": { "food": 150, "water": 150, "wood": 150, "parts": 80, "medicine": 40 } },
+            { "cost": { "wood": 280, "parts": 100 }, "buildSeconds": 900, "storage": { "food": 350, "water": 350, "wood": 350, "parts": 180, "medicine": 90 } }
         ],
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "storageGrowth": 1.6 }
     },
@@ -17,7 +17,7 @@
         "id": "wall", "stages": [{"level": 1, "name": "木栅栏", "icon": "🪵", "description": "木桩和货架拼成的一圈栅栏。"}, {"level": 4, "name": "加固木墙", "icon": "🧱", "description": "厚木板层层钉牢，外面挖了一道浅沟。"}, {"level": 8, "name": "铁皮墙", "icon": "🛡️", "description": "拆了车皮和广告牌焊成的铁皮墙。"}, {"level": 13, "name": "水泥围墙", "icon": "🏯", "description": "浇筑的水泥墙，顶上拉着铁丝网。"}],
         "name": "栅栏",
         "icon": "🪵",
-        "map": { "x": 60, "y": -245, "scale": 1.1 },
+        "map": { "x": 0, "y": -245, "scale": 1.1 },
         "description": "木桩、铁丝网和货架围成的一圈栅栏，把整个营地护在里面。等级越高越结实（木栅栏 → 加固木墙 → 铁皮墙 → 水泥墙），提供安全值，守夜时由它挡住尸群。",
         "startLevel": 1,
         "levels": [
@@ -32,7 +32,7 @@
         "id": "kitchen", "stages": [{"level": 1, "name": "篝火", "icon": "🔥", "description": "几块砖头围一堆火，架口锅就能煮东西。"}, {"level": 3, "name": "烤架", "icon": "🍖", "description": "焊了个铁架子，能同时烤肉、烧水。"}, {"level": 6, "name": "厨房", "icon": "🍳", "description": "超市熟食区改成的厨房，有灶台和案板。"}, {"level": 12, "name": "食堂", "icon": "🍲", "description": "长桌、大锅、排班表，全营地一起开饭。"}, {"level": 20, "name": "中央厨房", "icon": "🏭", "description": "能腌、能熏、能做罐头的大厨房。"}],
         "name": "厨房",
         "icon": "🍳",
-        "map": { "x": -230, "y": 45 },
+        "map": { "x": -270, "y": 35 },
         "description": "把找到的食材做成热饭。生产食物，厨师干活效率更高。",
         "specialty": "cook",
         "startLevel": 1,
@@ -47,7 +47,7 @@
         "id": "scrapyard", "stages": [{"level": 1, "name": "废品堆", "icon": "🗑️", "description": "停车场角落堆着能用的破烂。"}, {"level": 4, "name": "拆解棚", "icon": "🔩", "description": "搭了遮雨棚，有工作台和一套扳手。"}, {"level": 8, "name": "废料场", "icon": "🏗️", "description": "分门别类的废料场，拆车、锯木两不误。"}, {"level": 15, "name": "回收工厂", "icon": "🏭", "description": "有了发电机和切割机，一天能拆好几辆车。"}],
         "name": "废料场",
         "icon": "🔩",
-        "map": { "x": 230, "y": 45 },
+        "map": { "x": 90, "y": 35 },
         "description": "拆解停车场里的废车和杂物。生产木材和零件，机械师效率更高。",
         "specialty": "mechanic",
         "startLevel": 1,
@@ -62,7 +62,7 @@
         "id": "infirmary", "unlock": {"survivors": 3}, "stages": [{"level": 1, "name": "急救箱", "icon": "🩹", "description": "一个急救箱和一张干净的桌子。"}, {"level": 3, "name": "药房柜台", "icon": "💊", "description": "超市药房的柜台，药品按类摆好。"}, {"level": 7, "name": "医务室", "icon": "🏥", "description": "隔出了病床和消毒区。"}, {"level": 15, "name": "野战医院", "icon": "🚑", "description": "能做手术的小医院，还有自己的药材园。"}],
         "name": "医务室",
         "icon": "💊",
-        "map": { "x": -230, "y": -95 },
+        "map": { "x": -270, "y": -105 },
         "description": "药房柜台改成的简易医务室。生产药品，医生效率更高。",
         "specialty": "medic",
         "startLevel": 0,
@@ -77,7 +77,7 @@
         "id": "dorm", "stages": [{"level": 1, "name": "睡袋", "icon": "⛺", "description": "仓库里铺开的一排睡袋。"}, {"level": 3, "name": "行军床", "icon": "🛏️", "description": "每人一张行军床，终于不用睡地上了。"}, {"level": 6, "name": "宿舍", "icon": "🏠", "description": "用货架隔出的小房间，门上贴着名字。"}],
         "name": "宿舍",
         "icon": "🛏️",
-        "map": { "x": 0, "y": 35 },
+        "map": { "x": -90, "y": 35 },
         "description": "仓库里铺开的睡袋和行军床。床位决定营地能收留多少人。",
         "startLevel": 1,
         "levels": [
@@ -91,13 +91,13 @@
         "id": "training", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "沙袋", "icon": "🥊", "description": "吊在房梁上的一个旧沙袋。"}, {"level": 5, "name": "训练场", "icon": "🎯", "description": "轮胎、木桩、靶子，每天早上都有人练。"}, {"level": 12, "name": "格斗馆", "icon": "🏋️", "description": "像样的训练场馆，老手带新人。"}],
         "name": "训练场",
         "icon": "🥊",
-        "map": { "x": 230, "y": -95 },
+        "map": { "x": 270, "y": 35 },
         "description": "停车场里用轮胎和木桩搭的训练场。所有幸存者的战斗等级提升。",
         "startLevel": 0,
         "levels": [
-            { "cost": { "wood": 80, "parts": 20, "food": 50 }, "buildSeconds": 120, "battleLevel": 1 },
-            { "cost": { "wood": 160, "parts": 50, "food": 150 }, "buildSeconds": 600, "requiresHq": 2, "battleLevel": 2 },
-            { "cost": { "wood": 260, "parts": 90, "food": 300 }, "buildSeconds": 1800, "requiresHq": 3, "battleLevel": 3 }
+            { "cost": { "wood": 100, "parts": 25 }, "buildSeconds": 120, "battleLevel": 1 },
+            { "cost": { "wood": 200, "parts": 60 }, "buildSeconds": 600, "requiresHq": 2, "battleLevel": 2 },
+            { "cost": { "wood": 330, "parts": 110 }, "buildSeconds": 1800, "requiresHq": 3, "battleLevel": 3 }
         ],
         "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "battleLevelPerLevel": 1 }
     },
@@ -105,7 +105,7 @@
         "id": "workshop", "unlock": {"hq": 2, "survivors": 3}, "stages": [{"level": 1, "name": "工具台", "icon": "🔧", "description": "一张结实的桌子和一套工具。"}, {"level": 2, "name": "工坊", "icon": "🛠️", "description": "德里克的修车铺搬进了后仓，什么都能做。"}],
         "name": "工坊",
         "icon": "🔧",
-        "map": { "x": 0, "y": -105 },
+        "map": { "x": -90, "y": -105 },
         "description": "德里克的修车铺搬进了超市后仓。可以制作燃烧瓶、急救包等战斗物品。",
         "specialty": "mechanic",
         "startLevel": 0,
@@ -118,7 +118,7 @@
         "id": "cellar", "unlock": {"hq": 4}, "stages": [{"level": 1, "name": "地洞", "icon": "🕳️", "description": "在后院挖的地洞，凉快一点。"}, {"level": 4, "name": "地窖", "icon": "🧊", "description": "冷库改的地窖，食物坏得慢。"}, {"level": 8, "name": "冷库", "icon": "❄️", "description": "发电机带着的冷库，肉能放一个月。"}],
         "name": "地窖",
         "icon": "🧊",
-        "map": { "x": -230, "y": -240 },
+        "map": { "x": 270, "y": -105 },
         "description": "超市的冷库改成的地窖。让新鲜食物坏得慢一些。",
         "startLevel": 0,
         "levels": [
@@ -132,21 +132,21 @@
         "id": "garden", "unlock": {"hq": 2}, "stages": [{"level": 1, "name": "花盆", "icon": "🪴", "description": "超市花卉区搬来的几个花盆，只能种点小东西。"}, {"level": 3, "name": "菜畦", "icon": "🌱", "description": "停车场撬开柏油，翻出了几垄菜畦。"}, {"level": 6, "name": "菜园", "icon": "🥬", "description": "围起来的菜园，有引水管和堆肥箱。"}, {"level": 10, "name": "温室大棚", "icon": "🏡", "description": "塑料布搭的大棚，冬天也能种菜。"}],
         "name": "菜园",
         "icon": "🌱",
-        "map": { "x": -230, "y": 175 },
+        "map": { "x": -270, "y": 175 },
         "description": "种菜的地方。要有种子才能种，熟了记得收，放久了会烂在地里。等级越高菜地越多；农夫在营地时菜长得更快。",
         "startLevel": 0,
         "levels": [
-            { "cost": { "wood": 40 }, "buildSeconds": 60, "plots": 2 },
-            { "cost": { "wood": 90, "parts": 10 }, "buildSeconds": 240, "requiresHq": 2, "plots": 3 },
-            { "cost": { "wood": 160, "parts": 30 }, "buildSeconds": 600, "requiresHq": 3, "plots": 3 }
+            { "cost": { "wood": 40 }, "buildSeconds": 60, "plots": 2, "workerSlots": 1 },
+            { "cost": { "wood": 90, "parts": 10 }, "buildSeconds": 240, "requiresHq": 2, "plots": 3, "workerSlots": 1 },
+            { "cost": { "wood": 160, "parts": 30 }, "buildSeconds": 600, "requiresHq": 3, "plots": 3, "workerSlots": 1 }
         ],
-        "scaling": { "maxLevel": 14, "costGrowth": 1.45, "timeGrowth": 1.3, "plotsEvery": 2 }
+        "scaling": { "maxLevel": 14, "costGrowth": 1.45, "timeGrowth": 1.3, "plotsEvery": 2, "slotsEvery": 5 }
     },
     {
         "id": "pen", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "鸡笼", "icon": "🐔", "description": "购物车和铁丝网拼成的笼子。"}, {"level": 3, "name": "畜栏", "icon": "🐐", "description": "木桩围起来的畜栏，羊和兔子都养得下。"}, {"level": 6, "name": "小农场", "icon": "🐖", "description": "有猪圈、鸡舍和饲料棚的小农场。"}, {"level": 9, "name": "牧场", "icon": "🐄", "description": "营地外圈了一片草地，牲口成群。"}],
         "name": "畜栏",
         "icon": "🐔",
-        "map": { "x": 230, "y": 175 },
+        "map": { "x": 270, "y": 175 },
         "description": "养牲口的地方。牲口每天要吃食物，会下蛋、产奶、生崽，也能宰了吃肉。打猎时有机会活捉。",
         "startLevel": 0,
         "levels": [
@@ -159,7 +159,7 @@
         "id": "pond", "unlock": {"hq": 3}, "stages": [{"level": 1, "name": "水缸", "icon": "🪣", "description": "几口接雨水的大缸，能养几条小鱼。"}, {"level": 3, "name": "鱼池", "icon": "🐟", "description": "停车场挖的水池，铺了防水布。"}, {"level": 6, "name": "鱼塘", "icon": "🎣", "description": "引了河水的鱼塘，四周种了芦苇。"}],
         "name": "鱼塘",
         "icon": "🪣",
-        "map": { "x": 230, "y": -240 },
+        "map": { "x": 270, "y": -245 },
         "description": "养鱼的地方。钓鱼时有机会带活鱼回来，商人也卖鱼苗。鱼每天要喂一点食物，会自己繁殖，可以捞上来吃。等级越高养得越多，也能养更大的鱼。",
         "startLevel": 0,
         "levels": [
@@ -167,5 +167,19 @@
             { "cost": { "wood": 110, "parts": 25 }, "buildSeconds": 360, "requiresHq": 3, "pens": 7 }
         ],
         "scaling": { "maxLevel": 10, "costGrowth": 1.45, "timeGrowth": 1.3, "pensPerLevel": 3 }
+    },
+    {
+        "id": "well", "stages": [{"level": 1, "name": "雨水桶", "icon": "🛢️", "description": "屋檐下摆了几个接雨水的大桶，烧开了才能喝。"}, {"level": 3, "name": "净水器", "icon": "🚰", "description": "沙子、木炭和布做的过滤器，水干净多了。"}, {"level": 7, "name": "水井", "icon": "⛲", "description": "在停车场打了一口井，手摇泵咯吱咯吱响。"}, {"level": 12, "name": "水塔", "icon": "🗼", "description": "楼顶的水塔接上了水泵，全营地都有自来水了。"}],
+        "name": "水站",
+        "icon": "🛢️",
+        "map": { "x": 90, "y": -105 },
+        "description": "营地的水源。每个人每天都要喝水，夏天喝得更多；断水比断粮更难熬。派人来打水、烧水、过滤。",
+        "startLevel": 1,
+        "levels": [
+            { "cost": {}, "buildSeconds": 0, "production": { "water": 0.9 }, "passive": { "water": 0.6 }, "workerSlots": 2, "storage": { "water": 100 } },
+            { "cost": { "wood": 80, "parts": 15 }, "buildSeconds": 200, "requiresHq": 2, "production": { "water": 1.3 }, "passive": { "water": 0.8 }, "workerSlots": 2, "storage": { "water": 200 } },
+            { "cost": { "wood": 150, "parts": 40 }, "buildSeconds": 600, "requiresHq": 3, "production": { "water": 1.8 }, "passive": { "water": 1.0 }, "workerSlots": 2, "storage": { "water": 350 } }
+        ],
+        "scaling": { "maxLevel": 25, "costGrowth": 1.5, "timeGrowth": 1.32, "productionGrowth": 1.1, "storageGrowth": 1.25, "slotsEvery": 6 }
     }
 ]

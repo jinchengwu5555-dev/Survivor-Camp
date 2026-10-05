@@ -63,6 +63,10 @@ export function healSurvivorState(s: SurvivorState): void {
 
 /** 把老版本存档升级到当前版本；无法识别的版本返回 false */
 export function migrateState(config: GameConfig, state: GameState, now: number): boolean {
+    // 后来新加的资源（比如水）：老存档里没有，按开局数量补上
+    for (const id of RESOURCE_IDS) {
+        if (typeof state.resources[id] !== 'number') state.resources[id] = config.balance.startingResources[id] ?? 0;
+    }
     if (state.version === 1) {
         state.expeditions = [];
         state.nextRaidAt = now + config.balance.raidIntervalMinutes * 60_000;

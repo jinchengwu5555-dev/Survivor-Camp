@@ -13,7 +13,7 @@ import { addLog, addStat } from './state';
 import { ActionResult, GameConfig, GameState, HaulSection, HaulState, LootPiece, RESOURCE_IDS, ResourceBag, ResourceId } from './types';
 
 /** 每种资源一包大概值多少（用来决定先装什么） */
-const RESOURCE_VALUE: Record<ResourceId, number> = { food: 1, wood: 1, parts: 1.4, medicine: 1.8, cans: 2.5 };
+const RESOURCE_VALUE: Record<ResourceId, number> = { food: 1, water: 0.9, wood: 1, parts: 1.4, medicine: 1.8, cans: 2.5 };
 
 /** 资源包的大小随战利品一起成长（和 expeditionLoot 的倍率一致） */
 function bundleGrowth(config: GameConfig, state: GameState): number {

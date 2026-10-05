@@ -29,7 +29,7 @@ describe('备用资料库：候选事件', () => {
                 const config = loadConfig();
                 config.events.push(...events);
                 const game = CampGame.newGame(config, T0, 7);
-                game.state.resources = { food: 200, wood: 200, parts: 100, medicine: 50, cans: 10 };
+                game.state.resources = { food: 200, water: 200, wood: 200, parts: 100, medicine: 50, cans: 10 };
                 for (const id of ['leo', 'hank', 'rosa', 'nora']) game.state.survivors.push({ id, mood: 50, injured: false, recoverAt: null, assignment: null });
                 game.state.eventQueue = [e.id];
                 expect(game.choose(i, T0), `${e.id} 选项 ${i + 1}`).toMatchObject({ ok: true });

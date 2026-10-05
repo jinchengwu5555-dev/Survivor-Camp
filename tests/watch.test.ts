@@ -34,6 +34,7 @@ describe('轮流守夜', () => {
         let t = state.nextRaidAt;
         for (let night = 0; night < 12; night++) {
             state.resources.food = 10_000;
+            state.resources.water = 10_000;
             game.tick(t);
             t = state.nextRaidAt;
         }

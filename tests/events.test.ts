@@ -10,7 +10,7 @@ describe('所有事件', () => {
         for (const e of config.events) {
             e.choices.forEach((_, i) => {
                 const game = CampGame.newGame(loadConfig(), T0, 7);
-                game.state.resources = { food: 200, wood: 200, parts: 100, medicine: 50, cans: 50 };
+                game.state.resources = { food: 200, water: 200, wood: 200, parts: 100, medicine: 50, cans: 50 };
                 for (const id of ['leo', 'hank', 'rosa', 'nora', 'joe']) game.state.survivors.push({ id, mood: 50, injured: false, recoverAt: null, assignment: null });
                 game.state.eventQueue = [e.id];
                 expect(game.choose(i, T0), `${e.id} 选项 ${i + 1}`).toMatchObject({ ok: true });

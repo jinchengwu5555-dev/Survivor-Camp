@@ -1,5 +1,6 @@
 // 游戏总入口：界面层只和这个类打交道。
 
+import { repairBlocker, repairWall } from './wall';
 import { prepareVisitors } from './visitors';
 import { updateDiary } from './diary';
 import { autoFarm, clearPlot, collectProduce, harvestAll, petAnimals, plant, slaughter, updateFarm } from './farming';
@@ -10,7 +11,7 @@ import { updateChatter } from './chatter';
 import { resolveSurveys, startSurvey, suggestSurveyors } from './districts';
 import { buildVehicle, checkVehicleOwners } from './vehicles';
 import { autoPack, autoPlace, confirmHaul, placePiece, removePiece } from './packing';
-import { autoDecideCandidates, decideCandidate } from './recruits';
+import { autoDecideCandidates, decideCandidate, dismissSurvivor, waitCandidate } from './recruits';
 import { spendGold } from './gold';
 import { pray } from './bonds';
 import { resolveHunts, startHunt, suggestHunters } from './hunting';
@@ -139,8 +140,11 @@ export class CampGame {
         resolveSurveys(this.config, s, now);
         resolveHunts(this.config, s, now);
         updateFarm(this.config, s, now);
-        // 没有界面在看（比如模拟器），菜园和畜栏自动打理
-        if (!this.liveRaids) autoFarm(this.config, s, now);
+        // 没有界面在看（比如模拟器），菜园和畜栏自动打理、栅栏有木材就修
+        if (!this.liveRaids) {
+            autoFarm(this.config, s, now);
+            if (!repairBlocker(this.config, s)) repairWall(this.config, s, now);
+        }
         checkVehicleOwners(this.config, s, now);
         // 没有界面在看（比如模拟器），等着装的背包自动装好带回来
         if (!this.liveRaids) for (const h of [...(s.pendingHauls ?? [])]) confirmHaul(this.config, s, h.id, now);
@@ -278,6 +282,21 @@ export class CampGame {
         return this.state.candidates ?? [];
     }
 
+    /** 还没决定、也没让他在门口等的候选人（界面会先让玩家决定） */
+    get pendingCandidates(): CandidateState[] {
+        return this.candidates.filter((c) => !c.waiting);
+    }
+
+    /** 营地满了：让候选人在门口等 */
+    waitCandidate(candidateId: number, now: number): ActionResult {
+        return this.act(now, () => waitCandidate(this.state, candidateId));
+    }
+
+    /** 请一个人离开营地（给新人腾床位） */
+    dismiss(survivorId: string, now: number): ActionResult {
+        return this.act(now, () => dismissSurvivor(this.config, this.state, survivorId, now));
+    }
+
     /** 留下 / 让他走 */
     decideCandidate(candidateId: number, keep: boolean, now: number): ActionResult {
         return this.act(now, () => decideCandidate(this.config, this.state, candidateId, keep, now));
@@ -367,6 +386,11 @@ export class CampGame {
     /** 守夜安排：轮班 / 固定守夜 / 不守夜 */
     setWatch(survivorId: string, mode: WatchMode, now: number): ActionResult {
         return this.act(now, () => (setWatchMode(this.state, survivorId, mode) ? { ok: true } : { ok: false, reason: '没有这个人' }));
+    }
+
+    /** 修补栅栏（花木材） */
+    repairWall(now: number): ActionResult {
+        return this.act(now, () => repairWall(this.config, this.state, now));
     }
 
     /** 菜园：种下一颗种子（不指定地块就种在第一块空地） */

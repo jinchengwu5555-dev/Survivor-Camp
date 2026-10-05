@@ -93,6 +93,11 @@ export function productionPerMinute(config: GameConfig, state: GameState): Recor
         const eff = survivorEfficiency(config, survivor, building) * workMultiplier(config, state, survivor.id, building.id) * mult;
         for (const id of RESOURCE_IDS) rates[id] += (lv.production[id] ?? 0) * eff;
     }
+    // 不需要工人的产出（比如水站的雨水桶自己会接雨水）
+    for (const def of config.buildings) {
+        const lv = currentLevelDef(config, state, def.id);
+        if (lv?.passive) for (const id of RESOURCE_IDS) rates[id] += lv.passive[id] ?? 0;
+    }
     // 营地地点：产量倍率 + 不需要工人的被动产出
     for (const id of RESOURCE_IDS) rates[id] = rates[id] * siteProduction(config, state, id) + sitePassive(config, state, id);
     return rates;
@@ -102,8 +107,16 @@ export function foodConsumptionPerMinute(config: GameConfig, state: GameState): 
     return state.survivors.length * config.balance.foodPerSurvivorPerMinute;
 }
 
+/** 每分钟喝掉多少水（夏天多喝一点，冬天少喝一点） */
+export function waterConsumptionPerMinute(config: GameConfig, state: GameState, now?: number): number {
+    const base = state.survivors.length * (config.balance.waterPerSurvivorPerMinute ?? 0);
+    if (now === undefined) return base;
+    const season = seasonAt(config, state, now).season.id;
+    return base * (season === 'summer' ? 1.3 : season === 'winter' ? 0.8 : 1);
+}
+
 export function emptyBag(): Record<ResourceId, number> {
-    return { food: 0, wood: 0, parts: 0, medicine: 0, cans: 0 };
+    return { food: 0, water: 0, wood: 0, parts: 0, medicine: 0, cans: 0 };
 }
 
 export function canAfford(state: GameState, cost: ResourceBag | undefined): boolean {
@@ -159,6 +172,7 @@ export function economyRates(config: GameConfig, state: GameState, now: number):
         state.resources.food * config.balance.foodSpoilPerMinute * season.spoilMultiplier * siteSpoil(config, state) * (1 - spoilReduction(config, state));
     const heating = state.survivors.length * season.heatingWoodPerSurvivorPerMinute;
     net.food -= foodConsumptionPerMinute(config, state) + spoil;
+    net.water -= waterConsumptionPerMinute(config, state, now);
     net.wood -= heating;
     return { net, spoil, heating };
 }
@@ -179,7 +193,10 @@ export function advanceEconomy(config: GameConfig, state: GameState, minutes: nu
     const b = config.balance;
     const { net, heating } = economyRates(config, state, now);
 
-    const starvingMinutes = minutesWithout(state.resources.food, net.food, minutes);
+    // 断粮、断水都算挨饿（缺水更难受，心情掉得更快）
+    const hungryMinutes = minutesWithout(state.resources.food, net.food, minutes);
+    const thirstyMinutes = config.balance.waterPerSurvivorPerMinute ? minutesWithout(state.resources.water ?? 0, net.water, minutes) : 0;
+    const starvingMinutes = Math.max(hungryMinutes, thirstyMinutes);
     const freezingMinutes = heating > 0 ? minutesWithout(state.resources.wood, net.wood, minutes) : 0;
     for (const id of RESOURCE_IDS) addResource(config, state, id, net[id] * minutes);
 
@@ -188,7 +205,7 @@ export function advanceEconomy(config: GameConfig, state: GameState, minutes: nu
         if (s.mood < b.moodRecoveryMax) {
             s.mood = Math.min(b.moodRecoveryMax, s.mood + b.moodRecoveryPerMinute * moodRecoveryMultiplier(config, state, s.id) * fedMinutes);
         }
-        s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * starvingMinutes - b.coldMoodPenaltyPerMinute * freezingMinutes);
+        s.mood = clampMood(s.mood - b.hungerMoodPenaltyPerMinute * (hungryMinutes + thirstyMinutes * 1.5) - b.coldMoodPenaltyPerMinute * freezingMinutes);
     }
     return Math.max(starvingMinutes, freezingMinutes);
 }
