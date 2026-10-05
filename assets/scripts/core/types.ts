@@ -10,7 +10,9 @@ export const RESOURCE_IDS: ResourceId[] = ['food', 'water', 'wood', 'parts', 'me
 
 export type ResourceBag = Partial<Record<ResourceId, number>>;
 
-export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' | 'fighter' | 'farmer' | 'hunter' | 'carpenter' | 'herder' | 'engineer' | 'scout' | 'guard';
+export type Specialty = 'leader' | 'cook' | 'medic' | 'mechanic' | 'scavenger' | 'fighter' | 'farmer' | 'hunter' | 'carpenter' | 'herder' | 'engineer' | 'scout' | 'guard'
+    // 没什么实际加成的普通人（警察、歌手有一点小作用）
+    | 'police' | 'singer' | 'teacher' | 'official' | 'office_worker' | 'high_schooler' | 'college_student';
 
 // ---------- 配置（来自 assets/resources/config/*.json） ----------
 

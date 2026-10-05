@@ -18,9 +18,16 @@
         "herder": ["牧场帮工", "兽医助理", "养鸡场工人"],
         "engineer": ["水厂技工", "钻井工", "管道工"],
         "scout": ["越野跑选手", "地图测绘员", "外卖骑手"],
-        "guard": ["夜班保安", "狱警", "退伍兵"]
+        "guard": ["夜班保安", "狱警", "退伍兵"],
+        "police": ["巡警", "交警", "社区民警"],
+        "singer": ["酒吧歌手", "街头艺人", "合唱团团员"],
+        "teacher": ["中学老师", "钢琴老师", "幼儿园老师"],
+        "official": ["镇政府办事员", "税务员", "市长秘书"],
+        "office_worker": ["上班族", "保险推销员", "银行柜员"],
+        "high_schooler": ["高中生", "高三学生", "校篮球队队员"],
+        "college_student": ["大学生", "研究生", "交换生"]
     },
     "traits": ["勤快", "胆小", "乐观", "沉默", "暴躁", "热心", "多疑", "幽默", "固执", "细心"],
-    "specialties": ["cook", "medic", "mechanic", "scavenger", "fighter", "farmer", "hunter", "carpenter", "herder", "engineer", "scout", "guard"],
+    "specialties": ["cook", "medic", "mechanic", "scavenger", "fighter", "farmer", "hunter", "carpenter", "herder", "engineer", "scout", "guard", "police", "singer", "teacher", "official", "office_worker", "high_schooler", "college_student"],
     "battleUnit": "militia"
 }

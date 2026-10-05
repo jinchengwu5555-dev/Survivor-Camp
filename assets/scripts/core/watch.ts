@@ -6,7 +6,7 @@
 //   3. 不是每晚都有尸潮：按 raidChance 掷骰子（第一次尸潮必来）。人手不够时，尸潮来了栅栏更容易被冲破。
 
 import { isOnExpedition } from './combat';
-import { changeMood, isBrokenDown } from './mood';
+import { changeMood, changeMoodAll, isBrokenDown } from './mood';
 import { currentDay } from './state';
 import { quirkRaidChance } from './recruits';
 import { nextRandom } from './rng';
@@ -61,6 +61,9 @@ export function passNight(config: GameConfig, state: GameState, at: number): { w
             if (s.sleep < cfg.tiredBelow / 2) changeMood(state, s, -4, '守夜太累', at);
         }
     }
+    // 营地里有歌手：睡前唱几首，大家心情好一点
+    const singer = state.survivors.find((s) => !s.injured && survivorInfo(config, state, s.id)?.specialty === 'singer');
+    if (singer) changeMoodAll(state, 1, `听${survivorName(config, state, singer.id)}唱歌`, at);
     const needed = watchersNeeded(config, state);
     state.lastNight = { at, watchers, needed, raid: false };
     return { watchers, understaffed: watchers.length < needed };

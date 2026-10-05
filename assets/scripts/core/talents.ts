@@ -60,6 +60,8 @@ export function combatMultiplier(config: GameConfig, state: GameState, survivorI
     const q = quirkCombat(config, s);
     // 浴火重生：每涅槃一次攻击永久 +5%
     if (talentsOf(config, state, survivorId).some((t) => t.id === 'phoenix')) atk *= 1 + 0.05 * (state.phoenix?.rebirths ?? 0);
+    // 警察：受过训练，打仗攻击 +10%
+    if (survivorInfo(config, state, survivorId)?.specialty === 'police') atk *= 1.1;
     return { atk: atk * g.atk * tired * (s ? moodTier(s.mood).atk : 1) * q.atk, hp: hp * g.hp * q.hp };
 }
 

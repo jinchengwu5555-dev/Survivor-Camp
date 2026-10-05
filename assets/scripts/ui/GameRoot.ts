@@ -37,7 +37,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { CandidateState, GearSlot, HuntingGround, BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
+import { CandidateState, GearSlot, PropDef, HuntingGround, BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo, survivorName } from '../core/roster';
@@ -88,7 +88,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.7 战斗画面·新职业';
+const GAME_VERSION = 'v2.8 背包分类·更多职业';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -175,6 +175,13 @@ const SPECIALTY_NAMES: Record<string, string> = {
     engineer: '水工',
     scout: '斥候',
     guard: '守卫',
+    police: '警察',
+    singer: '歌手',
+    teacher: '老师',
+    official: '政府人员',
+    office_worker: '上班族',
+    high_schooler: '高中生',
+    college_student: '大学生',
 };
 /** 专长有什么用（显示在候选人卡片和个人档案里） */
 const SPECIALTY_TIPS: Record<string, string> = {
@@ -191,12 +198,40 @@ const SPECIALTY_TIPS: Record<string, string> = {
     engineer: '在水站产量更高',
     scout: '侦察、勘察跑得更快',
     guard: '守夜不怎么累',
+    police: '受过训练，打仗攻击 +10%',
+    singer: '每晚睡前唱几首，大家心情 +1',
+    teacher: '普通人，没有专长加成（会讲故事）',
+    official: '普通人，没有专长加成（会写报告）',
+    office_worker: '普通人，没有专长加成（会做表格）',
+    high_schooler: '普通人，没有专长加成（年轻、跑得快）',
+    college_student: '普通人，没有专长加成（读过很多书）',
 };
 
 /** 营地页上打开的面板：建筑详情、营地地点 */
 type Sheet = 'building' | 'sites' | 'trader' | 'props' | 'stats' | 'settings' | 'graveyard' | 'diary' | null;
 
 type ButtonStyle = 'normal' | 'disabled' | 'highlight' | 'danger';
+/** 背包的分类页 */
+type PropTab = 'all' | 'supply' | 'tool' | 'gear' | 'seed' | 'animal' | 'rare';
+const PROP_TABS: { id: PropTab; name: string }[] = [
+    { id: 'all', name: '📦 全部' },
+    { id: 'supply', name: '🥫 物资' },
+    { id: 'tool', name: '🧰 道具' },
+    { id: 'gear', name: '⚔️ 装备' },
+    { id: 'seed', name: '🌱 种子' },
+    { id: 'animal', name: '🐔 牲口' },
+    { id: 'rare', name: '🟥 稀有' },
+];
+/** 道具属于哪一类 */
+function propTabOf(def: PropDef): PropTab {
+    if (def.rare || def.type === 'treasure') return 'rare';
+    if (def.type === 'gear') return 'gear';
+    if (def.type === 'seed') return 'seed';
+    if (def.type === 'animal') return 'animal';
+    if (def.type === 'resource' || def.type === 'heal' || def.type === 'mood') return 'supply';
+    return 'tool';
+}
+
 /** 工坊的分类页 */
 type WorkshopTab = 'items' | 'weapon' | 'armor' | 'tool' | 'bag' | 'garage';
 const WORKSHOP_TABS: { id: WorkshopTab; name: string }[] = [
@@ -630,6 +665,8 @@ export class GameRoot extends Component {
         return this.eventShowing(camp) || this.tab !== 'camp' || this.sheet !== null;
     }
 
+    /** 背包的分类页 */
+    private propTab: PropTab = 'all';
     /** 探索页：小镇地图，还是狩猎钓鱼页 */
     private exploreMode: 'map' | 'hunt' = 'map';
     /** 换人要点两次：候选人 id:要离开的人 id */
@@ -1413,8 +1450,24 @@ export class GameRoot extends Component {
         this.text('探索、守夜、拾荒、每日宝箱、商人和事件都会得到道具。', 20, DIM);
         this.gap(8);
         this.renderGold(camp, now);
-        const owned = config.props.filter((p) => propCount(state, p.id) > 0);
-        if (owned.length === 0) this.text('背包是空的。', 22, DIM);
+        const allOwned = config.props.filter((p) => propCount(state, p.id) > 0);
+        // 分类页：每类显示有几样
+        const per = 4;
+        const w = (WIDTH - 10 * (per - 1)) / per;
+        PROP_TABS.forEach((t, i) => {
+            if (i % per === 0 && i > 0) this.gap(8);
+            const row = this.cursorY;
+            const n = allOwned.filter((p) => propTabOf(p) === t.id).reduce((sum, p) => sum + propCount(state, p.id), 0);
+            this.button(`${t.name}${n ? ` ${n}` : ''}`, w, () => {
+                this.propTab = t.id;
+                this.resetScroll();
+                this.render();
+            }, LEFT + (i % per) * (w + 10), this.propTab === t.id ? 'highlight' : 'normal', 18, 42);
+            if (i % per !== per - 1 && i !== PROP_TABS.length - 1) this.cursorY = row;
+        });
+        this.gap(12);
+        const owned = this.propTab === 'all' ? allOwned : allOwned.filter((p) => propTabOf(p) === this.propTab);
+        if (owned.length === 0) this.text(allOwned.length ? '这一类是空的。' : '背包是空的。', 22, DIM);
         for (const def of owned) {
             const count = propCount(state, def.id);
             const blocker = propBlocker(config, state, def.id);
