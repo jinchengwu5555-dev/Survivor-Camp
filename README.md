@@ -61,7 +61,7 @@ assets/
       props.ts          ← 背包道具：使用、掉落
       townMap.ts        ← 枫谷镇地图：地点状态、解锁提示、战争迷雾
       scouting.ts       ← 侦察点：派一个人去一趟
-    platform/           ← 微信平台适配：存档、激励视频广告、联网检查、排行榜
+    platform/           ← 微信平台适配：存档、激励视频广告、联网检查、排行榜、音效（Audio.ts）
     ui/GameRoot.ts      ← 主界面：顶部状态栏 + 营地地图（设施、拾荒物、尸潮倒计时）+ 底部两行导航；
                           点设施 / 页签打开面板（可拖动）；事件卡、引导、飘字
                           设施在地图上的位置在 buildings.json 的 map: { x, y, scale }
@@ -69,12 +69,14 @@ assets/
     ui/widgets.ts       ← 画按钮、面板、飘字的小工具
     ui/sprites.ts       ← 读取美术图片（sprites/units、portraits、buildings），没图时退回色块
   resources/sprites/    ← 美术图片（规格见 docs/art-assets.md）
+  resources/audio/      ← 音效 sfx_*.wav 和背景音乐 music_*.wav（同名文件覆盖即可换成正式音效）
 tests/                  ← 单元测试
 build-templates/wechatgame/  ← 构建微信小游戏时原样拷进输出目录
   openDataContext/      ← 开放数据域：好友排行榜
   cloudfunctions/leaderboard/  ← 云函数：全服排行榜和防刷校验
 art-raw/                ← 美术原图（任何格式），tools/process_art.py 抠图后输出到 assets/resources/sprites/
 tools/process_art.py    ← 美术图批处理：去背景、去白边、裁边、缩放
+tools/make_audio.py     ← 用代码合成 8-bit 音效和背景音乐 → assets/resources/audio/
 tools/subset_font.py    ← 像素字体裁剪：只保留游戏里用到的字 → assets/resources/fonts/camp_pixel.ttf
 docs/GDD.md             ← 游戏设计文档
 docs/reference/         ← 备用资料库：参考作品分析、点子池、候选事件（尚未采用）

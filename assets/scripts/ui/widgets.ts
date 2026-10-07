@@ -2,6 +2,7 @@
 // GameRoot（营地界面）和 BattleView（战斗画面）共用。
 
 import { Color, Graphics, Label, Layers, Node, TTFFont, tween, UIOpacity, UITransform, Vec3 } from 'cc';
+import { sfx } from '../platform/Audio';
 
 export const COLORS = {
     bg: new Color(28, 32, 30),
@@ -207,6 +208,7 @@ export class UIButton {
         this.label = addLabel(this.node, '', size, COLORS.text, { width: width - 12, height });
         this.node.on(Node.EventType.TOUCH_END, () => {
             if (this.style === 'disabled') return;
+            sfx('click');
             punch(this.node);
             onClick();
         });

@@ -11,6 +11,7 @@ import { parseFamiliarTag } from '../core/familiar';
 import { LiveRaid } from '../core/liveRaid';
 import { BattleReport, GameConfig } from '../core/types';
 import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelText, UIButton } from './widgets';
+import { sfx } from '../platform/Audio';
 import { addSprite, fitSize, getSprite, preloadSprites, SPRITE_DIRS } from './sprites';
 
 const WIDTH = 680;
@@ -119,6 +120,7 @@ export class BattleView {
             this.repairButton = new UIButton(this.controls, WIDTH, 64, () => {
                 const error = opts.live!.repair();
                 const wall = opts.live!.barricade;
+                sfx(error ? 'error' : 'repair');
                 if (error) this.floatAt(error, 0, 40, COLORS.lose, 24);
                 else if (wall) this.floatAt('🪵 栅栏加固了！', this.toScreenX(wall.x), this.topY(wall), COLORS.heal, 26);
             });
@@ -361,17 +363,21 @@ export class BattleView {
             if (e.type === 'damage') {
                 const target = this.battle.getUnit(e.target);
                 if (!target || e.amount < 1) continue;
+                sfx(e.crit ? 'crit' : 'hit');
                 const color = target.side === 'ally' ? COLORS.lose : e.crit ? COLORS.crit : COLORS.text;
                 this.floatAt(`${e.crit ? '暴击 ' : ''}${Math.round(e.amount)}`, this.toScreenX(target.x), this.laneY(target) + 20, color, e.crit ? 28 : 22);
             } else if (e.type === 'heal') {
                 const target = this.battle.getUnit(e.target);
+                if (target) sfx('heal');
                 if (target) this.floatAt(`+${Math.round(e.amount)}`, this.toScreenX(target.x), this.laneY(target) + 20, COLORS.heal, 22);
             } else if (e.type === 'skill') {
                 const source = this.battle.getUnit(e.source);
                 const def = this.battle.registry.skill(e.skill);
+                if (source && source.side === 'ally') sfx('skill');
                 if (source && source.side === 'ally') this.floatAt(`${def.icon ?? '✨'}${def.name}`, this.toScreenX(source.x), this.laneY(source) + 50, COLORS.accent, 24);
             } else if (e.type === 'death') {
                 const unit = this.battle.getUnit(e.unit);
+                if (unit) sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
                 if (unit?.side === 'ally' && unit.tag !== 'barricade') this.floatAt(`${unit.def.name}倒下了！`, this.toScreenX(unit.x), this.topY(unit), COLORS.lose, 26);
             }
         }
@@ -454,6 +460,7 @@ export class BattleView {
 
     private showResult(report: BattleReport | null): void {
         const win = (report?.result ?? this.battle.result) === 'win';
+        sfx(win ? 'win' : 'lose');
         const panel = makeNode('Result', this.root, WIDTH, 420);
         panel.setPosition(0, 150);
         drawPanel(panel.addComponent(Graphics), WIDTH, 420, COLORS.panel, 16, win ? COLORS.win : COLORS.lose, 4);

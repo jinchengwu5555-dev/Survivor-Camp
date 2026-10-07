@@ -78,6 +78,7 @@ import { todayIntel } from '../core/intel';
 import { AnimalSpace, SPACE_NAMES, spaceOf, animalDef, gardenKeepers, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
 import { formatProps, propBlocker, propCount, propDef, propReward, treasureValue } from '../core/props';
 import { createAdService } from '../platform/AdService';
+import { audio, initAudio, music, sfx, SfxName } from '../platform/Audio';
 import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
@@ -88,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.9 战斗背景图';
+const GAME_VERSION = 'v2.10 音效和音乐';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -331,6 +332,7 @@ export class GameRoot extends Component {
                 this.render();
             });
             this.chatBubbles = this.storage.getItem(CHAT_SETTING_KEY) !== '0';
+            initAudio(makeNode('Audio', this.node), this.storage);
             this.loadFont();
             this.connect();
         } catch (e) {
@@ -402,6 +404,7 @@ export class GameRoot extends Component {
             this.submitScore();
             this.detectChanges();
             if (!this.battleView && this.camp.liveRaid()) this.openLiveRaid();
+            music(this.battleView ? 'night' : 'day');
             if (!this.battleView) this.render();
         }
         if (this.saveTimer >= 10) {
@@ -474,19 +477,19 @@ export class GameRoot extends Component {
             if (b.level > before) {
                 const bdef = getBuildingDef(config, b.id);
                 const stage = bdef?.stages?.find((st) => st.level === b.level);
-                if (bdef && stage && b.level > 1) this.effect(`✨ ${bdef.name}变成了${stage.icon}${stage.name}！`, WIN, 32);
-                else this.effect(`⬆️ ${bdef ? buildingLabel(bdef, b.level) : ''} 升到 ${b.level} 级！`, WIN, 30);
+                if (bdef && stage && b.level > 1) this.effect(`✨ ${bdef.name}变成了${stage.icon}${stage.name}！`, WIN, 32, 'build');
+                else this.effect(`⬆️ ${bdef ? buildingLabel(bdef, b.level) : ''} 升到 ${b.level} 级！`, WIN, 30, 'build');
             }
             this.seenLevels[b.id] = b.level;
         }
         for (const r of state.reports) {
             if (r.id <= this.seenReportId) continue;
             this.seenReportId = r.id;
-            if (r.kind === 'expedition') this.effect(`${r.result === 'win' ? '🎒' : '🏃'} ${r.summary}`, r.result === 'win' ? WIN : LOSE, 24);
+            if (r.kind === 'expedition') this.effect(`${r.result === 'win' ? '🎒' : '🏃'} ${r.summary}`, r.result === 'win' ? WIN : LOSE, 24, r.result === 'win' ? 'coin' : 'lose');
         }
         const raidLeft = realSeconds(config, state.nextRaidAt - camp.now);
         if (currentRaid(config, state, camp.now) && raidLeft <= 15 && !state.pendingRaid) {
-            if (!this.raidWarned) this.effect('🧟 尸潮快到了！准备守夜！', LOSE, 32);
+            if (!this.raidWarned) this.effect('🧟 尸潮快到了！准备守夜！', LOSE, 32, 'alarm');
             this.raidWarned = true;
         } else {
             this.raidWarned = false;
@@ -494,12 +497,13 @@ export class GameRoot extends Component {
         if (camp.newAchievements.length > 0) {
             const names = camp.newAchievements.map((a) => `${a.icon}${a.name}`).join('、');
             camp.newAchievements.length = 0;
-            this.effect(`🏆 解锁成就：${names}`, ACCENT, 28);
+            this.effect(`🏆 解锁成就：${names}`, ACCENT, 28, 'win');
         }
     }
 
     /** 屏幕中间飘一行字 */
-    private effect(text: string, color: Color, size = 26): void {
+    private effect(text: string, color: Color, size = 26, sound: SfxName = color === LOSE ? 'error' : 'confirm'): void {
+        sfx(sound);
         if (this.fx) floatText(this.fx, text, 0, 80, color, size, 120, 2.2);
     }
 
@@ -1347,6 +1351,20 @@ export class GameRoot extends Component {
             }
             this.render();
         }, LEFT, 'normal', 22, 52);
+        this.gap(10);
+        const half = (WIDTH - 10) / 2;
+        const soundRow = this.cursorY;
+        const au = audio();
+        this.button(`🔊 音效：${au?.sfxOn !== false ? '开' : '关'}`, half, () => {
+            au?.setSfx(!au.sfxOn);
+            sfx('click');
+            this.render();
+        }, LEFT, au?.sfxOn !== false ? 'normal' : 'disabled', 22, 52, true);
+        this.cursorY = soundRow;
+        this.button(`🎵 音乐：${au?.musicOn !== false ? '开' : '关'}`, half, () => {
+            au?.setMusic(!au.musicOn);
+            this.render();
+        }, LEFT + half + 10, au?.musicOn !== false ? 'normal' : 'disabled', 22, 52, true);
         this.gap(10);
         this.button(camp.paused ? '▶ 继续游戏' : '⏸ 暂停游戏（时间停住，尸潮也不会来）', WIDTH, () => {
             camp.setPaused(!camp.paused, Date.now());
@@ -3224,6 +3242,7 @@ export class GameRoot extends Component {
 
     private showToast(message: string): void {
         if (!message) return;
+        sfx('error');
         this.toast = message;
         this.toastUntil = Date.now() + 3000;
     }
@@ -3293,6 +3312,7 @@ export class GameRoot extends Component {
         node.on(Node.EventType.TOUCH_END, () => {
             // 拖动滚动时不算点击；禁用的按钮不响应（页签除外，灰色只表示没选中）
             if (this.dragDistance > DRAG_THRESHOLD || (style === 'disabled' && !clickableWhenDisabled)) return;
+            sfx('click');
             punch(node);
             onClick();
         });

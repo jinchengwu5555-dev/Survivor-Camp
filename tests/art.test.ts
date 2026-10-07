@@ -44,3 +44,14 @@ describe('美术资源命名', () => {
         for (const name of BACKGROUNDS) expect(doc).toContain(`\`${name}.png\``);
     });
 });
+
+describe('音效', () => {
+    it('platform/Audio.ts 里的每个音效、音乐都有文件（python tools/make_audio.py 生成）', () => {
+        const src = readFileSync(join(ROOT, 'assets/scripts/platform/Audio.ts'), 'utf-8');
+        const list = (name: string) => JSON.parse(src.match(new RegExp(`const ${name}: \\w+\\[\\] = (\\[[^\\]]*\\])`))![1].replace(/'/g, '"')) as string[];
+        const dir = join(ROOT, 'assets/resources/audio');
+        const have = new Set(readdirSync(dir).map((f) => f.replace(/\.(wav|mp3)$/, '')));
+        for (const s of list('SFX')) expect(have, `缺 audio/sfx_${s}`).toContain(`sfx_${s}`);
+        for (const m of list('MUSIC')) expect(have, `缺 audio/music_${m}`).toContain(`music_${m}`);
+    });
+});
