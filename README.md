@@ -802,12 +802,14 @@ npm run economy
 }
 ```
 
-- **触发方式 `trigger.type`**：`active` 手动释放、`auto` 冷却好了自动释放、`onAttack` 普攻时按 `chance` 概率触发、`battleStart` 开战时触发、`hpBelow` 生命低于 `ratio` 时触发一次、`onDeath` 死亡时触发。每个角色最多 1 个 `active` 技能。
+- **触发方式 `trigger.type`**：`active` 手动释放、`auto` 冷却好了自动释放、`onAttack` 普攻时按 `chance` 概率触发、`battleStart` 开战时触发、`hpBelow` 生命低于 `ratio` 时触发一次、`onDeath` 死亡时触发、`enemyNear` 有敌人走到 `distance` 格以内时触发一次（栅栏上的陷阱）、`shieldBroken` 自己的护盾被打光时触发一次（要配一个加护盾的技能）。每个角色最多 1 个 `active` 技能。
 - **目标 `targeting.rule`**：`self`、`currentTarget`、`nearestEnemy`、`randomEnemy`、`lowestHpAlly`、`allAllies`、`allEnemies`；加上 `radius` 就变成范围技能（主目标周围 N 格内的同阵营单位都会被命中）。
 - **效果 `effects`**：
   - `damage`：伤害 = `ratio` × 攻击力，`damageType` 可选 `physical` / `fire` / `poison` / `true`
   - `heal`：治疗 = `ratio` × 攻击力
   - `status`：施加状态，持续 `duration` 秒；持续伤害和护盾的强度 = `power` × 攻击力
+- **特殊丧尸（`units.json`）**：`"vault": true` 撑杆跳——第一次碰到栅栏就跳过去，落在后面，之后只打人；`"burrow": 1.5` 钻地——出场时从栅栏后面 1.5 格的地下钻出来，只打人（没有栅栏的探索战斗里正常出场）。举门丧尸是“开战加护盾（`car_door`）+ 护盾打光就暴怒（`door_broken`，`shieldBroken` 触发）”的组合。
+- **尸潮分波**：敌人的 `spawnAt` 相同的算一波，守夜画面顶上显示波次进度条，最后一波前全屏提示“一大波尸群正在接近”（`waveTimes()`）。
 - **伤害类型**：物理受全额防御减免，火焰受一半，毒素和真实伤害无视防御。防御公式：减伤 = 防御 / (防御 + 100)。
 
 ## 营地生活系统
@@ -827,6 +829,8 @@ npm run economy
 ### 工坊
 
 建造工坊后可以制作燃烧瓶、急救包，2 级工坊可以制作钉子炸弹。物品在探索和守夜时自动分给上阵的人，**在战斗中真的用掉了才扣库存**。燃烧瓶和急救包都要用药品（酒精），需要取舍。
+
+**陷阱（最后防线）**：`items.json` 里写了 `"trap": true` 的物品（燃油沟、捕兽夹、土地雷）只在守夜时用，每种每晚装一个在栅栏上，丧尸冲到栅栏下时自动触发一次（技能用 `enemyNear` 触发），触发了才扣库存，探索不带。栅栏本身不打人，陷阱的伤害按 `balance.trapAtk`（`base + perLevel × (战斗等级 - 1)`）算。
 
 ### 尸潮：血月夜和营地的狗
 

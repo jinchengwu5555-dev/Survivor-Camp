@@ -14,7 +14,7 @@ const TARGET_RULES: TargetRule[] = [
     'allAllies',
     'allEnemies',
 ];
-const TRIGGERS: SkillTrigger['type'][] = ['active', 'auto', 'onAttack', 'battleStart', 'hpBelow', 'onDeath'];
+const TRIGGERS: SkillTrigger['type'][] = ['active', 'auto', 'onAttack', 'battleStart', 'hpBelow', 'onDeath', 'enemyNear', 'shieldBroken'];
 const EFFECTS: SkillEffect['type'][] = ['damage', 'heal', 'status'];
 
 export class BattleRegistry {
@@ -120,6 +120,10 @@ export class BattleRegistry {
             if (u.stats.attackInterval <= 0) errors.push(`角色 ${u.id}：attackInterval 必须大于 0`);
             const actives = u.skills.filter((id) => this.skills.get(id)?.trigger.type === 'active');
             if (actives.length > 1) errors.push(`角色 ${u.id}：最多只能有 1 个手动技能`);
+            if (u.burrow !== undefined && u.burrow <= 0) errors.push(`角色 ${u.id}：burrow 必须大于 0`);
+            const breaks = u.skills.some((id) => this.skills.get(id)?.trigger.type === 'shieldBroken');
+            const shields = u.skills.some((id) => this.skills.get(id)?.effects.some((e) => e.type === 'status' && this.statuses.get(e.status)?.shield));
+            if (breaks && !shields) errors.push(`角色 ${u.id}：有 shieldBroken 技能但自己没有护盾技能`);
         }
         for (const s of this.skills.values()) {
             const where = `技能 ${s.id}`;
@@ -129,6 +133,7 @@ export class BattleRegistry {
             if (s.trigger.type === 'onAttack' && (s.trigger.chance <= 0 || s.trigger.chance > 1)) {
                 errors.push(`${where}：chance 要在 0～1 之间`);
             }
+            if (s.trigger.type === 'enemyNear' && !(s.trigger.distance > 0)) errors.push(`${where}：distance 必须大于 0`);
             for (const e of s.effects) {
                 if (!EFFECTS.includes(e.type)) errors.push(`${where}：未知效果 ${(e as { type: string }).type}`);
                 if (e.type === 'status' && !this.statuses.has(e.status)) errors.push(`${where}：未登记的状态 ${e.status}`);
@@ -171,5 +176,9 @@ function describeTrigger(t: SkillTrigger): string {
             return `生命低于 ${pct(t.ratio)} 时触发一次`;
         case 'onDeath':
             return '死亡时触发';
+        case 'enemyNear':
+            return `敌人走到 ${t.distance} 格以内时触发一次`;
+        case 'shieldBroken':
+            return '护盾被打掉时触发一次';
     }
 }

@@ -28,6 +28,7 @@
     "flare": { "candidates": [2, 3], "raidBonus": 2 },
     "nightWatch": { "survivorsPerWatcher": 4, "watchCost": 40, "restGain": 35, "tiredBelow": 50, "minFactor": 0.6, "understaffedWallFactor": 0.7 },
     "raidRepair": { "hpRatio": 0.2, "woodPerHp": 0.1, "minWood": 10, "maxUses": 3 },
+    "trapAtk": { "base": 30, "perLevel": 2 },
     "maxDefenders": 5,
     "barricadeHpPerSafety": 30,
     "raidLossRatio": 0.1,

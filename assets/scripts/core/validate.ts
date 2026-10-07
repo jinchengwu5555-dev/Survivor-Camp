@@ -189,6 +189,7 @@ export function validateConfig(config: GameConfig): string[] {
         const where = `物品 ${item.id}`;
         checkBag(where, item.cost);
         if (!battle.hasSkill(item.battleSkill)) errors.push(`${where}：未知技能 ${item.battleSkill}`);
+        else if (item.trap && battle.skill(item.battleSkill).trigger.type !== 'enemyNear') errors.push(`${where}：陷阱的技能要用 enemyNear 触发`);
         if (item.workshopLevel > maxWorkshop) errors.push(`${where}：需要工坊 ${item.workshopLevel} 级，但工坊最高只有 ${maxWorkshop} 级`);
     }
 

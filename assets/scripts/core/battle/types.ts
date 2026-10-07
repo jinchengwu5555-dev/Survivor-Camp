@@ -49,6 +49,10 @@ export interface UnitDef {
     growth?: Partial<UnitStats>;
     attackDamageType?: DamageType;
     skills: string[];
+    /** 撑杆跳：第一次碰到建筑（栅栏）时跳过去，落在后面，之后只打人 */
+    vault?: boolean;
+    /** 钻地：出场时从我方最前面那个建筑后面 burrow 格的地下钻出来，只打人（没有建筑就正常出场） */
+    burrow?: number;
 }
 
 // ---------- 2 / 3. 技能（skills.json） ----------
@@ -59,7 +63,11 @@ export type SkillTrigger =
     | { type: 'onAttack'; chance: number }
     | { type: 'battleStart' }
     | { type: 'hpBelow'; ratio: number }
-    | { type: 'onDeath' };
+    | { type: 'onDeath' }
+    /** 有敌人走到 distance 格以内时触发一次（栅栏上的陷阱） */
+    | { type: 'enemyNear'; distance: number }
+    /** 自己的护盾被打掉时触发一次（举门丧尸的车门被打掉会暴怒） */
+    | { type: 'shieldBroken' };
 
 export type TargetRule =
     | 'self'
@@ -164,6 +172,8 @@ export interface BattleUnit {
     targetUid: number | null;
     skills: SkillState[];
     statuses: StatusInstance[];
+    /** 不打建筑（撑杆跳过栅栏、从地下钻出来的丧尸） */
+    ignoreStructures?: boolean;
 }
 
 export type BattleResult = 'ongoing' | 'win' | 'lose';
@@ -187,6 +197,9 @@ export type BattleEvent =
     | { t: number; type: 'statusOn'; target: number; status: string; stacks: number }
     | { t: number; type: 'statusOff'; target: number; status: string }
     | { t: number; type: 'death'; unit: number; killer: number | null }
+    /** 撑杆跳过了建筑 / 从地下钻出来 */
+    | { t: number; type: 'leap'; unit: number; over: number }
+    | { t: number; type: 'burrow'; unit: number }
     | { t: number; type: 'end'; result: BattleResult };
 
 /** 各模块共用的战斗上下文，由 Battle 实现 */
@@ -199,6 +212,8 @@ export interface BattleContext extends RngHolder {
     getUnit(uid: number | null): BattleUnit | undefined;
     /** 单位受到伤害后调用：处理死亡、低血量触发 */
     afterDamaged(target: BattleUnit, source: BattleUnit | null): void;
+    /** 单位的护盾刚被打光时调用 */
+    shieldBroken(target: BattleUnit): void;
     /** 为 true 时手动技能按自动技能处理 */
     readonly autoCastActive: boolean;
 }

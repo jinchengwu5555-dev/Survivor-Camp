@@ -213,6 +213,12 @@ export function bloodMoonEnemies(enemies: UnitSetup[]): UnitSetup[] {
     return [...enemies, ...extra];
 }
 
+/** 栅栏上陷阱的攻击力（栅栏本身不打人） */
+export function trapAtk(config: GameConfig, level: number): number {
+    const t = config.balance.trapAtk ?? { base: 30, perLevel: 2 };
+    return t.base + t.perLevel * Math.max(0, level - 1);
+}
+
 /** 守夜战斗的参数：栅栏站在最前面，大家守在栅栏后面，栅栏被拆就算输，撑到时间结束算赢 */
 export function raidSetup(
     config: GameConfig,
@@ -225,7 +231,7 @@ export function raidSetup(
 ): BattleSetup {
     const dog: UnitSetup[] = options.dog ? [{ unit: DOG_UNIT, level, tag: DOG_UNIT }] : [];
     return {
-        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT }, ...squadSetups(defenders, level), ...dog],
+        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT, atk: trapAtk(config, level) }, ...squadSetups(defenders, level), ...dog],
         enemies: levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0),
         timeLimit: raid.timeLimit,
         timeoutResult: 'win',

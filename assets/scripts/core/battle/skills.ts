@@ -7,6 +7,8 @@
 //   battleStart 开战时触发一次
 //   hpBelow     生命低于比例时触发一次
 //   onDeath     死亡时触发
+//   enemyNear   敌人走到 distance 格以内时触发一次（栅栏上的陷阱）
+//   shieldBroken 自己的护盾被打光时触发一次
 
 import { nextRandom, pickOne } from '../rng';
 import { heal } from './damage';
@@ -143,6 +145,9 @@ export function updateSkills(ctx: BattleContext, unit: BattleUnit, dt: number): 
         } else if (trig.type === 'hpBelow' && !s.fired && unit.hp < unit.stats.maxHp * trig.ratio) {
             s.fired = true;
             castSkill(ctx, unit, s);
+        } else if (trig.type === 'enemyNear' && !s.fired && enemiesOf(ctx, unit).some((e) => Math.abs(e.x - unit.x) <= trig.distance)) {
+            s.fired = true;
+            castSkill(ctx, unit, s);
         }
     }
 }
@@ -160,6 +165,17 @@ export function fireBattleStart(ctx: BattleContext, unit: BattleUnit): void {
 export function fireOnDeath(ctx: BattleContext, unit: BattleUnit): void {
     for (const s of unit.skills) {
         if (s.def.trigger.type === 'onDeath') castSkill(ctx, unit, s);
+    }
+}
+
+/** 护盾被打光时触发（只触发一次） */
+export function fireShieldBroken(ctx: BattleContext, unit: BattleUnit): void {
+    if (!unit.alive) return;
+    for (const s of unit.skills) {
+        if (s.def.trigger.type === 'shieldBroken' && !s.fired) {
+            s.fired = true;
+            castSkill(ctx, unit, s);
+        }
     }
 }
 

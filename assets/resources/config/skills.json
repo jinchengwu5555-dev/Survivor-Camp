@@ -159,5 +159,10 @@
         "targeting": { "rule": "self" },
         "effects": [ { "type": "heal", "ratio": 2.0 }, { "type": "status", "status": "rage", "duration": 8 } ],
         "tags": ["item", "buff"]
-    }
+    },
+    {"id": "trap_fuel", "name": "燃油沟", "icon": "🔥", "description": "尸群走近时点燃燃油沟，烧伤一片。", "trigger": {"type": "enemyNear", "distance": 3}, "cooldown": 0, "targeting": {"rule": "nearestEnemy", "radius": 2.5}, "effects": [{"type": "damage", "ratio": 1.5, "damageType": "fire", "canCrit": false}, {"type": "status", "status": "burn", "duration": 6, "power": 0.4}], "tags": ["item", "trap", "aoe"]},
+    {"id": "trap_bear", "name": "捕兽夹", "icon": "🪤", "description": "夹住冲到栅栏下的第一只丧尸。", "trigger": {"type": "enemyNear", "distance": 1.2}, "cooldown": 0, "targeting": {"rule": "nearestEnemy"}, "effects": [{"type": "damage", "ratio": 3, "canCrit": false}, {"type": "status", "status": "root", "duration": 6}], "tags": ["item", "trap", "control"]},
+    {"id": "trap_mine", "name": "土地雷", "icon": "💥", "description": "丧尸挤到栅栏下时引爆，炸翻一片。", "trigger": {"type": "enemyNear", "distance": 1.2}, "cooldown": 0, "targeting": {"rule": "nearestEnemy", "radius": 1.8}, "effects": [{"type": "damage", "ratio": 5, "canCrit": false}, {"type": "status", "status": "stun", "duration": 2}], "tags": ["item", "trap", "aoe", "control"]},
+    {"id": "car_door", "name": "车门", "icon": "🚪", "description": "举着一扇车门挡在身前，先把车门打掉才伤得到它。", "trigger": {"type": "battleStart"}, "cooldown": 0, "targeting": {"rule": "self"}, "effects": [{"type": "status", "status": "shield", "duration": 999, "power": 14}], "tags": ["zombie"]},
+    {"id": "door_broken", "name": "暴怒", "icon": "💢", "description": "车门被打掉后暴怒，跑得更快、咬得更狠。", "trigger": {"type": "shieldBroken"}, "cooldown": 0, "targeting": {"rule": "self"}, "effects": [{"type": "status", "status": "enraged", "duration": 999}], "tags": ["zombie", "buff"]}
 ]

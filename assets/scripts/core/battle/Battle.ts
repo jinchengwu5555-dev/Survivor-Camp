@@ -6,7 +6,7 @@
 
 import { DamagePipeline } from './damage';
 import { BattleRegistry } from './registry';
-import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, nearest, updateSkills } from './skills';
+import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, fireShieldBroken, nearest, updateSkills } from './skills';
 import { canAct, canMove, effectiveAtk, effectiveAttackInterval, effectiveMoveSpeed, updateStatuses } from './status';
 import { BattleContext, BattleEvent, BattleResult, BattleUnit, Side } from './types';
 import { createBattleUnit } from './units';
@@ -33,6 +33,8 @@ export interface UnitSetup {
     hpMult?: number;
     /** 拿着远程武器：射程至少这么远 */
     range?: number;
+    /** 覆盖攻击力（栅栏本身不打人，上面的陷阱按这个算伤害） */
+    atk?: number;
 }
 
 export interface BattleSetup {
@@ -64,6 +66,8 @@ export type BattleInput = { t: number; cast: number } | { t: number; auto: boole
 /** 我方从 x=0 往左排，敌方从 x=ENEMY_START 往右排 */
 const ENEMY_START = 10;
 const SPACING = 0.8;
+/** 撑杆跳落在建筑后面多远 */
+const VAULT_LANDING = 1.2;
 
 export class Battle implements BattleContext {
     time = 0;
@@ -109,6 +113,10 @@ export class Battle implements BattleContext {
         target.statuses = [];
         this.emit({ t: this.time, type: 'death', unit: target.uid, killer: source?.uid ?? null });
         fireOnDeath(this, target);
+    }
+
+    shieldBroken(target: BattleUnit): void {
+        fireShieldBroken(this, target);
     }
 
     // ---------- 对外接口 ----------
@@ -206,6 +214,14 @@ export class Battle implements BattleContext {
             u.x = x;
             return;
         }
+        if (u.def.vault && !u.ignoreStructures && target.def.faction === 'structure') {
+            // 撑杆跳：越过栅栏落到后面，之后只打人
+            u.ignoreStructures = true;
+            u.x = target.x + Math.sign(target.x - u.x || -1) * VAULT_LANDING;
+            u.targetUid = null;
+            this.emit({ t: this.time, type: 'leap', unit: u.uid, over: target.uid });
+            return;
+        }
         if (u.attackCooldown > 0) return;
 
         u.attackCooldown = effectiveAttackInterval(u);
@@ -227,7 +243,9 @@ export class Battle implements BattleContext {
     private pickTarget(u: BattleUnit): BattleUnit | undefined {
         const current = this.getUnit(u.targetUid);
         if (current?.alive && Math.abs(current.x - u.x) <= u.stats.attackRange) return current;
-        const next = nearest(u, enemiesOf(this, u));
+        const enemies = enemiesOf(this, u);
+        const people = u.ignoreStructures ? enemies.filter((e) => e.def.faction !== 'structure') : enemies;
+        const next = nearest(u, people.length ? people : enemies);
         u.targetUid = next?.uid ?? null;
         return next;
     }
@@ -241,11 +259,18 @@ export class Battle implements BattleContext {
             }
             this.pending.splice(i, 1);
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
+            const wall = unit.def.burrow ? this.frontStructure(p.side === 'ally' ? 'enemy' : 'ally') : undefined;
+            if (wall) {
+                // 从地下钻出来：落在栅栏后面
+                unit.x = wall.x + (p.side === 'enemy' ? -1 : 1) * unit.def.burrow!;
+                unit.ignoreStructures = true;
+            }
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
             if (p.setup.hpMult) unit.stats.maxHp = unit.hp = Math.round(unit.stats.maxHp * p.setup.hpMult);
             if (p.setup.hpRatio !== undefined) unit.hp = Math.max(1, Math.round(unit.stats.maxHp * Math.min(1, p.setup.hpRatio)));
             if (p.setup.atkMult) unit.stats.atk = unit.stats.atk * p.setup.atkMult;
             if (p.setup.range) unit.stats.attackRange = Math.max(unit.stats.attackRange, p.setup.range);
+            if (p.setup.atk !== undefined) unit.stats.atk = p.setup.atk;
             unit.tag = p.setup.tag;
             for (const id of p.setup.extraSkills ?? []) {
                 const skill = this.registry.skill(id);
@@ -253,8 +278,15 @@ export class Battle implements BattleContext {
             }
             this.units.push(unit);
             this.emit({ t: this.time, type: 'spawn', unit: unit.uid });
+            if (wall) this.emit({ t: this.time, type: 'burrow', unit: unit.uid });
             if (this.started) fireBattleStart(this, unit);
         }
+    }
+
+    /** 某一方还立着的、最靠前（离对面最近）的建筑 */
+    private frontStructure(side: Side): BattleUnit | undefined {
+        const walls = this.units.filter((u) => u.alive && u.side === side && u.def.faction === 'structure');
+        return walls.sort((a, b) => (side === 'ally' ? b.x - a.x : a.x - b.x))[0];
     }
 
     private aliveUnits(): BattleUnit[] {
@@ -274,6 +306,11 @@ export class Battle implements BattleContext {
             this.emit({ t: this.time, type: 'end', result });
         }
     }
+}
+
+/** 敌人分几波出场：每一波的出场时间（秒，从小到大，不重复） */
+export function waveTimes(setup: BattleSetup): number[] {
+    return [...new Set(setup.enemies.map((e) => e.spawnAt ?? 0))].sort((a, b) => a - b);
 }
 
 function round(t: number): number {

@@ -66,6 +66,8 @@ export interface BalanceDef {
     firstRaidMinutes: number;
     /** 守夜时花木材修补栅栏：每次回 hpRatio 的栅栏生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
     raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
+    /** 栅栏上陷阱的攻击力 = base + perLevel × (战斗等级 - 1)（工坊做的 trap 物品按这个算伤害） */
+    trapAtk?: { base: number; perLevel: number };
     /** 守夜时最多几个人上阵 */
     maxDefenders: number;
     /** 栅栏在战斗中的生命 = 安全值 × 这个数 */
@@ -417,6 +419,8 @@ export interface ItemDef {
     cost: ResourceBag;
     /** 战斗中携带者获得的技能（skills.json），用掉才消耗 */
     battleSkill: string;
+    /** 陷阱：只在守夜时装在栅栏上，丧尸冲到栅栏下自动触发一次（技能要用 enemyNear 触发） */
+    trap?: boolean;
 }
 
 export interface BountyDef {

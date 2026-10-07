@@ -3,8 +3,8 @@
 // 没有图的角色是一个彩色圆（颜色来自 units.json 的 appearance.color），中间写名字的第一个字。
 // 头顶是血条；栅栏没图时是一堵棕色的墙。伤害、治疗会飘字。
 
-import { Color, Graphics, Label, Node } from 'cc';
-import { Battle, BattleSetup } from '../core/battle/Battle';
+import { Color, Graphics, Label, Node, Sprite, tween, UIOpacity } from 'cc';
+import { Battle, BattleSetup, waveTimes } from '../core/battle/Battle';
 import { BattleUnit } from '../core/battle/types';
 import { battleRegistry } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
@@ -31,6 +31,8 @@ const BARRICADE_SIZE = { width: 90, height: 230 };
 /** 同时最多几个飘字，避免尸群一多卡顿 */
 const MAX_FLOATS = 14;
 const FIELD_BG = new Color(38, 44, 38);
+/** 受击时闪的颜色 */
+const FLASH_TINT = new Color(255, 150, 150);
 
 export interface BattleViewOptions {
     title: string;
@@ -68,6 +70,16 @@ export class BattleView {
     private readonly skipButton: UIButton;
     private speed = 1;
     private seenEvents = 0;
+    /** R73：敌人分几波（出场时间），已经提示到第几波，最后一波的预警放过没有 */
+    private readonly waves: number[];
+    private wavesAnnounced = 0;
+    private finalWarned = false;
+    /** 打击感：受击闪一下（uid → 剩余秒数）、震屏剩余时间和幅度、走路上下晃 */
+    private readonly flashes = new Map<number, number>();
+    private shakeTime = 0;
+    private shakePower = 0;
+    private readonly lastX = new Map<number, number>();
+    private clock = 0;
     private floats = 0;
     private finished = false;
 
@@ -76,6 +88,7 @@ export class BattleView {
         private readonly opts: BattleViewOptions,
     ) {
         this.battle = opts.live ? opts.live.battle : new Battle(battleRegistry(opts.replay!.config), opts.replay!.setup);
+        this.waves = waveTimes(this.battle.setup);
         this.root = makeNode('BattleView', parent, WIDTH, 1280);
 
         const bg = this.root.addComponent(Graphics);
@@ -133,13 +146,100 @@ export class BattleView {
 
     /** GameRoot.update 每帧调用 */
     update(dt: number): void {
+        this.clock += dt;
+        for (const [uid, t] of this.flashes) {
+            if (t - dt <= 0) this.flashes.delete(uid);
+            else this.flashes.set(uid, t - dt);
+        }
+        this.updateShake(dt);
         if (!this.finished) {
             this.battle.advance(dt * this.speed);
             if (this.battle.result !== 'ongoing') this.finish();
         }
         this.drawField();
         this.showNewEvents();
+        this.announceWaves();
         this.refreshControls();
+    }
+
+    // ---------- R73 波次 ----------
+
+    /** 现在是第几波（已经出场的波数） */
+    private currentWave(): number {
+        return this.waves.filter((t) => t <= this.battle.time + 1e-6).length;
+    }
+
+    private announceWaves(): void {
+        if (this.finished || this.waves.length <= 1) return;
+        const last = this.waves[this.waves.length - 1];
+        if (!this.finalWarned && this.battle.time >= last - 2.5) {
+            this.finalWarned = true;
+            this.banner('⚠️ 一大波尸群正在接近！', COLORS.lose, 40);
+            sfx('alarm');
+            this.shake(0.5, 6);
+        }
+        const wave = this.currentWave();
+        if (wave > this.wavesAnnounced) {
+            if (wave > 1 && wave < this.waves.length) this.banner(`🧟 第 ${wave} 波！`, COLORS.accent, 32);
+            else if (wave === this.waves.length) this.banner('🧟 最后一波！', COLORS.lose, 36);
+            this.wavesAnnounced = wave;
+        }
+    }
+
+    /** 战场中间一行大字（不受飘字数量限制） */
+    private banner(text: string, color: Color, size: number): void {
+        floatText(this.fx, text, 0, 40, color, size, 40, 1.8);
+    }
+
+    /** 波次进度条：画在战场顶上，刻度是每一波的出场时间，最后一波标红 */
+    private drawWaveBar(g: Graphics): void {
+        if (this.waves.length <= 1) return;
+        const limit = this.battle.setup.timeLimit;
+        const w = WIDTH - 60;
+        const left = -w / 2;
+        const y = FIELD_HEIGHT / 2 - 18;
+        g.fillColor = new Color(0, 0, 0, 150);
+        g.roundRect(left - 4, y - 4, w + 8, 14, 6);
+        g.fill();
+        g.fillColor = hexColor('#b04040');
+        g.rect(left, y, w * Math.min(1, this.battle.time / limit), 6);
+        g.fill();
+        this.waves.forEach((t, i) => {
+            const final = i === this.waves.length - 1;
+            g.fillColor = final ? COLORS.lose : t <= this.battle.time ? COLORS.dim : COLORS.text;
+            const x = left + w * Math.min(1, t / limit);
+            g.rect(x - (final ? 3 : 2), y - 4, final ? 6 : 4, 14);
+            g.fill();
+        });
+    }
+
+    // ---------- 打击感 ----------
+
+    private shake(time: number, power: number): void {
+        this.shakeTime = Math.max(this.shakeTime, time);
+        this.shakePower = Math.max(this.shakePower, power);
+    }
+
+    private updateShake(dt: number): void {
+        if (this.shakeTime <= 0) return;
+        this.shakeTime -= dt;
+        if (this.shakeTime <= 0) {
+            this.shakeTime = 0;
+            this.shakePower = 0;
+            this.root.setPosition(0, 0);
+            return;
+        }
+        const p = this.shakePower;
+        this.root.setPosition((Math.random() * 2 - 1) * p, (Math.random() * 2 - 1) * p);
+    }
+
+    /** 倒下的角色：淡出再消失 */
+    private fadeOut(node: Node): void {
+        const opacity = node.getComponent(UIOpacity) ?? node.addComponent(UIOpacity);
+        tween(opacity)
+            .to(0.5, { opacity: 0 })
+            .call(() => node.isValid && node.destroy())
+            .start();
     }
 
     destroy(): void {
@@ -249,6 +349,7 @@ export class BattleView {
         g.clear();
         bars.clear();
         if (!this.ensureBackdropImage()) this.drawBackdrop(g);
+        this.drawWaveBar(bars);
 
         const alive = new Set<number>();
         const withSprite: BattleUnit[] = [];
@@ -256,8 +357,13 @@ export class BattleView {
             if (!u.alive) continue;
             alive.add(u.uid);
             const x = this.toScreenX(u.x);
-            const feet = this.feetY(u);
+            // 走路时上下晃一点
+            const moving = Math.abs(u.x - (this.lastX.get(u.uid) ?? u.x)) > 1e-4;
+            this.lastX.set(u.uid, u.x);
+            const bob = moving && u.def.faction !== 'structure' ? Math.abs(Math.sin(this.clock * 9 + u.uid)) * 5 : 0;
+            const feet = this.feetY(u) + bob;
             const scale = u.def.appearance.scale;
+            const flash = this.flashes.has(u.uid);
             const frame = this.frameOf(u);
             if (frame) {
                 withSprite.push(u);
@@ -272,6 +378,8 @@ export class BattleView {
                 }
                 const h = u.tag === 'barricade' ? BARRICADE_SIZE.height : SPRITE_HEIGHT * scale;
                 node.setPosition(x, feet + h / 2);
+                const sprite = node.getComponent(Sprite);
+                if (sprite) sprite.color = flash ? FLASH_TINT : Color.WHITE;
             } else if (u.tag === 'barricade') {
                 g.fillColor = hexColor(u.def.appearance.color);
                 g.roundRect(x - 14, feet, 28, BARRICADE_SIZE.height, 6);
@@ -280,7 +388,7 @@ export class BattleView {
             } else {
                 const r = UNIT_RADIUS * scale;
                 const cy = feet + r;
-                g.fillColor = hexColor(u.def.appearance.color);
+                g.fillColor = flash ? FLASH_TINT : hexColor(u.def.appearance.color);
                 g.circle(x, cy, r);
                 g.fill();
                 if (u.side === 'ally') {
@@ -329,7 +437,7 @@ export class BattleView {
         }
         for (const [uid, node] of this.unitSprites) {
             if (!alive.has(uid)) {
-                node.destroy();
+                this.fadeOut(node);
                 this.unitSprites.delete(uid);
             }
         }
@@ -364,6 +472,9 @@ export class BattleView {
                 const target = this.battle.getUnit(e.target);
                 if (!target || e.amount < 1) continue;
                 sfx(e.crit ? 'crit' : 'hit');
+                this.flashes.set(target.uid, 0.12);
+                if (target.tag === 'barricade' && e.amount >= target.stats.maxHp * 0.03) this.shake(0.15, 4);
+                else if (e.crit) this.shake(0.1, 3);
                 const color = target.side === 'ally' ? COLORS.lose : e.crit ? COLORS.crit : COLORS.text;
                 this.floatAt(`${e.crit ? '暴击 ' : ''}${Math.round(e.amount)}`, this.toScreenX(target.x), this.laneY(target) + 20, color, e.crit ? 28 : 22);
             } else if (e.type === 'heal') {
@@ -374,11 +485,23 @@ export class BattleView {
                 const source = this.battle.getUnit(e.source);
                 const def = this.battle.registry.skill(e.skill);
                 if (source && source.side === 'ally') sfx('skill');
+                if (source?.tag === 'barricade') this.shake(0.3, 7);
+                if (source && source.side === 'enemy' && def.icon) this.floatAt(`${def.icon}${def.name}`, this.toScreenX(source.x), this.topY(source) + 30, COLORS.lose, 22);
                 if (source && source.side === 'ally') this.floatAt(`${def.icon ?? '✨'}${def.name}`, this.toScreenX(source.x), this.laneY(source) + 50, COLORS.accent, 24);
             } else if (e.type === 'death') {
                 const unit = this.battle.getUnit(e.unit);
                 if (unit) sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
+                if (unit?.side === 'ally') this.shake(0.3, 8);
                 if (unit?.side === 'ally' && unit.tag !== 'barricade') this.floatAt(`${unit.def.name}倒下了！`, this.toScreenX(unit.x), this.topY(unit), COLORS.lose, 26);
+            } else if (e.type === 'leap') {
+                const unit = this.battle.getUnit(e.unit);
+                if (unit) this.floatAt(`🤸 ${unit.def.name}跳过了栅栏！`, this.toScreenX(unit.x), this.topY(unit) + 20, COLORS.lose, 26);
+                sfx('alarm');
+            } else if (e.type === 'burrow') {
+                const unit = this.battle.getUnit(e.unit);
+                if (unit) this.floatAt(`🕳️ ${unit.def.name}从地下钻出来了！`, this.toScreenX(unit.x), this.topY(unit) + 20, COLORS.lose, 26);
+                this.shake(0.3, 6);
+                sfx('alarm');
             }
         }
     }
@@ -398,7 +521,8 @@ export class BattleView {
         const wall = this.opts.live?.barricade ?? b.units.find((u) => u.tag === 'barricade');
         const wallText = wall ? `栅栏 ${Math.max(0, Math.round((wall.hp / wall.stats.maxHp) * 100))}%` : '';
         const goal = b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
-        setLabelText(this.status, this.finished ? '' : `${goal}   ${wallText}`, WIDTH, 24);
+        const wave = this.waves.length > 1 ? `第 ${Math.max(1, this.currentWave())}/${this.waves.length} 波   ` : '';
+        setLabelText(this.status, this.finished ? '' : `${wave}${goal}   ${wallText}`, WIDTH, 24);
 
         this.speedButton.set(`速度 ×${this.speed}`, this.finished ? 'disabled' : 'normal');
         this.skipButton.set(this.opts.live ? '跳过（自动打完）' : '跳到结尾', this.finished ? 'disabled' : 'normal');

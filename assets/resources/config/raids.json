@@ -17,11 +17,26 @@
             { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "runner", "level": 2, "spawnAt": 4 },
             { "unit": "walker", "level": 2, "spawnAt": 8 }, { "unit": "walker", "level": 2, "spawnAt": 8 }, { "unit": "armored", "spawnAt": 8 },
             { "unit": "fatty", "level": 2, "spawnAt": 12 }, { "unit": "fatty", "level": 2, "spawnAt": 12 },
-            { "unit": "frenzied", "spawnAt": 16 }
+            { "unit": "frenzied", "spawnAt": 16 }, { "unit": "vaulter", "level": 2, "spawnAt": 10 }
         ],
         "timeLimit": 40,
         "reward": { "parts": 10, "wood": 20 },
         "drops": [ { "prop": "parts_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.3 } ]
+    },
+    {
+        "id": "strange_horde",
+        "name": "怪异尸群",
+        "conditions": { "minDay": 12, "flags": ["raids_started"] },
+        "enemies": [
+            { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 }, { "unit": "walker", "level": 2 },
+            { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "runner", "level": 2, "spawnAt": 4 }, { "unit": "vaulter", "level": 2, "spawnAt": 4 },
+            { "unit": "door_bearer", "level": 2, "spawnAt": 9 }, { "unit": "walker", "level": 2, "spawnAt": 9 }, { "unit": "armored", "level": 2, "spawnAt": 9 },
+            { "unit": "burrower", "level": 2, "spawnAt": 14 }, { "unit": "fatty", "level": 2, "spawnAt": 14 },
+            { "unit": "frenzied", "level": 2, "spawnAt": 18 }, { "unit": "vaulter", "level": 2, "spawnAt": 18 }
+        ],
+        "timeLimit": 45,
+        "reward": { "parts": 16, "wood": 25 },
+        "drops": [ { "prop": "parts_s", "chance": 0.5 }, { "prop": "toolbox", "chance": 0.2 } ]
     },
     {
         "id": "great_horde",

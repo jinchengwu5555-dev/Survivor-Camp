@@ -7,5 +7,6 @@
     { "id": "armor_break", "name": "破甲", "debuff": true, "stacking": "refresh", "modifiers": { "def": -0.5, "damageTaken": 0.2 } },
     { "id": "rage", "name": "狂怒", "debuff": false, "stacking": "refresh", "modifiers": { "atk": 0.3, "attackSpeed": 0.2 } },
     { "id": "inspired", "name": "鼓舞", "debuff": false, "stacking": "refresh", "modifiers": { "atk": 0.15, "damageTaken": -0.1 } },
-    { "id": "shield", "name": "护盾", "debuff": false, "stacking": "refresh", "shield": true }
+    { "id": "shield", "name": "护盾", "debuff": false, "stacking": "refresh", "shield": true },
+    { "id": "enraged", "name": "暴怒", "debuff": false, "stacking": "refresh", "modifiers": { "atk": 0.4, "moveSpeed": 0.8, "attackSpeed": 0.3 } }
 ]

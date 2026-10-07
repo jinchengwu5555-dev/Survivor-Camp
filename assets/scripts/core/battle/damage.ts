@@ -118,6 +118,7 @@ export class DamagePipeline {
         if (ctx.cancelled || !req.target.alive) return ctx;
         ctx.absorbed = absorbWithShields(battle, req.target, ctx.amount);
         ctx.amount -= ctx.absorbed;
+        if (ctx.absorbed > 0 && !req.target.statuses.some((s) => s.def.shield)) battle.shieldBroken(req.target);
         req.target.hp = Math.max(0, req.target.hp - ctx.amount);
         battle.emit({
             t: battle.time,

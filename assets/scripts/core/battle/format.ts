@@ -30,6 +30,10 @@ export function formatEvent(battle: Battle, e: BattleEvent): string {
             return `${t}s   ${name(e.target)} 的【${battle.registry.status(e.status).name}】消失`;
         case 'death':
             return `${t}s ☠ ${name(e.unit)} 倒下了`;
+        case 'leap':
+            return `${t}s ${name(e.unit)} 撑杆跳过了 ${name(e.over)}`;
+        case 'burrow':
+            return `${t}s ${name(e.unit)} 从地下钻了出来`;
         case 'end':
             return `${t}s 战斗结束：${e.result === 'win' ? '胜利' : '失败'}`;
     }

@@ -89,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.10 音效和音乐';
+const GAME_VERSION = 'v2.11 波次·陷阱·怪异丧尸';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -234,9 +234,10 @@ function propTabOf(def: PropDef): PropTab {
 }
 
 /** 工坊的分类页 */
-type WorkshopTab = 'items' | 'weapon' | 'armor' | 'tool' | 'bag' | 'garage';
+type WorkshopTab = 'items' | 'trap' | 'weapon' | 'armor' | 'tool' | 'bag' | 'garage';
 const WORKSHOP_TABS: { id: WorkshopTab; name: string }[] = [
     { id: 'items', name: '🧪 战斗物品' },
+    { id: 'trap', name: '🪤 陷阱' },
     { id: 'weapon', name: '⚔️ 武器' },
     { id: 'armor', name: '🛡️ 护甲' },
     { id: 'tool', name: '🔧 工具' },
@@ -2069,8 +2070,8 @@ export class GameRoot extends Component {
         const { config, state } = camp;
         const level = workshopLevel(config, state);
         this.text(level > 0 ? `🔧 工坊 ${level} 级` : '🔧 工坊（先在营地里建造工坊）', 24, ACCENT);
-        // 分类按钮：两行，每行三个
-        const per = 3;
+        // 分类按钮：两行，每行四个
+        const per = 4;
         const w = (WIDTH - 10 * (per - 1)) / per;
         WORKSHOP_TABS.forEach((t, i) => {
             if (i % per === 0 && i > 0) this.gap(8);
@@ -2084,10 +2085,10 @@ export class GameRoot extends Component {
         });
         this.gap(12);
         const tab = this.workshopTab;
-        if (tab === 'items') {
-            this.text('战斗物品：守夜和探索时自动使用，用掉才扣。', 18, DIM);
+        if (tab === 'items' || tab === 'trap') {
+            this.text(tab === 'trap' ? '陷阱：守夜时装在栅栏上，丧尸冲到栅栏下自动触发一次，每种每晚带一个，触发了才扣。' : '战斗物品：守夜和探索时自动使用，用掉才扣。', 18, DIM);
             this.gap(4);
-            for (const item of config.items) {
+            for (const item of config.items.filter((x) => !!x.trap === (tab === 'trap'))) {
                 this.text(`${item.icon}${item.name} ×${itemCount(state, item.id)}  ${item.description}`, 22);
                 const blocker = craftBlocker(config, state, item.id);
                 this.button(`制作 ${formatCost(config, item.cost)}${blocker ? `（${blocker}）` : ''}`, WIDTH, () => {

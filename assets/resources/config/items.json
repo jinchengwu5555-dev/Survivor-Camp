@@ -52,5 +52,35 @@
         "workshopLevel": 2,
         "cost": { "medicine": 6, "parts": 2 },
         "battleSkill": "item_stim"
+    },
+    {
+        "id": "fuel_ditch",
+        "name": "燃油沟",
+        "icon": "🛢️",
+        "description": "栅栏前挖一道沟，灌上废机油。尸群走近时点着，烧成一片火墙。只在守夜时用，烧完要重新挖。",
+        "workshopLevel": 1,
+        "cost": { "wood": 8, "parts": 4, "medicine": 1 },
+        "battleSkill": "trap_fuel",
+        "trap": true
+    },
+    {
+        "id": "bear_trap",
+        "name": "捕兽夹",
+        "icon": "🪤",
+        "description": "五金店找来的大号捕兽夹，埋在栅栏下。夹住冲在最前面的丧尸，让它动弹不得。只在守夜时用。",
+        "workshopLevel": 1,
+        "cost": { "parts": 8, "wood": 2 },
+        "battleSkill": "trap_bear",
+        "trap": true
+    },
+    {
+        "id": "landmine",
+        "name": "土地雷",
+        "icon": "💥",
+        "description": "高压锅改的土地雷，埋在栅栏脚下。丧尸挤到栅栏下时轰的一声，炸翻一片。只在守夜时用。",
+        "workshopLevel": 2,
+        "cost": { "parts": 14, "medicine": 2, "wood": 4 },
+        "battleSkill": "trap_mine",
+        "trap": true
     }
 ]
