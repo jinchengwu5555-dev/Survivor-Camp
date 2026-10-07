@@ -89,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.12 功能慢慢解锁';
+const GAME_VERSION = 'v2.12.1 功能慢慢解锁';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -438,7 +438,7 @@ export class GameRoot extends Component {
             const config = expandConfig(byName as unknown as GameConfig);
             const errors = validateConfig(config);
             if (errors.length > 0) {
-                this.showFatal(`配置表有错误：\n${errors.slice(0, 10).join('\n')}`);
+                this.showFatal(`配置表有错误（代码版本 ${GAME_VERSION}）：\n${errors.slice(0, 10).join('\n')}\n\n如果刚更新过代码：代码版本不是最新的，说明编辑器还在用旧的脚本缓存。请在 Cocos 菜单“开发者 → 缓存 → 清除代码缓存”后重启编辑器，预览页面按 Ctrl+Shift+R 强制刷新。`);
                 return;
             }
             this.config = config;
