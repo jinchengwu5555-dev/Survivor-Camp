@@ -46,6 +46,9 @@ export class BattleView {
     readonly root: Node;
     private readonly battle: Battle;
     private readonly field: Graphics;
+    /** 战斗背景图（sprites/bg/bg_battle、bg_bloodmoon）；有图就不用代码画夜景 */
+    private readonly backdrop: Node;
+    private backdropImage: Node | null = null;
     /** 血条画在角色图片上面 */
     private readonly bars: Graphics;
     private readonly unitLabels = new Map<number, Label>();
@@ -84,6 +87,8 @@ export class BattleView {
         this.hint = addLabel(this.root, '', 20, COLORS.dim, { width: WIDTH });
         this.hint.node.setPosition(0, 515);
 
+        this.backdrop = makeNode('Backdrop', this.root, WIDTH, FIELD_HEIGHT);
+        this.backdrop.setPosition(0, FIELD_Y);
         const fieldNode = makeNode('Field', this.root, WIDTH, FIELD_HEIGHT);
         fieldNode.setPosition(0, FIELD_Y);
         this.field = fieldNode.addComponent(Graphics);
@@ -119,6 +124,7 @@ export class BattleView {
             });
             this.repairButton.node.setPosition(0, -130);
         }
+        preloadSprites([this.backdropPath()]);
         preloadSprites([...this.battle.setup.allies, ...this.battle.setup.enemies].map((u) => this.spritePath(u.unit)));
         this.refreshControls();
     }
@@ -174,6 +180,20 @@ export class BattleView {
         return (this.feetY(u) + this.topY(u)) / 2;
     }
 
+    private backdropPath(): string {
+        const bloodMoon = this.opts.live ? this.opts.live.pending.bloodMoon : this.opts.title.includes('血月');
+        return SPRITE_DIRS.bg + (bloodMoon ? 'bg_bloodmoon' : 'bg_battle');
+    }
+
+    /** 有背景图就铺满战场（拉伸到 WIDTH × FIELD_HEIGHT），返回是否用了图 */
+    private ensureBackdropImage(): boolean {
+        if (this.backdropImage) return true;
+        const frame = getSprite(this.backdropPath());
+        if (!frame) return false;
+        this.backdropImage = addSprite(this.backdrop, frame, WIDTH, FIELD_HEIGHT);
+        return true;
+    }
+
     /** 夜晚的街道：天空、月亮、远处楼房的剪影、地面和马路 */
     private drawBackdrop(g: Graphics): void {
         const top = FIELD_HEIGHT / 2;
@@ -226,7 +246,7 @@ export class BattleView {
         const bars = this.bars;
         g.clear();
         bars.clear();
-        this.drawBackdrop(g);
+        if (!this.ensureBackdropImage()) this.drawBackdrop(g);
 
         const alive = new Set<number>();
         const withSprite: BattleUnit[] = [];

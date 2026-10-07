@@ -2,6 +2,7 @@
 declare module 'fs' {
     export function readFileSync(path: string, encoding: 'utf-8'): string;
     export function readdirSync(path: string): string[];
+    export function existsSync(path: string): boolean;
     export function statSync(path: string): { size: number; isDirectory(): boolean };
 }
 declare module 'path' {

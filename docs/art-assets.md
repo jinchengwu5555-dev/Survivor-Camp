@@ -155,6 +155,10 @@ Midjourney 建议加：`--style raw --stylize 50`，人物 `--ar 1:1`，背景�
 | `building_training.png` | 训练场 | 轮胎、木桩和画着靶心的稻草人 | training ground with tires, wooden posts and a scarecrow with a painted target |
 | `building_workshop.png` | 工坊 | 小修车铺改的工坊，卷帘门半开，墙上挂满工具，工作台上有台虎钳 | small garage workshop, roll-up door half open, tools on the wall, workbench with a vise |
 | `building_cellar.png` | 地窖 | 地上一扇厚重的地窖门半开，冒出白色冷气，旁边堆着箱子和罐头 | heavy cellar door in the ground half open with white cold mist, crates and cans beside it |
+| `building_garden.png` | 菜园 | 停车场撬开柏油翻出的几垄菜畦，绿油油的菜苗，一个堆肥箱和一把锄头 | a few vegetable rows dug out of a parking lot, green seedlings, a compost box and a hoe |
+| `building_pen.png` | 畜栏 | 木桩和铁丝网围起来的小畜栏，里面有鸡窝和饲料槽 | small pen fenced with wooden stakes and wire mesh, a chicken coop and a feeding trough inside |
+| `building_pond.png` | 鱼塘 | 铺着防水布的小水池，水面有几圈涟漪，边上几丛芦苇 | small pond lined with tarp, ripples on the water, a few reeds at the edge |
+| `building_well.png` | 水站 | 一口带手摇泵的水井，旁边几个接雨水的蓝色大桶 | a water well with a hand pump, a few blue rain barrels beside it |
 
 ### 4.2 阶段图（可选，做了就会随升级换样子）
 
@@ -192,6 +196,21 @@ Midjourney 建议加：`--style raw --stylize 50`，人物 `--ar 1:1`，背景�
 | `building_cellar_1.png` | 🕳️地洞 | 后院挖的一个地洞，盖着木板 | a hole dug in the backyard covered with planks |
 | `building_cellar_2.png` | 🧊地窖 | 厚重的地窖门，冒出一点冷气 | heavy cellar door with a little cold mist |
 | `building_cellar_3.png` | ❄️冷库 | 银色冷库门，旁边一台嗡嗡响的发电机 | silver freezer door with a humming generator beside it |
+| `building_garden_1.png` | 🪴花盆 | 几个花盆排成一排，长着小苗 | a row of flower pots with small seedlings |
+| `building_garden_2.png` | 🌱菜畦 | 撬开柏油翻出的几垄菜畦 | a few vegetable rows dug out of the asphalt |
+| `building_garden_3.png` | 🥬菜园 | 围起来的菜园，有引水管和堆肥箱 | fenced vegetable garden with a water hose and a compost box |
+| `building_garden_4.png` | 🏡温室大棚 | 塑料布搭的拱形大棚，里面绿油油的 | arched plastic-sheet greenhouse, green plants inside |
+| `building_pen_1.png` | 🐔鸡笼 | 购物车和铁丝网拼成的鸡笼 | chicken cage made from shopping carts and wire mesh |
+| `building_pen_2.png` | 🐐畜栏 | 木桩围起来的畜栏，一个小棚子 | pen fenced with wooden stakes and a small shed |
+| `building_pen_3.png` | 🐖小农场 | 猪圈、鸡舍和饲料棚连在一起的小农场 | small farm with a pigsty, a henhouse and a feed shed |
+| `building_pen_4.png` | 🐄牧场 | 一大片围起来的草地，木栅栏和谷仓 | large fenced pasture with a wooden fence and a barn |
+| `building_pond_1.png` | 🪣水缸 | 几口装满雨水的大缸 | a few large jars full of rainwater |
+| `building_pond_2.png` | 🐟鱼池 | 停车场挖的水池，铺着蓝色防水布 | a pool dug in the parking lot, lined with blue tarp |
+| `building_pond_3.png` | 🎣鱼塘 | 引了河水的鱼塘，四周种着芦苇，一根钓竿 | fish pond fed by a stream, reeds around it, a fishing rod |
+| `building_well_1.png` | 🛢️雨水桶 | 屋檐下几个接雨水的大桶 | a few rain barrels under an eave |
+| `building_well_2.png` | 🚰净水器 | 用桶、沙子和木炭叠起来的过滤器，下面接着水壶 | stacked bucket filter with sand and charcoal, a jug collecting water below |
+| `building_well_3.png` | ⛲水井 | 石头砌的水井，一台手摇泵 | stone well with a hand pump |
+| `building_well_4.png` | 🗼水塔 | 铁架子上的水塔，接着水管 | water tower on a steel frame with pipes running down |
 
 ---
 
@@ -203,8 +222,8 @@ Midjourney 建议加：`--style raw --stylize 50`，人物 `--ar 1:1`，背景�
 |---|---|---|---|
 | `bg_camp.png` | 约 1:1（1440×1330） | 营地地图的**地面底图**：45 度俯视的小镇超市停车场，超市外墙和大门只占最上面一条，其余是开阔平整的停车场（柏油、停车线、杂草、裂缝、零星轮胎和木箱），黄昏暖光。**不要画帐篷、厨房这些设施**（设施是单独的建筑图），没有人物，没有文字 | camp map **ground layer**, 45-degree top-down pixel art of a small-town supermarket parking lot, store front only as a thin strip at the top, the rest open flat asphalt with parking lines, weeds, cracks, a few tires and crates, warm dusk light, **no tents or facilities**, no characters, no text |
 | `bg_town.png` | 约 1:1（1440×1460） | 小镇地图底图：**正上方俯视**，一条小河从左弯到右，主路从左下镇口通到中间再分岔去北边山坡和右边，四角有树林，北边山坡，街区之间留出很多空地（地点标记由游戏放，**不要画文字和招牌**），低饱和末日配色，杂草丛生 | **top-down** pixel art map of a small town, a river winding left to right, main road from the lower-left entrance to the center then branching north to the hills and east, woods in the corners, hillside to the north, lots of open space between blocks, **no text or signs**, desaturated post-apocalyptic palette, overgrown |
-| `bg_battle.png` | 3:2（1080×720） | 战斗背景，**横版侧视**，夜晚的小镇街道：左边是营地的栅栏和一盏路灯，右边马路延伸出去，路边有废车和倒下的路牌，天上一轮月亮，蓝紫色夜色，**画面底部 20% 是平坦地面**（角色站在上面），没有人物 | **side-scrolling** pixel art battle background, small-town street at night, camp fence and a street lamp on the left, road stretching right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground in the bottom 20%**, no characters |
-| `bg_bloodmoon.png` | 3:2（1080×720） | 和 `bg_battle` 同一条街、同一个构图，但天上是一轮巨大的**血红月亮**，整体暗红色调 | same street and composition as bg_battle, but a huge **blood-red moon**, overall dark red tones |
+| `bg_battle.png` | 约 3:2（1080×690） | 战斗背景，**横版侧视**，夜晚的小镇街道：左边是营地的栅栏和一盏路灯，右边马路延伸出去，路边有废车和倒下的路牌，天上一轮月亮，蓝紫色夜色，**画面下方 40% 是平坦的地面和马路**（角色分 4 排站在上面，游戏会把图拉伸铺满战场），没有人物 | **side-scrolling** pixel art battle background, small-town street at night, camp fence and a street lamp on the left, road stretching right with abandoned cars and a fallen road sign, moon in the sky, blue-purple night, **flat ground and road in the bottom 40%**, no characters |
+| `bg_bloodmoon.png` | 约 3:2（1080×690） | 和 `bg_battle` 同一条街、同一个构图，但天上是一轮巨大的**血红月亮**，整体暗红色调 | same street and composition as bg_battle, but a huge **blood-red moon**, overall dark red tones |
 | `bg_title.png` | 9:16（1080×1920） | 游戏封面：黄昏下的超市营地，几个幸存者的背影围坐篝火（剪影就行），远处天边尸群的黑色剪影，温暖又有点不安。**上方 1/3 留空**放标题，没有文字 | title screen pixel art, supermarket camp at dusk, silhouettes of a few survivors around a campfire seen from behind, dark silhouette of a zombie horde on the far horizon, warm yet uneasy, **top third left empty** for the title, no text |
 
 ---
