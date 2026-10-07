@@ -4,7 +4,7 @@ import { repairBlocker, repairWall } from './wall';
 import { prepareVisitors } from './visitors';
 import { updateDiary } from './diary';
 import { autoFarm, clearPlot, collectProduce, harvestAll, petAnimals, plant, slaughter, updateFarm } from './farming';
-import { AchievementDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
+import { AchievementDef, UnlockDef, ActionResult, BattleReport, GameConfig, CandidateState, GameEventDef, GameState, GearSlot, HaulState, ResourceBag, ResourceId, SurvivorRow, WatchMode } from './types';
 import { equipGear, forgeGear, unequipGear } from './gear';
 import { setWatchMode } from './watch';
 import { updateChatter } from './chatter';
@@ -31,6 +31,7 @@ import { resolveScouts, sendScout, updateScoutSpots } from './scouting';
 import { craftItem } from './crafting';
 import { abandonBounty, acceptBounty, claimBounty } from './bounties';
 import { checkAchievements } from './achievements';
+import { checkUnlocks, isUnlocked } from './unlocks';
 import { checkSeasonChange } from './seasons';
 import { addStat, createNewState } from './state';
 import { applyHardship } from './roster';
@@ -41,6 +42,8 @@ import { grantOfflineReward } from './offline';
 export class CampGame {
     /** 新解锁、还没在界面上提示过的成就；界面取走后自己清空 */
     readonly newAchievements: AchievementDef[] = [];
+    /** 刚解锁的功能（界面弹完提示后清空） */
+    readonly newUnlocks: UnlockDef[] = [];
     /**
      * 界面打开时设为 true：尸潮来了不自动结算，放进 state.pendingRaid 等玩家亲手守夜（见 liveRaid.ts）。
      * 测试和数值模拟保持 false，照旧自动结算。
@@ -169,6 +172,12 @@ export class CampGame {
         scheduleFirstRaid(this.config, this.state, now);
         if (!this.state.gameOver) refreshDaily(this.config, this.state, now);
         this.newAchievements.push(...checkAchievements(this.config, this.state, now));
+        this.newUnlocks.push(...checkUnlocks(this.config, this.state, now));
+    }
+
+    /** 这个功能开放了没有（新手节奏，见 core/unlocks.ts） */
+    unlocked(id: string): boolean {
+        return isUnlocked(this.config, this.state, id);
     }
 
     private act<T extends ActionResult | ChoiceResult | PickupResult>(now: number, action: () => T): T {

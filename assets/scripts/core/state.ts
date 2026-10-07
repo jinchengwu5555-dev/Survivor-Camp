@@ -42,6 +42,7 @@ export function createNewState(config: GameConfig, now: number, seed: number): G
         ...emptyV3Fields(config),
         raidRelief: 0,
         ...emptyV5Fields(config),
+        unlocked: [],
     };
     syncBuildings(config, state);
     rollNames(config, state, seed);

@@ -89,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.11 波次·陷阱·怪异丧尸';
+const GAME_VERSION = 'v2.12 功能慢慢解锁';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -495,6 +495,11 @@ export class GameRoot extends Component {
         } else {
             this.raidWarned = false;
         }
+        for (const f of camp.newUnlocks.splice(0)) {
+            this.effect(`🔓 新功能：${f.icon}${f.name}`, ACCENT, 32, 'win');
+            this.toast = f.text;
+            this.toastUntil = Date.now() + 6000;
+        }
         if (camp.newAchievements.length > 0) {
             const names = camp.newAchievements.map((a) => `${a.icon}${a.name}`).join('、');
             camp.newAchievements.length = 0;
@@ -875,7 +880,10 @@ export class GameRoot extends Component {
         const w = (WIDTH - 10 * (TABS_PER_ROW - 1)) / TABS_PER_ROW;
         const badges = camp.badges();
         this.target = nav;
-        TABS.forEach(([tab, name], i) => {
+        // 新手节奏：还没解锁的页签不显示
+        const tabs = TABS.filter(([tab]) => camp.unlocked(tab));
+        if (!tabs.some(([tab]) => tab === this.tab)) this.tab = 'camp';
+        tabs.forEach(([tab, name], i) => {
             const col = i % TABS_PER_ROW;
             const row = Math.floor(i / TABS_PER_ROW);
             this.cursorY = NAV_TOP - 10 - row * 62;
@@ -2515,7 +2523,7 @@ export class GameRoot extends Component {
     /** 探索页：枫谷镇地图（迷雾、道路、地点、在路上的小队、侦察点）+ 下方选中地点的详情 */
     private renderExplore(camp: CampGame, now: number): void {
         const { config, state } = camp;
-        if (this.exploreMode === 'hunt') {
+        if (this.exploreMode === 'hunt' && camp.unlocked('hunting')) {
             this.renderHunting(camp, now);
             return;
         }
@@ -2686,8 +2694,9 @@ export class GameRoot extends Component {
         title.setPosition(-MAP_WIDTH / 2 + 175, TOWN_HEIGHT / 2 - 26);
         drawPanel(title.addComponent(Graphics), 330, 38, new Color(20, 22, 20, 210), 19);
         addLabel(title, `🗺️ ${townName(state)} · 已探索 ${Math.round(exploredRatio(config, state, now) * 100)}%`, 20, ACCENT, { width: 320 });
-        // 右上角：去狩猎钓鱼页（猎场和探索地点分开）
+        // 右上角：去狩猎钓鱼页（猎场和探索地点分开；新手第二天才开放）
         const huntBtn = makeNode('HuntBtn', map, 190, 44);
+        huntBtn.active = camp.unlocked('hunting');
         huntBtn.setPosition(MAP_WIDTH / 2 - 105, TOWN_HEIGHT / 2 - 28);
         drawPanel(huntBtn.addComponent(Graphics), 190, 44, COLORS.button, 12, ACCENT, 2);
         const huntingNow = (state.hunts ?? []).length;
@@ -3233,7 +3242,7 @@ export class GameRoot extends Component {
             if (!this.camp) return;
             if (watched) {
                 this.camp.speedUpExpedition(expeditionId, this.camp.now);
-                this.tab = 'reports';
+                this.tab = this.camp.unlocked('reports') ? 'reports' : 'explore';
             } else {
                 this.showToast('需要看完广告才能加速');
             }

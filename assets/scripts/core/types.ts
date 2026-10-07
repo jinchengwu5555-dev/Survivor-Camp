@@ -535,6 +535,8 @@ export interface GameConfig {
     hunting?: HuntingConfig;
     /** 今日情报（老配置没有） */
     intel?: IntelConfig;
+    /** 新手节奏：功能慢慢解锁（老配置没有 = 全部开放），见 core/unlocks.ts */
+    unlocks?: { features: UnlockDef[] };
     /** 伊森的日记（老配置没有） */
     diary?: DiaryConfig;
     /** 探索背包：资源怎么分包、占几格、多重（老配置没有） */
@@ -922,6 +924,8 @@ export interface GameState {
     hunts?: SurveyState[];
     /** 菜园和畜栏（见 core/farming.ts；老存档没有，用到时补上） */
     farm?: FarmState;
+    /** 已经解锁的功能 id（见 core/unlocks.ts）；老存档没有这个字段 = 全部已解锁 */
+    unlocked?: string[];
     /** 今日情报：第几天、哪几个分区有什么情报（见 core/intel.ts） */
     intel?: { day: number; items: { district: string; kind: string }[] };
     /** 伊森的日记：每天一篇（见 core/diary.ts）；diarySnap 是当天开始时的快照 */
@@ -1333,6 +1337,17 @@ export interface FarmState {
     pettedDay?: number;
     /** 送过开局种子了 */
     starter?: boolean;
+}
+
+/** 一个慢慢解锁的功能（unlocks.json） */
+export interface UnlockDef {
+    id: string;
+    icon: string;
+    name: string;
+    /** 解锁时的提示 */
+    text: string;
+    /** 满足任意一个条件就解锁 */
+    any: Condition[];
 }
 
 /** 今日情报（intel.json），见 core/intel.ts */

@@ -1,0 +1,11 @@
+{
+    "_doc": "新手节奏：开局只有营地、幸存者、探索三个页签，其余功能满足任意一个条件（any，写法和事件条件一样）就永久解锁，并弹出提示。老存档没有这个记录，全部算已解锁。见 core/unlocks.ts。",
+    "features": [
+        { "id": "reports", "icon": "📜", "name": "战报", "text": "第一场仗打完了——在「战报」页可以回看战斗。", "any": [{ "flags": ["cleared_gas_station"] }, { "flags": ["raids_started"] }, { "minDay": 2 }] },
+        { "id": "hunting", "icon": "🏹", "name": "打猎钓鱼", "text": "附近有野兔和鱼——「探索」页可以去打猎钓鱼了。", "any": [{ "minDay": 2 }, { "minHq": 2 }] },
+        { "id": "bounties", "icon": "📌", "name": "任务", "text": "镇上的人开始托你办事了——去「任务」页看看悬赏和每日目标。", "any": [{ "minDay": 2 }, { "minHq": 2 }] },
+        { "id": "achievements", "icon": "🏆", "name": "成就", "text": "营地慢慢有了样子——「成就」页记着你们做到过的事。", "any": [{ "minDay": 2 }] },
+        { "id": "workshop", "icon": "🔧", "name": "工坊", "text": "可以自己动手做东西了——「工坊」页能做燃烧瓶、陷阱、装备和车。", "any": [{ "minBuilding": { "workshop": 1 } }, { "minDay": 3 }] },
+        { "id": "rank", "icon": "🏅", "name": "排行", "text": "收音机里传来别的营地的消息——「排行」页看看谁撑得最久。", "any": [{ "minDay": 3 }] }
+    ]
+}

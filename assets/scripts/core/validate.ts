@@ -380,6 +380,15 @@ export function validateConfig(config: GameConfig): string[] {
         if (!config.units?.some((u) => u.id === fz.unit)) errors.push(`balance.familiarZombie：未知战斗单位 ${fz.unit}`);
         if (fz.chance < 0 || fz.chance > 1) errors.push('balance.familiarZombie：chance 要在 0～1 之间');
     }
+    if (config.unlocks) {
+        checkUnique('新功能解锁', config.unlocks.features.map((f) => f.id));
+        for (const f of config.unlocks.features) {
+            if (f.any.length === 0) errors.push(`新功能 ${f.id}：any 里至少要有一个条件（不然永远解锁不了）`);
+            for (const c of f.any) {
+                for (const id of Object.keys(c.minBuilding ?? {})) if (!config.buildings.some((b) => b.id === id)) errors.push(`新功能 ${f.id} 条件：未知建筑 ${id}`);
+            }
+        }
+    }
     if (config.intel) {
         checkUnique('情报', config.intel.kinds.map((k) => k.id));
         for (const k of config.intel.kinds) {
