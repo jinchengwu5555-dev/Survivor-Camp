@@ -219,6 +219,8 @@ Midjourney 建议加：`--style raw --stylize 50`，人物 `--ar 1:1`，背景�
 
 ## 五、第二批：背景 → `sprites/bg/`（宽 360，脚本自动缩）
 
+> ⚠️ 守夜和探索战斗已经改成**俯视**画面（圆点 + 围墙），下面的 `bg_battle` / `bg_bloodmoon`（横版侧视）和第二节的战斗小人图暂时用不上，先不用做；以后要做俯视的小人图再另外出规格。
+
 背景**不用抠图**，按比例生成就行。前缀把 `game sprite` 换成 `game background, pixel art scene`。
 
 | 文件名 | 生成比例 | 画面描述（中文） | 画面描述（英文） |

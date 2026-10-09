@@ -32,7 +32,7 @@ export function nextHint(config: GameConfig, state: GameState, now: number): Gui
     const obj = ep?.objectives.find((o) => !objectiveDone(config, state, o, now));
     if (obj) return objectiveHint(config, state, obj);
     if (state.flags.includes('raids_started') && state.raidCount === 0) {
-        return { text: '尸潮就要来了！守夜时点角色的技能按钮，栅栏快撑不住时花木材修补' };
+        return { text: '尸潮就要来了！守夜时点一个人再点门，把人调到尸群多的门；门快撑不住时直接点门花木材修' };
     }
     return null;
 }

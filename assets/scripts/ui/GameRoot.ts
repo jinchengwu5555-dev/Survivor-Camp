@@ -89,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.0 俯视守夜';
+const GAME_VERSION = 'v3.1 俯视营地';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -139,6 +139,8 @@ const TOWN_HEIGHT = 730;
 const TOWN_CENTER_Y = SHEET_TOP - TOWN_HEIGHT / 2;
 /** 建筑在地图上的默认大小（再乘 buildings.json 里 map.scale） */
 const BUILDING_BOX = { width: 150, height: 118 };
+/** 营地地图上围墙的位置（相对地图中心）：建筑都在墙里面，上面留出尸潮倒计时的位置 */
+const CAMP_WALL = { left: -352, right: 352, bottom: -322, top: 282 };
 /** 拾荒物在地图上出现的位置（相对地图中心） */
 const PICKUP_SPOTS = [
     { x: -110, y: -30 },
@@ -920,9 +922,10 @@ export class GameRoot extends Component {
             this.drawMapPlaceholder(map, camp);
         }
 
-        this.drawCampFence(map, state.buildings.wall?.level ?? 0);
+        this.drawCampFence(map, state.buildings.wall?.level ?? 0, wallDurability(state));
         const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
         config.buildings.forEach((def, i) => this.renderMapBuilding(map, camp, def, i, now, guided === def.id));
+        this.drawIdlePeople(map, camp, now);
 
         // 地上能捡的东西
         activePickups(state, now).forEach((p, i) => {
@@ -1055,91 +1058,116 @@ export class GameRoot extends Component {
     }
 
     /**
-     * 营地的栅栏：围着停车场一圈，样子随栅栏等级变化——
-     * 0 级：散落的货架；1～3 级：木栅栏；4～7 级：加固木墙；8～12 级：铁皮墙；13 级以上：水泥墙加铁丝网。
-     * 下方中间留一个大门（栅栏建筑就站在门口）。
+     * 营地的围墙（俯视，和守夜画面一样）：方形围墙四面各一个门，建筑都在墙里面。
+     * 墙的厚度和颜色随栅栏等级变化：0 级只有散落的货架，越往后越厚越结实；门的颜色随耐久变暗。
      */
-    private drawCampFence(map: Node, level: number): void {
+    private drawCampFence(map: Node, level: number, durability: number): void {
         const node = makeNode('Fence', map, MAP_WIDTH, MAP_HEIGHT);
         const g = node.addComponent(Graphics);
-        const left = -MAP_WIDTH / 2 + 16;
-        const right = MAP_WIDTH / 2 - 16;
-        const bottom = -MAP_HEIGHT / 2 + 16;
-        const top = MAP_HEIGHT / 2 - 160;
-        const gate = { from: -10, to: 130 };
+        const { left, right, bottom, top } = CAMP_WALL;
         const style =
             level >= 13
-                ? { color: hexColor('#9a9a92'), width: 12, post: hexColor('#6a6a64'), wire: true }
+                ? { color: hexColor('#6a7a86'), edge: hexColor('#a0b0bc'), width: 14 }
                 : level >= 8
-                  ? { color: hexColor('#7c8a94'), width: 10, post: hexColor('#4e5a62'), wire: false }
+                  ? { color: hexColor('#4e5e6c'), edge: hexColor('#8a9eae'), width: 12 }
                   : level >= 4
-                    ? { color: hexColor('#8a6a44'), width: 9, post: hexColor('#5e4428'), wire: false }
+                    ? { color: hexColor('#3a4a58'), edge: hexColor('#6a7e8e'), width: 10 }
                     : level >= 1
-                      ? { color: hexColor('#9a7a50'), width: 5, post: hexColor('#6e5232'), wire: false }
-                      : { color: new Color(150, 130, 100, 150), width: 3, post: new Color(110, 90, 60, 150), wire: false };
-        // 墙身：左、右、下（下方中间是大门），上面接着超市外墙
-        g.strokeColor = style.color;
-        g.lineWidth = style.width;
-        g.moveTo(left, top);
-        g.lineTo(left, bottom);
-        g.lineTo(gate.from, bottom);
-        g.moveTo(gate.to, bottom);
-        g.lineTo(right, bottom);
-        g.lineTo(right, top);
-        g.stroke();
-        // 立柱
-        g.fillColor = style.post;
-        const post = (x: number, y: number) => {
-            g.rect(x - style.width / 2 - 2, y - style.width / 2 - 2, style.width + 4, style.width + 4);
-        };
-        for (let y = bottom; y <= top; y += 42) {
-            post(left, y);
-            post(right, y);
+                      ? { color: hexColor('#5a4a34'), edge: hexColor('#8a7050'), width: 7 }
+                      : { color: new Color(90, 80, 60, 150), edge: new Color(120, 100, 70, 150), width: 4 };
+        const gap = 46;
+        const cx = (left + right) / 2;
+        const cy = (bottom + top) / 2;
+        const w = style.width;
+        // 四条墙，中间留门
+        const segs: [number, number, number, number][] = [
+            [left, top - w / 2, cx - gap - left, w],
+            [cx + gap, top - w / 2, right - cx - gap, w],
+            [left, bottom - w / 2, cx - gap - left, w],
+            [cx + gap, bottom - w / 2, right - cx - gap, w],
+            [left - w / 2, bottom, w, cy - gap - bottom],
+            [left - w / 2, cy + gap, w, top - cy - gap],
+            [right - w / 2, bottom, w, cy - gap - bottom],
+            [right - w / 2, cy + gap, w, top - cy - gap],
+        ];
+        for (const [x, y, sw, sh] of segs) {
+            g.fillColor = style.color;
+            g.rect(x, y, sw, sh);
+            g.fill();
+            g.strokeColor = style.edge;
+            g.lineWidth = 1;
+            g.rect(x, y, sw, sh);
+            g.stroke();
         }
-        for (let x = left; x <= right; x += 42) if (x < gate.from - 6 || x > gate.to + 6) post(x, bottom);
-        g.fill();
-        // 最高级：墙头的铁丝网
-        if (style.wire) {
-            g.strokeColor = new Color(200, 200, 200, 160);
+        if (level <= 0) return;
+        // 四个木门：耐久越低颜色越暗
+        const k = 0.45 + 0.55 * Math.max(0, Math.min(1, durability / 100));
+        const gateFill = new Color(Math.round(122 * k), Math.round(90 * k), Math.round(52 * k));
+        const gates: [number, number, number, number][] = [
+            [cx - gap, top - w / 2 - 3, gap * 2, w + 6],
+            [cx - gap, bottom - w / 2 - 3, gap * 2, w + 6],
+            [left - w / 2 - 3, cy - gap, w + 6, gap * 2],
+            [right - w / 2 - 3, cy - gap, w + 6, gap * 2],
+        ];
+        for (const [x, y, gw, gh] of gates) {
+            g.fillColor = gateFill;
+            g.rect(x, y, gw, gh);
+            g.fill();
+            g.strokeColor = hexColor('#c09a5a');
             g.lineWidth = 2;
-            for (let y = bottom; y < top; y += 14) {
-                g.moveTo(left - 6, y);
-                g.lineTo(left + 6, y + 7);
-                g.moveTo(right - 6, y);
-                g.lineTo(right + 6, y + 7);
-            }
+            g.rect(x, y, gw, gh);
             g.stroke();
         }
     }
 
-    /** 没有 bg_camp 背景图时，画一个简单的超市停车场 */
+    /** 没有 bg_camp 背景图时：俯视的营地地面（墙外深色，墙里稍亮） */
     private drawMapPlaceholder(map: Node, camp: CampGame): void {
         const g = map.addComponent(Graphics);
         const w = MAP_WIDTH;
         const h = MAP_HEIGHT;
-        // 柏油地面
-        g.fillColor = hexColor('#3b403a');
+        g.fillColor = hexColor('#141a1c');
         g.rect(-w / 2, -h / 2, w, h);
         g.fill();
-        // 停车位的白线
-        g.strokeColor = new Color(200, 200, 190, 60);
-        g.lineWidth = 3;
-        for (let x = -w / 2 + 40; x < w / 2; x += 90) {
-            g.moveTo(x, -h / 2 + 20);
-            g.lineTo(x, -h / 2 + 90);
-            g.moveTo(x, h / 2 - 190);
-            g.lineTo(x, h / 2 - 250);
+        const { left, right, bottom, top } = CAMP_WALL;
+        g.fillColor = hexColor('#1b2326');
+        g.rect(left, bottom, right - left, top - bottom);
+        g.fill();
+        // 地上淡淡的格子
+        g.strokeColor = new Color(255, 255, 255, 10);
+        g.lineWidth = 1;
+        for (let x = left + 60; x < right; x += 60) {
+            g.moveTo(x, bottom);
+            g.lineTo(x, top);
+        }
+        for (let y = bottom + 60; y < top; y += 60) {
+            g.moveTo(left, y);
+            g.lineTo(right, y);
         }
         g.stroke();
-        // 超市外墙
-        g.fillColor = hexColor('#5a4a3a');
-        g.rect(-w / 2, h / 2 - 150, w, 150);
-        g.fill();
-        g.fillColor = hexColor('#6e5a44');
-        g.rect(-w / 2, h / 2 - 158, w, 12);
-        g.fill();
         const site = currentSite(camp.config, camp.state);
-        addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 22, new Color(255, 220, 150, 180), { width: 300 }).node.setPosition(-230, h / 2 - 70);
+        addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 18, new Color(255, 220, 150, 120), { width: 300 }).node.setPosition(-200, bottom - 22);
+    }
+
+    /** 闲着的人：营地中间走来走去的小圆点（颜色是角色的主色） */
+    private drawIdlePeople(map: Node, camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const idle = state.survivors.filter((s) => !s.assignment && !isOnExpedition(state, s.id));
+        if (!idle.length) return;
+        const node = makeNode('Idle', map, 10, 10);
+        const g = node.addComponent(Graphics);
+        const t = now / 4000;
+        idle.slice(0, 10).forEach((s, i) => {
+            const a = i * 2.1 + t * (0.6 + (i % 3) * 0.2);
+            const x = Math.cos(a) * (40 + (i % 4) * 16);
+            const y = -35 + Math.sin(a * 1.3) * 26;
+            g.fillColor = hexColor(portraitOf(config, state, s.id)?.color ?? '#7a8a7a');
+            g.circle(x, y, 8);
+            g.fill();
+            g.strokeColor = new Color(20, 20, 20, 220);
+            g.lineWidth = 2;
+            g.circle(x, y, 8);
+            g.stroke();
+        });
     }
 
     /** 地图上的一个设施：图片（或色块）+ 名字等级 + 状态角标 + 干活的人 */
@@ -1170,7 +1198,8 @@ export class GameRoot extends Component {
             const sprite = addSprite(node, art, size.width, size.height);
             if (b.level === 0) sprite.addComponent(UIOpacity).opacity = 110;
         } else {
-            drawPanel(g, bw, bh, b.level === 0 ? new Color(70, 70, 70, 160) : new Color(96, 84, 66, 235), 14, b.level === 0 ? DIM : new Color(150, 130, 100), 2);
+            // 俯视的房顶：深色方块，建好的描亮边，没建的是虚影
+            drawPanel(g, bw, bh, b.level === 0 ? new Color(40, 46, 50, 140) : hexColor('#2c383e'), 8, b.level === 0 ? new Color(90, 100, 106, 160) : hexColor('#6a8290'), 2);
             addLabel(node, buildingStage(def, b.level).icon, Math.round(46 * scale), TEXT, { width: bw }).node.setPosition(0, 8);
         }
 
@@ -3338,7 +3367,7 @@ const HELP_LINES = [
     '· 时间只在你在线时走，离线时营地暂停，只攒一点挂机收益。',
     '· 开局只有伊森一个人。去“探索”派人搜刮，第一次回来会遇到别的幸存者，留谁由你决定。',
     '· 每个人有专长、天赋、特质（有好有坏，有的坏毛病藏着）、心情和精力。',
-    '· 晚上要有人轮流守夜；不是每晚都有尸潮，来了就亲手守住栅栏。',
+    '· 晚上要有人轮流守夜；不是每晚都有尸潮，来了就守住营地的四个门：点人再点门调人，直接点门花木材修门。',
     '· 打赢探索后要把战利品装进背包，装不下的只能留下。背包、车越大，能带的越多。',
     '· 地图分区勘察能驱散迷雾；远的区要自行车、摩托或汽车才能去。',
     '· 黄金只在前期值钱，早点花掉。',

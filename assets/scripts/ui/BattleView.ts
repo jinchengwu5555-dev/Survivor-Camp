@@ -196,6 +196,15 @@ export class BattleView {
 
     // ---------- 坐标 ----------
 
+    /**
+     * 角色画在哪：守夜就是战斗里的位置；探索战斗的逻辑还是一条线（数值按这个校准过），
+     * 画的时候按 uid 上下错开几排，看起来是一群人对一群敌人。
+     */
+    private pos(u: BattleUnit): Point {
+        if (this.battle.setup.camp) return { x: u.x, y: u.y };
+        return { x: u.x, y: u.y + ((u.uid % 5) - 2) * 0.7 };
+    }
+
     private toScreen(p: Point): Point {
         return { x: (p.x - this.center.x) * this.scale, y: (p.y - this.center.y) * this.scale };
     }
@@ -274,7 +283,7 @@ export class BattleView {
         const units = this.battle.units.filter((u) => u.alive && u.def.faction !== 'structure');
         units.sort((a, b) => Number(a.side === 'ally') - Number(b.side === 'ally'));
         for (const u of units) {
-            const s = this.toScreen(u);
+            const s = this.toScreen(this.pos(u));
             if (Math.abs(s.x) > half + 10 || Math.abs(s.y) > half + 10) continue;
             const r = this.radiusOf(u);
             g.fillColor = this.flashes.has(u.uid) ? FLASH_COLOR : this.colorOf(u);
@@ -461,7 +470,7 @@ export class BattleView {
             if (e.type === 'attack') {
                 const src = this.battle.getUnit(e.source);
                 const tgt = this.battle.getUnit(e.target);
-                if (src && tgt && src.stats.attackRange > 1.5 && this.shots.length < 40) this.shots.push({ from: { x: src.x, y: src.y }, to: { x: tgt.x, y: tgt.y }, ttl: 0.12, ally: src.side === 'ally' });
+                if (src && tgt && src.stats.attackRange > 1.5 && this.shots.length < 40) this.shots.push({ from: this.pos(src), to: this.pos(tgt), ttl: 0.12, ally: src.side === 'ally' });
             } else if (e.type === 'damage') {
                 const target = this.battle.getUnit(e.target);
                 if (!target || e.amount < 1) continue;
@@ -497,7 +506,7 @@ export class BattleView {
                 }
                 if (unit.def.faction === 'structure') continue;
                 sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
-                this.corpses.push({ p: { x: unit.x, y: unit.y }, color: this.colorOf(unit), r: this.radiusOf(unit), ttl: 0.6 });
+                this.corpses.push({ p: this.pos(unit), color: this.colorOf(unit), r: this.radiusOf(unit), ttl: 0.6 });
                 if (this.corpses.length > 60) this.corpses.splice(0, this.corpses.length - 60);
                 if (unit.side === 'ally') {
                     this.shake(0.3, 8);
@@ -521,10 +530,10 @@ export class BattleView {
         }
     }
 
-    private floatAt(text: string, p: Point, color: Color, size: number): void {
+    private floatAt(text: string, p: Point | BattleUnit, color: Color, size: number): void {
         if (this.floats >= MAX_FLOATS) return;
         this.floats++;
-        const s = this.toScreen(p);
+        const s = this.toScreen('uid' in p ? this.pos(p) : p);
         const half = FIELD_SIZE / 2 - 40;
         floatText(this.fx, text, Math.max(-half, Math.min(half, s.x)), Math.max(-half, Math.min(half, s.y + 16)), color, size, 50, 0.9);
         setTimeout(() => this.floats--, 900);
