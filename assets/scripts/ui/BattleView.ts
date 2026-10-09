@@ -10,7 +10,7 @@
 
 import { Color, EventTouch, Graphics, Label, Node, UITransform, Vec3 } from 'cc';
 import { Battle, BattleSetup, waveTimes } from '../core/battle/Battle';
-import { gateNormal, Point } from '../core/battle/geometry';
+import { campBounds, campCenter, gateNormal, Point } from '../core/battle/geometry';
 import { BattleUnit } from '../core/battle/types';
 import { battleRegistry, CORE_UNIT, GATE_NAMES } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
@@ -25,7 +25,7 @@ const WIDTH = 680;
 const FIELD_SIZE = 680;
 const FIELD_Y = 150;
 /** 守夜时视野的半径（格）：围墙半边 6 格，尸群从更远的地方走进画面 */
-const CAMP_VIEW_RADIUS = 11;
+const CAMP_VIEW_MARGIN = 5;
 /** 同时最多几个飘字，避免尸群一多卡顿 */
 const MAX_FLOATS = 12;
 const FIELD_BG = hexColor('#141a1c');
@@ -120,8 +120,10 @@ export class BattleView {
         // 视野：守夜固定看整个营地；探索按双方的站位自动框住
         const camp = this.battle.setup.camp;
         if (camp) {
-            this.center = { x: 0, y: 0 };
-            this.scale = FIELD_SIZE / 2 / CAMP_VIEW_RADIUS;
+            // 和营地地图一样大的围墙，四周再留出尸群走过来的空地
+            const r = campBounds(camp);
+            this.center = campCenter(camp);
+            this.scale = FIELD_SIZE / 2 / (Math.max(r.x2 - r.x1, r.y2 - r.y1) / 2 + CAMP_VIEW_MARGIN);
         } else {
             const xs = [...this.battle.setup.allies, ...this.battle.setup.enemies].map((s, i) => s.x ?? (i < this.battle.setup.allies.length ? -i * 0.8 : 10 + i * 0.8));
             const min = Math.min(-2, ...xs);
@@ -137,6 +139,12 @@ export class BattleView {
         this.fx = makeNode('Fx', this.root, FIELD_SIZE, FIELD_SIZE);
         this.fx.setPosition(0, FIELD_Y);
         if (camp) {
+            // 营地里的建筑：和营地地图上同样的位置，中间写图标和名字
+            for (const b of camp.buildings ?? []) {
+                const sp = this.toScreen(b);
+                addLabel(this.fx, `${b.icon}`, Math.max(16, Math.min(30, b.h * this.scale * 0.35)), new Color(200, 210, 215, 150), { width: 80, height: 34 }).node.setPosition(sp.x, sp.y + 6);
+                addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale), height: 20 }).node.setPosition(sp.x, sp.y - 18);
+            }
             camp.gates.forEach((g, i) => {
                 const n = gateNormal(camp, g);
                 const label = addLabel(this.fx, GATE_NAMES[i] ?? `门${i + 1}`, 18, COLORS.text, { width: 120, height: 24 });
@@ -308,21 +316,37 @@ export class BattleView {
     /** 营地：地面、围墙、四个门、中间的营地核心 */
     private drawCamp(g: Graphics): void {
         const camp = this.battle.setup.camp!;
-        const h = camp.half * this.scale;
+        const r = campBounds(camp);
+        const lo = this.toScreen({ x: r.x1, y: r.y1 });
+        const hi = this.toScreen({ x: r.x2, y: r.y2 });
         const t = Math.max(8, this.scale * 0.45);
         g.fillColor = GROUND;
-        g.rect(-h, -h, h * 2, h * 2);
+        g.rect(lo.x, lo.y, hi.x - lo.x, hi.y - lo.y);
         g.fill();
+        // 营地里的建筑（只是画出来，不挡路）
+        for (const b of camp.buildings ?? []) {
+            const c = this.toScreen(b);
+            const w = b.w * this.scale;
+            const h = b.h * this.scale;
+            g.fillColor = hexColor('#26323a');
+            g.roundRect(c.x - w / 2, c.y - h / 2, w, h, 6);
+            g.fill();
+            g.strokeColor = hexColor('#4a5e6a');
+            g.lineWidth = 2;
+            g.roundRect(c.x - w / 2, c.y - h / 2, w, h, 6);
+            g.stroke();
+        }
         // 围墙：四条边，门的位置留出缺口
         const gap = 1.1 * this.scale;
         const segs: [number, number, number, number][] = [];
-        for (const side of [0, 1, 2, 3]) {
-            const gate = camp.gates[side];
+        for (const gate of camp.gates) {
             const gs = this.toScreen(gate);
-            const horizontal = side % 2 === 0;
+            const horizontal = gateNormal(camp, gate).y !== 0;
             const fixed = horizontal ? gs.y : gs.x;
             const along = horizontal ? gs.x : gs.y;
-            for (const [a, b] of [[-h - t / 2, along - gap], [along + gap, h + t / 2]] as [number, number][]) {
+            const from = horizontal ? lo.x : lo.y;
+            const to = horizontal ? hi.x : hi.y;
+            for (const [a, b] of [[from - t / 2, along - gap], [along + gap, to + t / 2]] as [number, number][]) {
                 if (horizontal) segs.push([a, fixed - t / 2, b - a, t]);
                 else segs.push([fixed - t / 2, a, t, b - a]);
             }
@@ -340,7 +364,7 @@ export class BattleView {
         camp.gates.forEach((gate, i) => {
             const unit = this.battle.gateUnit(i);
             const s = this.toScreen(gate);
-            const horizontal = i % 2 === 0;
+            const horizontal = gateNormal(camp, gate).y !== 0;
             const w = horizontal ? gap * 2 : t + 4;
             const hh = horizontal ? t + 4 : gap * 2;
             if (unit?.alive) {
@@ -369,14 +393,15 @@ export class BattleView {
         const core = this.battle.units.find((u) => u.tag === CORE_UNIT);
         if (core) {
             const size = this.scale * 1.4;
+            const c = this.toScreen(core);
             g.fillColor = core.alive ? (this.flashes.has(core.uid) ? FLASH_COLOR : CORE_COLOR) : hexColor('#3a2a1a');
-            g.roundRect(-size / 2, -size / 2, size, size, 6);
+            g.roundRect(c.x - size / 2, c.y - size / 2, size, size, 6);
             g.fill();
             g.strokeColor = GATE_EDGE;
             g.lineWidth = 2;
-            g.roundRect(-size / 2, -size / 2, size, size, 6);
+            g.roundRect(c.x - size / 2, c.y - size / 2, size, size, 6);
             g.stroke();
-            if (core.alive) this.hpBar(g, 0, size / 2 + 6, size * 1.4, core);
+            if (core.alive) this.hpBar(g, c.x, c.y + size / 2 + 6, size * 1.4, core);
         }
     }
 

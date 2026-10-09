@@ -1,7 +1,8 @@
 // 营地空地：开局只有中间能用，其他地要清理（花资源、等时间、有的要指挥部等级）才能盖房子
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { buildingZoneBlocker, campZones, clearZoneBlocker, zoneCleared, zoneOfBuilding } from '../assets/scripts/core/campzones';
+import { battleCamp, buildingZoneBlocker, campZones, clearZoneBlocker, zoneCleared, zoneOfBuilding } from '../assets/scripts/core/campzones';
+import { prepareRaid } from '../assets/scripts/core/combat';
 import { upgradeBlocker } from '../assets/scripts/core/buildings';
 import { loadConfig, MIN, T0 } from './helpers';
 
@@ -52,5 +53,19 @@ describe('营地空地', () => {
         state.buildings.cellar.level = 1;
         expect(zoneCleared(config, state, 'southeast')).toBe(true);
         expect(zoneCleared(config, state, 'northeast')).toBe(false);
+    });
+
+    it('守夜的战场就是营地地图：围墙随清理出来的地变大，建好的建筑也在里面', () => {
+        const game = newGame();
+        const { config, state } = game;
+        const small = battleCamp(config, state)!;
+        state.zones = { west: { cleared: true, endsAt: null } };
+        state.buildings.garden.level = 1;
+        const big = battleCamp(config, state)!;
+        expect(big.rect.x1).toBeLessThan(small.rect.x1);
+        expect(big.buildings.some((b) => b.x < small.rect.x1)).toBe(true);
+        const pending = prepareRaid(config, state, config.raids[0], T0);
+        expect(pending.setup.camp?.rect).toEqual(big.rect);
+        expect(pending.setup.camp?.buildings?.length).toBe(big.buildings.length);
     });
 });

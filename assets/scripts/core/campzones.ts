@@ -6,6 +6,12 @@
 import { canAfford, getBuildingDef, hqLevel, pay } from './economy';
 import { addLog, addStat } from './state';
 import { ActionResult, BuildingDef, CampZoneDef, GameConfig, GameState } from './types';
+import { CampBuilding, Rect } from './battle/geometry';
+import { buildingStage } from './buildings';
+
+/** 营地地图上一格（战斗里的 1 格）是多少像素；地图上建筑的方块大小（和 ui/GameRoot 的 BUILDING_BOX 一致） */
+const PX_PER_CELL = 30;
+const BUILDING_PX = { w: 150, h: 118 };
 
 export function campZones(config: GameConfig): CampZoneDef[] {
     return config.campzones?.zones ?? [];
@@ -75,4 +81,32 @@ export function updateZones(config: GameConfig, state: GameState, now: number): 
         addStat(state, 'zones_cleared');
         addLog(state, at, `${zone.icon} ${zone.name}清理出来了，营地又大了一圈！`);
     }
+}
+
+/**
+ * 守夜的战场 = 营地地图：围墙围住清理出来的地，建好的建筑画在里面。
+ * 没有空地配置时返回 undefined（用标准的正方形营地）。
+ */
+export function battleCamp(config: GameConfig, state: GameState): { rect: Rect; buildings: CampBuilding[] } | undefined {
+    const zones = campZones(config).filter((z) => zoneCleared(config, state, z.id));
+    if (!zones.length) return undefined;
+    const c = (v: number) => Math.round((v / PX_PER_CELL) * 100) / 100;
+    const rect = {
+        x1: c(Math.min(...zones.map((z) => z.rect.x1))),
+        x2: c(Math.max(...zones.map((z) => z.rect.x2))),
+        y1: c(Math.min(...zones.map((z) => z.rect.y1))),
+        y2: c(Math.max(...zones.map((z) => z.rect.y2))),
+    };
+    const buildings: CampBuilding[] = config.buildings
+        .filter((b) => b.map && (state.buildings[b.id]?.level ?? 0) > 0)
+        .filter((b) => {
+            const z = zoneOfBuilding(config, b);
+            return !z || zoneCleared(config, state, z.id);
+        })
+        .map((b) => {
+            const scale = b.map!.scale ?? 1;
+            const stage = buildingStage(b, state.buildings[b.id].level);
+            return { x: c(b.map!.x), y: c(b.map!.y), w: c(BUILDING_PX.w * scale), h: c(BUILDING_PX.h * scale), icon: stage.icon, name: stage.name };
+        });
+    return { rect, buildings };
 }

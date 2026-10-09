@@ -10,7 +10,7 @@
 // 战斗逻辑以固定步长（STEP 秒）推进，结果只由种子决定，同一个种子可以完整重放。
 
 import { DamagePipeline } from './damage';
-import { CampLayout, clampInside, distance, gateNormal, insideCamp, Point, pushOutside, stepToward } from './geometry';
+import { campBounds, CampLayout, clampInside, distance, gateNormal, insideCamp, Point, pushOutside, stepToward } from './geometry';
 import { BattleRegistry } from './registry';
 import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, fireShieldBroken, nearest, updateSkills } from './skills';
 import { canAct, canMove, effectiveAtk, effectiveAttackInterval, effectiveMoveSpeed, updateStatuses } from './status';
@@ -132,7 +132,7 @@ export class Battle implements BattleContext {
                 setup: s,
                 side: 'enemy',
                 // 营地战斗里没写位置的敌人从东边来
-                x: s.x ?? (camp ? camp.half + ENEMY_START : ENEMY_START + i * SPACING),
+                x: s.x ?? (camp ? campBounds(camp).x2 + ENEMY_START : ENEMY_START + i * SPACING),
                 y: s.y ?? (camp ? ((i % 7) - 3) * SPACING : 0),
             }),
         );
@@ -252,7 +252,8 @@ export class Battle implements BattleContext {
         const inset = this.gateUnits[u.post]?.alive === false ? POST_FALLBACK : POST_INSET;
         const mates = this.postMates.get(u.post) ?? [u];
         const k = Math.max(0, mates.indexOf(u));
-        const max = camp.half - 0.5;
+        const r = campBounds(camp);
+        const max = (n.x !== 0 ? r.y2 - r.y1 : r.x2 - r.x1) / 2 - 0.5;
         const offset = Math.max(-max, Math.min(max, (k - (mates.length - 1) / 2) * POST_SPACING));
         return { x: gate.x - n.x * inset - n.y * offset, y: gate.y - n.y * inset + n.x * offset };
     }

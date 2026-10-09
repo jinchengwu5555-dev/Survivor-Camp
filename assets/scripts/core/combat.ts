@@ -7,7 +7,8 @@
 import { recordWallDamage, wallWear } from './wall';
 import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
 import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
-import { CampLayout } from './battle/geometry';
+import { CampBuilding, campCenter, CampLayout, gateNormal, Rect } from './battle/geometry';
+import { battleCamp } from './campzones';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
@@ -58,10 +59,21 @@ export function gateTag(gate: number): string {
     return `gate_${gate}`;
 }
 
-/** 俯视守夜的营地布局：方形围墙，每面墙正中一个门（北、东、南、西） */
-export function campLayout(config: GameConfig): CampLayout {
+/**
+ * 俯视守夜的营地布局：围墙围成的矩形，每面墙正中一个门（北、东、南、西）。
+ * 不给 rect 就是 balance.camp.half 的正方形（数值报告用）；游戏里用营地地图真实的围墙（campzones.ts 的 battleCamp）。
+ */
+export function campLayout(config: GameConfig, rect?: Rect, buildings?: CampBuilding[]): CampLayout {
     const h = config.balance.camp?.half ?? 6;
-    return { half: h, gates: [{ x: 0, y: h }, { x: h, y: 0 }, { x: 0, y: -h }, { x: -h, y: 0 }] };
+    if (!rect) return { half: h, gates: [{ x: 0, y: h }, { x: h, y: 0 }, { x: 0, y: -h }, { x: -h, y: 0 }] };
+    const cx = (rect.x1 + rect.x2) / 2;
+    const cy = (rect.y1 + rect.y2) / 2;
+    return {
+        half: Math.max(rect.x2 - rect.x1, rect.y2 - rect.y1) / 2,
+        rect,
+        gates: [{ x: cx, y: rect.y2 }, { x: rect.x2, y: cy }, { x: cx, y: rect.y1 }, { x: rect.x1, y: cy }],
+        buildings,
+    };
 }
 /** 营地的狗（收养后跟大家一起守夜） */
 export const DOG_UNIT = 'dog';
@@ -220,6 +232,8 @@ export interface RaidOptions {
     bloodMoon?: boolean;
     /** 无尽尸潮的等级加成 */
     enemyBonus?: number;
+    /** 营地真实的围墙和建筑（营地地图上清理出来的范围）；不给就是标准的正方形营地 */
+    camp?: { rect: Rect; buildings: CampBuilding[] };
 }
 
 /** 血月夜的敌人：原来的尸群里每隔一只再来一只（多 50%），晚 2 秒出场 */
@@ -271,7 +285,8 @@ export function raidSetup(
     seed: number,
     options: RaidOptions = {},
 ): BattleSetup {
-    const camp = campLayout(config);
+    const camp = campLayout(config, options.camp?.rect, options.camp?.buildings);
+    const center = campCenter(camp);
     const cfg = config.balance.camp ?? { half: 6, spawnDistance: 9, gateHpShare: 0.5, coreHpShare: 0.6 };
     const sides = attackedGates(raid, seed);
     // 门：被攻打的排在前面（陷阱先装在这些门上）
@@ -285,7 +300,7 @@ export function raidSetup(
         tag: gateTag(g),
         atk: trapAtk(config, level),
     }));
-    const core: UnitSetup = { unit: CORE_UNIT, x: 0, y: 0, maxHp: Math.max(1, Math.round(wallHp * cfg.coreHpShare)), tag: CORE_UNIT };
+    const core: UnitSetup = { unit: CORE_UNIT, x: center.x, y: center.y, maxHp: Math.max(1, Math.round(wallHp * cfg.coreHpShare)), tag: CORE_UNIT };
     const people = squadSetups(defenders, level);
     if (options.dog) people.push({ unit: DOG_UNIT, level, tag: DOG_UNIT });
     // 守门的人轮流分到今晚被攻打的门，站在门里面
@@ -293,16 +308,16 @@ export function raidSetup(
         const g = sides[i % sides.length];
         const gate = camp.gates[g];
         p.post = g;
-        p.x = gate.x * 0.8;
-        p.y = gate.y * 0.8;
+        p.x = gate.x + (center.x - gate.x) * 0.2;
+        p.y = gate.y + (center.y - gate.y) * 0.2;
     });
     const base = levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0);
     const enemies = swarmEnemies(config, base).map((e, i) => {
         const g = camp.gates[sides[i % sides.length]];
-        const n = { x: Math.sign(g.x), y: Math.sign(g.y) };
+        const n = gateNormal(camp, g);
         const along = (((i * 7) % 9) - 4) * 0.9;
-        const out = camp.half + cfg.spawnDistance + ((i * 5) % 4) * 0.5;
-        return { ...e, x: n.x * out - n.y * along, y: n.y * out + n.x * along };
+        const out = cfg.spawnDistance + ((i * 5) % 4) * 0.5;
+        return { ...e, x: g.x + n.x * out - n.y * along, y: g.y + n.y * out + n.x * along };
     });
     return {
         allies: [...gates, core, ...people],
@@ -583,7 +598,7 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
     const flareBonus = state.flare ? config.balance.flare?.raidBonus ?? 0 : 0;
     state.flare = false;
     const enemyBonus = raidEnemyBonus(config, state, at) + flareBonus;
-    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
+    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus, camp: battleCamp(config, state) };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
     // 上一晚没修好的栅栏：每个门都带着伤出场（wall.ts）
     const wear = wallWear(state);
@@ -677,7 +692,7 @@ export function fightStragglers(config: GameConfig, state: GameState, group: Str
     const defenders = squadOf(config, state, raidDefenders(config, state));
     // 种子 % 4 决定从哪个门来（attackedGates）
     const seed = Math.floor(nextRandom(state) * 2 ** 28) * 4 + group.gate;
-    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed);
+    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed, { camp: battleCamp(config, state) });
     const wear = wallWear(state);
     if (wear > 0) setup.allies = setup.allies.map((a) => (a.gate !== undefined ? { ...a, hpRatio: 1 - wear } : a));
     const battle = new Battle(battleRegistry(config), setup);
