@@ -1,5 +1,6 @@
 // 建造 / 升级，以及幸存者的工作分配。
 
+import { buildingZoneBlocker } from './campzones';
 import { ActionResult, BuildingDef, BuildingStage, GameConfig, GameState } from './types';
 import { canAfford, getBuildingDef, hqLevel, pay, workerSlots } from './economy';
 import { specialistsHome } from './roster';
@@ -17,6 +18,8 @@ export function upgradeBlocker(config: GameConfig, state: GameState, buildingId:
     if (b.upgradeEndsAt !== null) return '正在升级中';
     const locked = buildingLockReason(def, state);
     if (locked) return locked;
+    const zone = buildingZoneBlocker(config, state, buildingId);
+    if (zone) return zone;
     const next = def.levels[b.level];
     if (!next) return '已达到最高等级';
     if (next.requiresHq && hqLevel(state) < next.requiresHq) return `需要指挥部 ${next.requiresHq} 级`;

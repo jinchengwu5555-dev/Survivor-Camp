@@ -52,6 +52,7 @@ assets/
       leaderboard.ts    ← 排行榜上报的数据
       liveRaid.ts       ← 亲手守夜：实时战斗、调人守门、修门
       guide.ts          ← 新手引导：根据剧情目标算出“下一步”
+      campzones.ts      ← 营地空地：清理货架、废车、瓦砾后才能在上面盖房子（campzones.json）
       unlocks.ts        ← 新手节奏：页签和功能按天数 / 建筑慢慢解锁（unlocks.json）
       portrait.ts       ← 事件卡上的说话人头像
       pickups.ts        ← 路边拾荒
@@ -279,6 +280,20 @@ npm run economy
 - 可以 1/2/4 倍速，也可以“跳过”（剩下的自动打完）。战斗中关掉游戏：下次打开会从头再打这一场（同一个种子）。
 - 界面开着时（`camp.liveRaids = true`）尸潮放进 `state.pendingRaid` 由玩家亲手打；测试和数值模拟里自动结算。所有操作记在 `BattleSetup.inputs` 里，战报回放时原样执行。
 - 探索战斗的逻辑还是横向一条线（数值按它校准），画面上按人错开几排显示。
+
+### 营地空地（`campzones.json` + `core/campzones.ts`）
+
+营地地图分成四块地，开局只有中间的“超市停车场”能用（指挥部、厨房、宿舍、废料场、水站、栅栏都在这里）。其余三块地上堆着货架、废车、瓦砾，要先**清理**才能在上面盖房子，围墙也会跟着往外扩：
+
+| 空地 | 上面能盖 | 条件 | 清理 |
+|---|---|---|---|
+| 🗄️ 西边的货架堆 | 菜园、医务室、工坊 | — | 🪵40，3 游戏分钟 |
+| 🚗 东北角的废车堆 | 畜栏、训练场 | 指挥部 3 级 | 🪵120 ⚙️40，8 游戏分钟 |
+| 🧱 东南角的瓦砾 | 地窖、鱼塘 | 指挥部 4 级 | 🪵220 ⚙️90，12 游戏分钟 |
+
+- 建筑属于哪块地，看它在 `buildings.json` 的 `map` 坐标落在哪块地的 `rect` 里（validate 会检查每个建筑正好落在一块地里，一级免费的建筑必须在开局那块地上）。
+- 一次只能清理一块；点地图上那块地中间的牌子开始清理（`CampGame.clearZone`）。统计 `zones_cleared`。
+- 老存档：某块地上已经有建好的建筑，就算清理过了。
 
 ### 白天的游荡丧尸（`core/stragglers.ts`，`balance.stragglers`）
 
@@ -896,6 +911,7 @@ npm run economy
 | `scouts_done`、`rescued_by_scouts` | 侦察回来的次数 / 侦察时救回的人 |
 | `quiet_nights` | 没有尸潮的夜晚 |
 | `stragglers_cleared` | 打退白天游荡丧尸的次数 |
+| `zones_cleared` | 清理出来的营地空地 |
 | `raiders_killed` | 击杀的掠夺者 |
 | `gear_equipped`、`gear_forged` | 穿上装备 / 在工坊打造装备的次数 |
 | `chats` | 营地闲聊的次数 |

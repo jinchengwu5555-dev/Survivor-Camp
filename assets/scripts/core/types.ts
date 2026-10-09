@@ -568,6 +568,8 @@ export interface GameConfig {
     hunting?: HuntingConfig;
     /** 今日情报（老配置没有） */
     intel?: IntelConfig;
+    /** 营地的空地：要清理才能盖房子（老配置没有 = 不限制），见 core/campzones.ts */
+    campzones?: { zones: CampZoneDef[] };
     /** 新手节奏：功能慢慢解锁（老配置没有 = 全部开放），见 core/unlocks.ts */
     unlocks?: { features: UnlockDef[] };
     /** 伊森的日记（老配置没有） */
@@ -923,6 +925,8 @@ export interface GameState {
     /** 营地附近可以捡的东西（老存档没有，用到时补上） */
     pickups?: PickupState[];
     nextPickupAt?: number;
+    /** 营地空地的清理进度（core/campzones.ts）；没有记录的地按“没清理”算 */
+    zones?: Record<string, { cleared: boolean; endsAt: number | null }>;
     /** 白天晃到营地外的丧尸（core/stragglers.ts） */
     stragglers?: StragglerGroup[];
     nextStragglerAt?: number;
@@ -1373,6 +1377,22 @@ export interface FarmState {
     pettedDay?: number;
     /** 送过开局种子了 */
     starter?: boolean;
+}
+
+/** 营地的一块空地（campzones.json） */
+export interface CampZoneDef {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    /** 地图坐标的范围（和 buildings.json 的 map 一样，x1 ≤ x < x2，y1 ≤ y < y2） */
+    rect: { x1: number; x2: number; y1: number; y2: number };
+    /** 开局就能用 */
+    start?: boolean;
+    requires?: { hq?: number };
+    cost?: ResourceBag;
+    /** 清理要多少游戏分钟 */
+    minutes?: number;
 }
 
 /** 白天晃到营地外的一小群丧尸 */

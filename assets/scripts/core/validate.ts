@@ -388,6 +388,22 @@ export function validateConfig(config: GameConfig): string[] {
         if (!config.units?.some((u) => u.id === fz.unit)) errors.push(`balance.familiarZombie：未知战斗单位 ${fz.unit}`);
         if (fz.chance < 0 || fz.chance > 1) errors.push('balance.familiarZombie：chance 要在 0～1 之间');
     }
+    if (config.campzones) {
+        const zones = config.campzones.zones;
+        checkUnique('营地空地', zones.map((z) => z.id));
+        if (!zones.some((z) => z.start)) errors.push('campzones.json：至少要有一块 start 的地（开局能用）');
+        for (const z of zones) {
+            if (z.cost) checkBag(`营地空地 ${z.id}`, z.cost);
+            if (z.rect.x1 >= z.rect.x2 || z.rect.y1 >= z.rect.y2) errors.push(`营地空地 ${z.id}：rect 写反了`);
+        }
+        for (const b of config.buildings) {
+            if (!b.map) continue;
+            const inZone = zones.filter((z) => b.map!.x >= z.rect.x1 && b.map!.x < z.rect.x2 && b.map!.y >= z.rect.y1 && b.map!.y < z.rect.y2);
+            if (inZone.length !== 1) errors.push(`建筑 ${b.id} 的地图位置要正好落在一块营地空地里（现在是 ${inZone.length} 块）`);
+            // 开局不用花钱的建筑必须在开局就能用的地上
+            if (Object.keys(b.levels[0]?.cost ?? {}).length === 0 && inZone[0] && !inZone[0].start) errors.push(`建筑 ${b.id} 一级免费，却在要清理的地「${inZone[0].name}」上`);
+        }
+    }
     if (config.unlocks) {
         checkUnique('新功能解锁', config.unlocks.features.map((f) => f.id));
         for (const f of config.unlocks.features) {

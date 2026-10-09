@@ -50,6 +50,7 @@ import { GuideHint, nextHint } from '../core/guide';
 import { eventSpeaker, portraitOf } from '../core/portrait';
 import { activePickups, pickupKind } from '../core/pickups';
 import { activeStragglers } from '../core/stragglers';
+import { campZones, clearingEndsAt, clearZoneBlocker, zoneCleared, zoneOfBuilding } from '../core/campzones';
 import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
@@ -90,7 +91,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.3 新武器';
+const GAME_VERSION = 'v3.4 营地空地';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -930,9 +931,15 @@ export class GameRoot extends Component {
             this.drawMapPlaceholder(map, camp);
         }
 
-        this.drawCampFence(map, state.buildings.wall?.level ?? 0, wallDurability(state));
+        this.drawCampFence(map, camp, state.buildings.wall?.level ?? 0, wallDurability(state));
         const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
-        config.buildings.forEach((def, i) => this.renderMapBuilding(map, camp, def, i, now, guided === def.id));
+        config.buildings.forEach((def, i) => {
+            // 还没清理的地上不画建筑（那里是一堆瓦砾）
+            const zone = zoneOfBuilding(config, def);
+            if (zone && !zoneCleared(config, state, zone.id)) return;
+            this.renderMapBuilding(map, camp, def, i, now, guided === def.id);
+        });
+        this.renderZones(map, camp, now);
         this.drawIdlePeople(map, camp, now);
         this.renderStragglers(map, camp, now);
 
@@ -1070,10 +1077,10 @@ export class GameRoot extends Component {
      * 营地的围墙（俯视，和守夜画面一样）：方形围墙四面各一个门，建筑都在墙里面。
      * 墙的厚度和颜色随栅栏等级变化：0 级只有散落的货架，越往后越厚越结实；门的颜色随耐久变暗。
      */
-    private drawCampFence(map: Node, level: number, durability: number): void {
+    private drawCampFence(map: Node, camp: CampGame, level: number, durability: number): void {
         const node = makeNode('Fence', map, MAP_WIDTH, MAP_HEIGHT);
         const g = node.addComponent(Graphics);
-        const { left, right, bottom, top } = CAMP_WALL;
+        const { left, right, bottom, top } = this.campWall(camp);
         const style =
             level >= 13
                 ? { color: hexColor('#6a7a86'), edge: hexColor('#a0b0bc'), width: 14 }
@@ -1137,10 +1144,26 @@ export class GameRoot extends Component {
         g.fillColor = hexColor('#141a1c');
         g.rect(-w / 2, -h / 2, w, h);
         g.fill();
-        const { left, right, bottom, top } = CAMP_WALL;
+        const { left, right, bottom, top } = this.campWall(camp);
         g.fillColor = hexColor('#1b2326');
         g.rect(left, bottom, right - left, top - bottom);
         g.fill();
+        // 还没清理的地：一堆堆的货架、废车、瓦砾
+        for (const z of campZones(camp.config)) {
+            if (zoneCleared(camp.config, camp.state, z.id)) continue;
+            const { x1, x2, y1, y2 } = z.rect;
+            g.fillColor = hexColor('#171d20');
+            g.rect(x1 + 4, y1 + 4, x2 - x1 - 8, y2 - y1 - 8);
+            g.fill();
+            for (let k = 0; k < 26; k++) {
+                const rx = x1 + 14 + ((k * 53) % Math.max(1, x2 - x1 - 40));
+                const ry = y1 + 14 + ((k * 97) % Math.max(1, y2 - y1 - 40));
+                const shade = 40 + ((k * 17) % 30);
+                g.fillColor = new Color(shade + 10, shade, shade - 8);
+                g.rect(rx, ry, 14 + (k % 4) * 8, 8 + (k % 3) * 6);
+                g.fill();
+            }
+        }
         // 地上淡淡的格子
         g.strokeColor = new Color(255, 255, 255, 10);
         g.lineWidth = 1;
@@ -1157,10 +1180,57 @@ export class GameRoot extends Component {
         addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 18, new Color(255, 220, 150, 120), { width: 300 }).node.setPosition(-200, bottom - 22);
     }
 
+    /** 围墙围住的范围：清理出来的地合在一起（没有空地配置就是整张地图） */
+    private campWall(camp: CampGame): { left: number; right: number; bottom: number; top: number } {
+        const zones = campZones(camp.config).filter((z) => zoneCleared(camp.config, camp.state, z.id));
+        if (!zones.length) return CAMP_WALL;
+        return {
+            left: Math.max(CAMP_WALL.left, Math.min(...zones.map((z) => z.rect.x1))),
+            right: Math.min(CAMP_WALL.right, Math.max(...zones.map((z) => z.rect.x2))),
+            bottom: Math.max(CAMP_WALL.bottom, Math.min(...zones.map((z) => z.rect.y1))),
+            top: Math.min(CAMP_WALL.top, Math.max(...zones.map((z) => z.rect.y2))),
+        };
+    }
+
+    /** 没清理的地：中间一块牌子（要什么条件 / 花多少清理 / 还要多久），点了开始清理 */
+    private renderZones(map: Node, camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        for (const z of campZones(config)) {
+            if (zoneCleared(config, state, z.id)) continue;
+            const cx = (z.rect.x1 + z.rect.x2) / 2;
+            const cy = (z.rect.y1 + z.rect.y2) / 2;
+            const w = Math.min(170, z.rect.x2 - z.rect.x1 - 12);
+            const node = makeNode('Zone', map, w, 96);
+            node.setPosition(cx, cy);
+            const ends = clearingEndsAt(state, z.id);
+            const blocker = clearZoneBlocker(config, state, z.id);
+            const ready = blocker === null;
+            drawPanel(node.addComponent(Graphics), w, 96, new Color(30, 34, 36, 235), 12, ready ? WIN : ends !== null ? ACCENT : new Color(110, 110, 110), 2);
+            addLabel(node, `${z.icon} ${z.name}`, 18, TEXT, { width: w - 10 }).node.setPosition(0, 28);
+            const line =
+                ends !== null
+                    ? `🧹 清理中 ${formatTime(realSeconds(config, ends - now))}`
+                    : z.requires?.hq && blocker === `需要指挥部 ${z.requires.hq} 级`
+                      ? `🔒 指挥部 ${z.requires.hq} 级`
+                      : `🧹 清理 ${formatCost(config, z.cost ?? {})}`;
+            addLabel(node, line, 16, ready ? WIN : ends !== null ? ACCENT : DIM, { width: w - 10 }).node.setPosition(0, 2);
+            addLabel(node, ends !== null ? '' : `⏱ ${formatTime(realSeconds(config, (z.minutes ?? 0) * 60_000))}`, 15, DIM, { width: w - 10 }).node.setPosition(0, -24);
+            node.on(Node.EventType.TOUCH_END, () => {
+                if (this.dragDistance > DRAG_THRESHOLD) return;
+                punch(node);
+                const res = camp.clearZone(z.id, camp.now);
+                if (res.ok) this.effect(`🧹 ${res.message ?? ''}`, ACCENT, 26);
+                else this.showToast(`${z.name}：${res.reason}。${z.description}`);
+                this.save();
+                this.render();
+            });
+        }
+    }
+
     /** 白天晃到门外的丧尸：门口一团紫色小点 + “点我清理”的牌子，点了打一场小仗并回放 */
     private renderStragglers(map: Node, camp: CampGame, now: number): void {
         const { config, state } = camp;
-        const { left, right, bottom, top } = CAMP_WALL;
+        const { left, right, bottom, top } = this.campWall(camp);
         const cx = (left + right) / 2;
         const cy = (bottom + top) / 2;
         // 北、东、南、西：门的位置和朝外的方向

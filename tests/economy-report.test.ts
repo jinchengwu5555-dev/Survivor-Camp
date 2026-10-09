@@ -8,6 +8,7 @@
 //   探索：有没打过的地点就去打；否则去上次打赢过、战利品最多的地点
 // 不看广告、不做物品、不接悬赏，代表“最低投入”的玩家（会顺手捡营地附近的东西、领每日目标、打开背包里的资源箱和加速道具）。
 
+import { campZones, clearZoneBlocker } from '../assets/scripts/core/campzones';
 import { expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { availableLocations, clearedFlag, expeditionBlocker, raidEnemyBonus, suggestSquad } from '../assets/scripts/core/combat';
@@ -113,6 +114,8 @@ function session(game: CampGame, now: number): void {
         if (game.survey(d.id, now, who.slice(0, 1)).ok) break;
     }
     for (const v of config.vehicles ?? []) if (buildVehicleBlocker(config, state, v.id) === null) game.buildVehicle(v.id, now);
+    // 营地空地：能清理就清理（清出来才能盖新房子）
+    for (const z of campZones(config)) if (clearZoneBlocker(config, state, z.id) === null && game.clearZone(z.id, now).ok) break;
     // 升级：缺粮先升厨房，缺零件先升废料场，其余挑最便宜的（花费总和最小）
     const rates = economyRates(config, state, now).net;
     const urgent = rates.food < 0 ? 'kitchen' : rates.water < 0 ? 'well' : rates.parts < 0.5 ? 'scrapyard' : null;

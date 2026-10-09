@@ -1,0 +1,9 @@
+{
+    "_doc": "营地的空地（core/campzones.ts）：营地地图分成几块，rect 是地图坐标（和 buildings.json 的 map 一样）。start = 开局就能用；其余的要先“清理”（花 cost、等 minutes 游戏分钟，requires 写需要的指挥部等级）才能在上面盖房子。围墙随着清理出来的地往外扩。",
+    "zones": [
+        { "id": "core", "name": "超市停车场", "icon": "🅿️", "start": true, "rect": { "x1": -180, "x2": 180, "y1": -322, "y2": 282 }, "description": "大家最早落脚的地方。" },
+        { "id": "west", "name": "西边的货架堆", "icon": "🗄️", "rect": { "x1": -352, "x2": -180, "y1": -322, "y2": 282 }, "cost": { "wood": 40 }, "minutes": 3, "description": "倒塌的货架和购物车堆成了小山，清出来能盖菜园、医务室和工坊。" },
+        { "id": "northeast", "name": "东北角的废车堆", "icon": "🚗", "rect": { "x1": 180, "x2": 352, "y1": -35, "y2": 282 }, "requires": { "hq": 3 }, "cost": { "wood": 120, "parts": 40 }, "minutes": 8, "description": "十几辆撞在一起的车，拖走之后能盖训练场和畜栏。" },
+        { "id": "southeast", "name": "东南角的瓦砾", "icon": "🧱", "rect": { "x1": 180, "x2": 352, "y1": -322, "y2": -35 }, "requires": { "hq": 4 }, "cost": { "wood": 220, "parts": 90 }, "minutes": 12, "description": "塌了一半的仓库，清出来能挖地窖、修鱼塘。" }
+    ]
+}

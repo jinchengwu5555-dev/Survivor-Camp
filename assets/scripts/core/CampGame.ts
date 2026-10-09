@@ -23,6 +23,7 @@ import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions,
 import { LiveRaid } from './liveRaid';
 import { collectPickup, PickupResult, updatePickups } from './pickups';
 import { resolveStragglers, updateStragglers } from './stragglers';
+import { startClearingZone, updateZones } from './campzones';
 import { claimDaily, claimDailyChest, refreshDaily } from './daily';
 import { addWorker, autoAssign, removeWorker } from './workers';
 import { refreshTraderOffers, trade, updateTrader } from './trader';
@@ -160,6 +161,7 @@ export class CampGame {
         maybeTriggerRandomEvent(this.config, s, now);
         updatePickups(this.config, s, now);
         updateStragglers(this.config, s, now, this.liveRaids);
+        updateZones(this.config, s, now);
         updateTrader(this.config, s, now);
         updateScoutSpots(this.config, s, now);
         updateChatter(this.config, s, now);
@@ -188,6 +190,11 @@ export class CampGame {
         const result = action();
         this.settle(now);
         return result;
+    }
+
+    /** 清理营地的一块空地（campzones.ts），清完才能在上面盖房子 */
+    clearZone(id: string, now: number): ActionResult {
+        return this.act(now, () => startClearingZone(this.config, this.state, id, now));
     }
 
     /** 派人去清理白天晃到营地外的丧尸（stragglers.ts），返回战报（可以回放） */
