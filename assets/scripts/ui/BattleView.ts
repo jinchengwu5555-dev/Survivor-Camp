@@ -1,38 +1,48 @@
-// 战斗画面：守夜时实时演出战斗，玩家点技能、修栅栏；战报里的战斗也可以用它回放。
-// 有美术图（assets/resources/sprites/units/<appearance.sprite>.png）就画图；
-// 没有图的角色是一个彩色圆（颜色来自 units.json 的 appearance.color），中间写名字的第一个字。
-// 头顶是血条；栅栏没图时是一堵棕色的墙。伤害、治疗会飘字。
+// 战斗画面（俯视）：守夜时实时演出战斗，战报里的战斗也可以用它回放。
+//
+// 守夜（setup.camp）：中间是方形的营地围墙，四面各一个门，门里面是守门的人，中心是营地核心；
+// 尸群从四面八方的墙外涌来。玩家可以
+//   · 点一个人（场上的圆点，或者下面的名字），再点一个门 → 把他调去守那个门
+//   · 没选人时直接点门 → 花木材修这个门（每晚有次数限制）
+// 探索战斗没有营地，就是一片空地，左边是小队、右边是敌人。
+// 每个角色是一个圆点：幸存者按人分颜色，普通丧尸是紫色小点，特殊的丧尸是粉色大点。
+// 远程攻击画一条细线，受击闪红，倒下淡出；门和营地核心头上有血条。
 
-import { Color, Graphics, Label, Node, Sprite, tween, UIOpacity } from 'cc';
+import { Color, EventTouch, Graphics, Label, Node, UITransform, Vec3 } from 'cc';
 import { Battle, BattleSetup, waveTimes } from '../core/battle/Battle';
+import { gateNormal, Point } from '../core/battle/geometry';
 import { BattleUnit } from '../core/battle/types';
-import { battleRegistry } from '../core/combat';
+import { battleRegistry, CORE_UNIT, GATE_NAMES } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
 import { LiveRaid } from '../core/liveRaid';
+import { survivorName } from '../core/roster';
 import { BattleReport, GameConfig } from '../core/types';
-import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelText, UIButton } from './widgets';
 import { sfx } from '../platform/Audio';
-import { addSprite, fitSize, getSprite, preloadSprites, SPRITE_DIRS } from './sprites';
+import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelText, UIButton } from './widgets';
 
 const WIDTH = 680;
-/** 战场的 x 范围（战斗里的格子）映射到屏幕 */
-const FIELD_MIN = -4;
-const FIELD_MAX = 16;
-const FIELD_Y = 195;
-const FIELD_HEIGHT = 460;
-const UNIT_RADIUS = 22;
-/** 地面上沿（相对战场中心）：地面占下面一大块，角色按 4 条“车道”前后错开站在地面上 */
-const GROUND_TOP = -FIELD_HEIGHT / 2 + 200;
-const LANES = 4;
-const LANE_GAP = 40;
-/** 有图时角色的高度（再乘 appearance.scale） */
-const SPRITE_HEIGHT = 120;
-const BARRICADE_SIZE = { width: 90, height: 230 };
+/** 战场：正方形，中心在屏幕上的位置 */
+const FIELD_SIZE = 680;
+const FIELD_Y = 150;
+/** 守夜时视野的半径（格）：围墙半边 6 格，尸群从更远的地方走进画面 */
+const CAMP_VIEW_RADIUS = 11;
 /** 同时最多几个飘字，避免尸群一多卡顿 */
-const MAX_FLOATS = 14;
-const FIELD_BG = new Color(38, 44, 38);
-/** 受击时闪的颜色 */
-const FLASH_TINT = new Color(255, 150, 150);
+const MAX_FLOATS = 12;
+const FIELD_BG = hexColor('#141a1c');
+const GROUND = hexColor('#1b2326');
+const WALL_COLOR = hexColor('#3a4a58');
+const WALL_EDGE = hexColor('#6a7e8e');
+const GATE_COLOR = hexColor('#7a5a34');
+const GATE_EDGE = hexColor('#c09a5a');
+const CORE_COLOR = hexColor('#8a6a3a');
+const ZOMBIE_COLOR = hexColor('#9a5ad0');
+const SPECIAL_COLOR = hexColor('#e04a9a');
+const RAIDER_COLOR = hexColor('#d05a4a');
+const BEAST_COLOR = hexColor('#9a7a5a');
+const FLASH_COLOR = new Color(255, 160, 160);
+const SELECT_COLOR = hexColor('#ffe08a');
+/** 幸存者的颜色：一人一色，方便认出谁在哪个门 */
+const PEOPLE_COLORS = ['#5ac46a', '#e09a3a', '#e0d04a', '#4ac0d0', '#d8d8d8', '#5a8ae0', '#c07ad8', '#a0d05a'].map(hexColor);
 
 export interface BattleViewOptions {
     title: string;
@@ -45,41 +55,48 @@ export interface BattleViewOptions {
     onClose: (report: BattleReport | null) => void;
 }
 
+/** 远程攻击的弹道线 */
+interface Shot {
+    from: Point;
+    to: Point;
+    ttl: number;
+    ally: boolean;
+}
+
 export class BattleView {
     readonly root: Node;
     private readonly battle: Battle;
+    private readonly config: GameConfig;
+    private readonly fieldNode: Node;
     private readonly field: Graphics;
-    /** 战斗背景图（sprites/bg/bg_battle、bg_bloodmoon）；有图就不用代码画夜景 */
-    private readonly backdrop: Node;
-    private backdropImage: Node | null = null;
-    /** 血条画在角色图片上面 */
-    private readonly bars: Graphics;
-    private readonly unitLabels = new Map<number, Label>();
-    private readonly unitSprites = new Map<number, Node>();
-    /** 混在尸群里的熟人：头顶的名字（见 core/familiar.ts） */
-    private readonly nameTags = new Map<number, Label>();
-    private readonly unitsLayer: Node;
     private readonly fx: Node;
     private readonly status: Label;
     private readonly hint: Label;
-    private readonly skillButtons = new Map<number, UIButton>();
     private readonly controls: Node;
-    private repairButton: UIButton | null = null;
-    private autoButton: UIButton | null = null;
     private readonly speedButton: UIButton;
     private readonly skipButton: UIButton;
+    private readonly gateButtons: UIButton[] = [];
+    private readonly peopleButtons = new Map<number, UIButton>();
+    private readonly gateLabels: Label[] = [];
     private speed = 1;
     private seenEvents = 0;
+    /** 视野：世界坐标的中心和缩放（像素 / 格） */
+    private readonly center: Point;
+    private readonly scale: number;
+    /** 选中的人（再点一个门就调过去） */
+    private selected: number | null = null;
+    /** 每个幸存者的颜色（按出场顺序） */
+    private readonly colors = new Map<number, Color>();
     /** R73：敌人分几波（出场时间），已经提示到第几波，最后一波的预警放过没有 */
     private readonly waves: number[];
     private wavesAnnounced = 0;
     private finalWarned = false;
-    /** 打击感：受击闪一下（uid → 剩余秒数）、震屏剩余时间和幅度、走路上下晃 */
+    /** 打击感：受击闪一下（uid → 剩余秒数）、震屏、弹道线、倒下的残影 */
     private readonly flashes = new Map<number, number>();
+    private readonly shots: Shot[] = [];
+    private readonly corpses: { p: Point; color: Color; r: number; ttl: number }[] = [];
     private shakeTime = 0;
     private shakePower = 0;
-    private readonly lastX = new Map<number, number>();
-    private clock = 0;
     private floats = 0;
     private finished = false;
 
@@ -87,79 +104,281 @@ export class BattleView {
         parent: Node,
         private readonly opts: BattleViewOptions,
     ) {
-        this.battle = opts.live ? opts.live.battle : new Battle(battleRegistry(opts.replay!.config), opts.replay!.setup);
+        this.config = opts.live ? opts.live.config : opts.replay!.config;
+        this.battle = opts.live ? opts.live.battle : new Battle(battleRegistry(this.config), opts.replay!.setup);
         this.waves = waveTimes(this.battle.setup);
         this.root = makeNode('BattleView', parent, WIDTH, 1280);
+        drawPanel(this.root.addComponent(Graphics), 720, 1280, COLORS.bg, 0);
 
-        const bg = this.root.addComponent(Graphics);
-        drawPanel(bg, 720, 1280, COLORS.bg, 0);
-
-        const title = addLabel(this.root, opts.title, 34, COLORS.accent, { width: WIDTH });
-        title.node.setPosition(0, 590);
+        const title = addLabel(this.root, opts.title, 32, COLORS.accent, { width: WIDTH });
+        title.node.setPosition(0, 600);
         this.status = addLabel(this.root, '', 24, COLORS.text, { width: WIDTH });
-        this.status.node.setPosition(0, 548);
-        this.hint = addLabel(this.root, '', 20, COLORS.dim, { width: WIDTH });
-        this.hint.node.setPosition(0, 515);
+        this.status.node.setPosition(0, 560);
+        this.hint = addLabel(this.root, '', 19, COLORS.dim, { width: WIDTH });
+        this.hint.node.setPosition(0, 528);
 
-        this.backdrop = makeNode('Backdrop', this.root, WIDTH, FIELD_HEIGHT);
-        this.backdrop.setPosition(0, FIELD_Y);
-        const fieldNode = makeNode('Field', this.root, WIDTH, FIELD_HEIGHT);
-        fieldNode.setPosition(0, FIELD_Y);
-        this.field = fieldNode.addComponent(Graphics);
-        this.unitsLayer = makeNode('Units', this.root, WIDTH, FIELD_HEIGHT);
-        this.unitsLayer.setPosition(0, FIELD_Y);
-        const barsNode = makeNode('Bars', this.root, WIDTH, FIELD_HEIGHT);
-        barsNode.setPosition(0, FIELD_Y);
-        this.bars = barsNode.addComponent(Graphics);
-        this.fx = makeNode('Fx', this.root, WIDTH, FIELD_HEIGHT);
+        // 视野：守夜固定看整个营地；探索按双方的站位自动框住
+        const camp = this.battle.setup.camp;
+        if (camp) {
+            this.center = { x: 0, y: 0 };
+            this.scale = FIELD_SIZE / 2 / CAMP_VIEW_RADIUS;
+        } else {
+            const xs = [...this.battle.setup.allies, ...this.battle.setup.enemies].map((s, i) => s.x ?? (i < this.battle.setup.allies.length ? -i * 0.8 : 10 + i * 0.8));
+            const min = Math.min(-2, ...xs);
+            const max = Math.max(12, ...xs);
+            this.center = { x: (min + max) / 2, y: 0 };
+            this.scale = FIELD_SIZE / (max - min + 6);
+        }
+
+        this.fieldNode = makeNode('Field', this.root, FIELD_SIZE, FIELD_SIZE);
+        this.fieldNode.setPosition(0, FIELD_Y);
+        this.field = this.fieldNode.addComponent(Graphics);
+        this.fieldNode.on(Node.EventType.TOUCH_END, (e: EventTouch) => this.onFieldTap(e));
+        this.fx = makeNode('Fx', this.root, FIELD_SIZE, FIELD_SIZE);
         this.fx.setPosition(0, FIELD_Y);
+        if (camp) {
+            camp.gates.forEach((g, i) => {
+                const n = gateNormal(camp, g);
+                const label = addLabel(this.fx, GATE_NAMES[i] ?? `门${i + 1}`, 18, COLORS.text, { width: 120, height: 24 });
+                const s = this.toScreen({ x: g.x + n.x * 1.1, y: g.y + n.y * 1.1 });
+                label.node.setPosition(s.x + (n.x ? n.x * 26 : 0), s.y + (n.y ? n.y * 6 : 0));
+                this.gateLabels.push(label);
+            });
+        }
 
-        this.controls = makeNode('Controls', this.root, WIDTH, 500);
-        this.controls.setPosition(0, -250);
-
+        this.controls = makeNode('Controls', this.root, WIDTH, 440);
+        this.controls.setPosition(0, -420);
         const small = (WIDTH - 20) / 3;
         this.speedButton = new UIButton(this.controls, small, 56, () => {
-            this.speed = this.speed === 1 ? 2 : 1;
+            this.speed = this.speed === 1 ? 2 : this.speed === 2 ? 4 : 1;
         });
-        this.speedButton.node.setPosition(-small - 10, -210);
-        this.skipButton = new UIButton(this.controls, small, 56, () => this.skip());
-        this.skipButton.node.setPosition(small + 10, -210);
+        this.speedButton.node.setPosition(-small - 10, -180);
+        this.skipButton = new UIButton(this.controls, small * 2 + 10, 56, () => this.skip());
+        this.skipButton.node.setPosition(small / 2 + 5, -180);
 
-        if (opts.live) {
-            this.autoButton = new UIButton(this.controls, small, 56, () => {
-                opts.live!.setAuto(!this.battle.autoCastActive);
+        const live = opts.live;
+        if (live && camp) {
+            // 四个门的按钮：选了人 = 调过去；没选人 = 修门
+            const w = (WIDTH - 30) / 4;
+            camp.gates.forEach((_, i) => {
+                const btn = new UIButton(this.controls, w, 64, () => this.onGate(i), 20);
+                btn.node.setPosition(-WIDTH / 2 + w / 2 + i * (w + 10), 170);
+                this.gateButtons.push(btn);
             });
-            this.autoButton.node.setPosition(0, -210);
-            this.repairButton = new UIButton(this.controls, WIDTH, 64, () => {
-                const error = opts.live!.repair();
-                const wall = opts.live!.barricade;
-                sfx(error ? 'error' : 'repair');
-                if (error) this.floatAt(error, 0, 40, COLORS.lose, 24);
-                else if (wall) this.floatAt('🪵 栅栏加固了！', this.toScreenX(wall.x), this.topY(wall), COLORS.heal, 26);
-            });
-            this.repairButton.node.setPosition(0, -130);
+            // 有手动技能的话交给自动释放（现在幸存者都没有技能，物品是自动用的）
+            if (live.skillButtons().length > 0) live.setAuto(true);
         }
-        preloadSprites([this.backdropPath()]);
-        preloadSprites([...this.battle.setup.allies, ...this.battle.setup.enemies].map((u) => this.spritePath(u.unit)));
         this.refreshControls();
     }
 
     /** GameRoot.update 每帧调用 */
     update(dt: number): void {
-        this.clock += dt;
         for (const [uid, t] of this.flashes) {
             if (t - dt <= 0) this.flashes.delete(uid);
             else this.flashes.set(uid, t - dt);
         }
+        for (const s of this.shots) s.ttl -= dt;
+        for (const c of this.corpses) c.ttl -= dt;
         this.updateShake(dt);
         if (!this.finished) {
             this.battle.advance(dt * this.speed);
             if (this.battle.result !== 'ongoing') this.finish();
         }
-        this.drawField();
         this.showNewEvents();
+        this.drawField();
         this.announceWaves();
         this.refreshControls();
+    }
+
+    destroy(): void {
+        this.root.destroy();
+    }
+
+    // ---------- 坐标 ----------
+
+    private toScreen(p: Point): Point {
+        return { x: (p.x - this.center.x) * this.scale, y: (p.y - this.center.y) * this.scale };
+    }
+
+    private toWorld(x: number, y: number): Point {
+        return { x: x / this.scale + this.center.x, y: y / this.scale + this.center.y };
+    }
+
+    private radiusOf(u: BattleUnit): number {
+        const base = u.side === 'ally' ? 0.42 : this.isSpecial(u) ? 0.42 : 0.28;
+        return Math.max(4, base * this.scale * Math.min(1.6, u.def.appearance.scale));
+    }
+
+    /** 特殊的敌人（不是一群里的小丧尸）：画成粉色大点 */
+    private isSpecial(u: BattleUnit): boolean {
+        const swarm = this.config.balance.camp?.swarm?.units ?? [];
+        return u.def.faction === 'zombie' && (!swarm.includes(u.def.id) || !!parseFamiliarTag(u.tag));
+    }
+
+    private colorOf(u: BattleUnit): Color {
+        if (u.side === 'ally') {
+            let c = this.colors.get(u.uid);
+            if (!c) {
+                c = PEOPLE_COLORS[this.colors.size % PEOPLE_COLORS.length];
+                this.colors.set(u.uid, c);
+            }
+            return c;
+        }
+        if (u.def.faction === 'raider') return RAIDER_COLOR;
+        if (u.def.faction === 'beast') return BEAST_COLOR;
+        return this.isSpecial(u) ? SPECIAL_COLOR : ZOMBIE_COLOR;
+    }
+
+    private nameOf(u: BattleUnit): string {
+        const live = this.opts.live;
+        if (live && u.tag && live.state.survivors.some((s) => s.id === u.tag)) return survivorName(live.config, live.state, u.tag);
+        return u.def.name;
+    }
+
+    // ---------- 画战场 ----------
+
+    private drawField(): void {
+        const g = this.field;
+        g.clear();
+        const half = FIELD_SIZE / 2;
+        drawPanel(g, FIELD_SIZE, FIELD_SIZE, FIELD_BG, 10);
+        const camp = this.battle.setup.camp;
+        if (camp) this.drawCamp(g);
+        else {
+            g.fillColor = GROUND;
+            g.rect(-half + 8, -half / 2, FIELD_SIZE - 16, half);
+            g.fill();
+        }
+        this.drawWaveBar(g);
+
+        // 倒下的残影
+        for (const c of this.corpses) {
+            if (c.ttl <= 0) continue;
+            const s = this.toScreen(c.p);
+            g.fillColor = new Color(c.color.r, c.color.g, c.color.b, Math.round(200 * Math.min(1, c.ttl / 0.6)));
+            g.circle(s.x, s.y, c.r);
+            g.fill();
+        }
+        // 弹道线
+        for (const shot of this.shots) {
+            if (shot.ttl <= 0) continue;
+            const a = this.toScreen(shot.from);
+            const b = this.toScreen(shot.to);
+            g.strokeColor = shot.ally ? new Color(255, 240, 200, 220) : new Color(255, 120, 160, 200);
+            g.lineWidth = 2;
+            g.moveTo(a.x, a.y);
+            g.lineTo(b.x, b.y);
+            g.stroke();
+        }
+        // 角色：先画敌人，再画自己人（自己人在上面）
+        const units = this.battle.units.filter((u) => u.alive && u.def.faction !== 'structure');
+        units.sort((a, b) => Number(a.side === 'ally') - Number(b.side === 'ally'));
+        for (const u of units) {
+            const s = this.toScreen(u);
+            if (Math.abs(s.x) > half + 10 || Math.abs(s.y) > half + 10) continue;
+            const r = this.radiusOf(u);
+            g.fillColor = this.flashes.has(u.uid) ? FLASH_COLOR : this.colorOf(u);
+            g.circle(s.x, s.y, r);
+            g.fill();
+            if (u.side === 'ally') {
+                g.lineWidth = u.uid === this.selected ? 4 : 2;
+                g.strokeColor = u.uid === this.selected ? SELECT_COLOR : new Color(20, 20, 20, 220);
+                g.circle(s.x, s.y, r + (u.uid === this.selected ? 4 : 0));
+                g.stroke();
+            }
+            if (u.statuses.some((st) => st.def.control?.stun || st.def.control?.root)) {
+                g.strokeColor = COLORS.crit;
+                g.lineWidth = 2;
+                g.circle(s.x, s.y, r + 3);
+                g.stroke();
+            }
+            if (u.hp < u.stats.maxHp && (u.side === 'ally' || this.isSpecial(u))) this.hpBar(g, s.x, s.y + r + 4, Math.max(18, r * 2.4), u);
+        }
+    }
+
+    /** 营地：地面、围墙、四个门、中间的营地核心 */
+    private drawCamp(g: Graphics): void {
+        const camp = this.battle.setup.camp!;
+        const h = camp.half * this.scale;
+        const t = Math.max(8, this.scale * 0.45);
+        g.fillColor = GROUND;
+        g.rect(-h, -h, h * 2, h * 2);
+        g.fill();
+        // 围墙：四条边，门的位置留出缺口
+        const gap = 1.1 * this.scale;
+        const segs: [number, number, number, number][] = [];
+        for (const side of [0, 1, 2, 3]) {
+            const gate = camp.gates[side];
+            const gs = this.toScreen(gate);
+            const horizontal = side % 2 === 0;
+            const fixed = horizontal ? gs.y : gs.x;
+            const along = horizontal ? gs.x : gs.y;
+            for (const [a, b] of [[-h - t / 2, along - gap], [along + gap, h + t / 2]] as [number, number][]) {
+                if (horizontal) segs.push([a, fixed - t / 2, b - a, t]);
+                else segs.push([fixed - t / 2, a, t, b - a]);
+            }
+        }
+        for (const [x, y, w, hh] of segs) {
+            g.fillColor = WALL_COLOR;
+            g.rect(x, y, w, hh);
+            g.fill();
+            g.strokeColor = WALL_EDGE;
+            g.lineWidth = 1;
+            g.rect(x, y, w, hh);
+            g.stroke();
+        }
+        // 门：木门，越破颜色越暗；被打破了画成一地碎木头
+        camp.gates.forEach((gate, i) => {
+            const unit = this.battle.gateUnit(i);
+            const s = this.toScreen(gate);
+            const horizontal = i % 2 === 0;
+            const w = horizontal ? gap * 2 : t + 4;
+            const hh = horizontal ? t + 4 : gap * 2;
+            if (unit?.alive) {
+                const ratio = unit.hp / unit.stats.maxHp;
+                const flash = this.flashes.has(unit.uid);
+                g.fillColor = flash ? FLASH_COLOR : new Color(Math.round(GATE_COLOR.r * (0.5 + ratio / 2)), Math.round(GATE_COLOR.g * (0.5 + ratio / 2)), Math.round(GATE_COLOR.b * (0.5 + ratio / 2)));
+                g.rect(s.x - w / 2, s.y - hh / 2, w, hh);
+                g.fill();
+                g.strokeColor = this.selected !== null ? SELECT_COLOR : GATE_EDGE;
+                g.lineWidth = this.selected !== null ? 3 : 2;
+                g.rect(s.x - w / 2, s.y - hh / 2, w, hh);
+                g.stroke();
+                const n = gateNormal(camp, gate);
+                this.hpBar(g, s.x - (horizontal ? 0 : n.x * (t + 12)), s.y + (horizontal ? -n.y * (t + 8) : 0), horizontal ? w : 36, unit);
+            } else {
+                g.fillColor = hexColor('#4a3a28');
+                for (let k = 0; k < 5; k++) {
+                    const ox = ((k * 37) % 9) - 4;
+                    const oy = ((k * 23) % 7) - 3;
+                    g.rect(s.x + ox * (w / 10) - 3, s.y + oy * (hh / 8) - 3, 7, 5);
+                    g.fill();
+                }
+            }
+        });
+        // 营地核心
+        const core = this.battle.units.find((u) => u.tag === CORE_UNIT);
+        if (core) {
+            const size = this.scale * 1.4;
+            g.fillColor = core.alive ? (this.flashes.has(core.uid) ? FLASH_COLOR : CORE_COLOR) : hexColor('#3a2a1a');
+            g.roundRect(-size / 2, -size / 2, size, size, 6);
+            g.fill();
+            g.strokeColor = GATE_EDGE;
+            g.lineWidth = 2;
+            g.roundRect(-size / 2, -size / 2, size, size, 6);
+            g.stroke();
+            if (core.alive) this.hpBar(g, 0, size / 2 + 6, size * 1.4, core);
+        }
+    }
+
+    private hpBar(g: Graphics, x: number, y: number, width: number, u: BattleUnit): void {
+        const ratio = Math.max(0, u.hp / u.stats.maxHp);
+        g.fillColor = hexColor('#111111');
+        g.rect(x - width / 2, y, width, 5);
+        g.fill();
+        g.fillColor = u.side === 'ally' ? (ratio > 0.3 ? COLORS.win : COLORS.lose) : hexColor('#c05050');
+        g.rect(x - width / 2, y, width * ratio, 5);
+        g.fill();
     }
 
     // ---------- R73 波次 ----------
@@ -195,9 +414,9 @@ export class BattleView {
     private drawWaveBar(g: Graphics): void {
         if (this.waves.length <= 1) return;
         const limit = this.battle.setup.timeLimit;
-        const w = WIDTH - 60;
+        const w = FIELD_SIZE - 60;
         const left = -w / 2;
-        const y = FIELD_HEIGHT / 2 - 18;
+        const y = FIELD_SIZE / 2 - 18;
         g.fillColor = new Color(0, 0, 0, 150);
         g.roundRect(left - 4, y - 4, w + 8, 14, 6);
         g.fill();
@@ -233,336 +452,198 @@ export class BattleView {
         this.root.setPosition((Math.random() * 2 - 1) * p, (Math.random() * 2 - 1) * p);
     }
 
-    /** 倒下的角色：淡出再消失 */
-    private fadeOut(node: Node): void {
-        const opacity = node.getComponent(UIOpacity) ?? node.addComponent(UIOpacity);
-        tween(opacity)
-            .to(0.5, { opacity: 0 })
-            .call(() => node.isValid && node.destroy())
-            .start();
-    }
+    // ---------- 事件 → 飘字、音效 ----------
 
-    destroy(): void {
-        this.root.destroy();
-    }
-
-    // ---------- 战场 ----------
-
-    private toScreenX(x: number): number {
-        return ((x - FIELD_MIN) / (FIELD_MAX - FIELD_MIN) - 0.5) * WIDTH;
-    }
-
-    private spritePath(unitId: string): string {
-        const def = this.battle.registry.unit(unitId);
-        return SPRITE_DIRS.units + def.appearance.sprite;
-    }
-
-    /** 脚踩的位置：一维战场上的单位会叠在一起，按 uid 错开三条“车道”（越往上越靠后） */
-    private feetY(u: BattleUnit): number {
-        // 栅栏站在最后面，守夜的人在它前面
-        if (u.tag === 'barricade') return GROUND_TOP - 24;
-        const lane = u.uid % LANES;
-        return GROUND_TOP - 40 - lane * LANE_GAP;
-    }
-
-    /** 这个单位的图片（没有图返回 null） */
-    private frameOf(u: BattleUnit) {
-        return getSprite(SPRITE_DIRS.units + u.def.appearance.sprite) ?? null;
-    }
-
-    /** 头顶的高度（血条、飘字的位置） */
-    private topY(u: BattleUnit): number {
-        const feet = this.feetY(u);
-        if (u.tag === 'barricade') return feet + BARRICADE_SIZE.height;
-        return feet + (this.frameOf(u) ? SPRITE_HEIGHT : UNIT_RADIUS * 2) * u.def.appearance.scale;
-    }
-
-    /** 身体中间（飘字从这里出来） */
-    private laneY(u: BattleUnit): number {
-        return (this.feetY(u) + this.topY(u)) / 2;
-    }
-
-    private backdropPath(): string {
-        const bloodMoon = this.opts.live ? this.opts.live.pending.bloodMoon : this.opts.title.includes('血月');
-        return SPRITE_DIRS.bg + (bloodMoon ? 'bg_bloodmoon' : 'bg_battle');
-    }
-
-    /** 有背景图就铺满战场（拉伸到 WIDTH × FIELD_HEIGHT），返回是否用了图 */
-    private ensureBackdropImage(): boolean {
-        if (this.backdropImage) return true;
-        const frame = getSprite(this.backdropPath());
-        if (!frame) return false;
-        this.backdropImage = addSprite(this.backdrop, frame, WIDTH, FIELD_HEIGHT);
-        return true;
-    }
-
-    /** 夜晚的街道：天空、月亮、远处楼房的剪影、地面和马路 */
-    private drawBackdrop(g: Graphics): void {
-        const top = FIELD_HEIGHT / 2;
-        const bottom = -FIELD_HEIGHT / 2;
-        drawPanel(g, WIDTH, FIELD_HEIGHT, FIELD_BG, 12);
-        // 越往上越暗的天空
-        for (let i = 0; i < 6; i++) {
-            const y = GROUND_TOP + ((top - GROUND_TOP) * i) / 6;
-            g.fillColor = new Color(30 - i * 3, 36 - i * 3, 58 - i * 4);
-            g.rect(-WIDTH / 2, y, WIDTH, (top - GROUND_TOP) / 6 + 1);
-            g.fill();
-        }
-        // 月亮
-        g.fillColor = new Color(235, 230, 200, 220);
-        g.circle(WIDTH / 2 - 90, top - 70, 30);
-        g.fill();
-        g.fillColor = new Color(30, 36, 58);
-        g.circle(WIDTH / 2 - 78, top - 62, 26);
-        g.fill();
-        // 远处的楼房剪影（固定的高低，每次画都一样）
-        const heights = [90, 140, 70, 170, 110, 60, 150, 95, 130, 80, 160, 100];
-        const w = WIDTH / heights.length;
-        heights.forEach((h, i) => {
-            g.fillColor = new Color(22, 26, 34);
-            g.rect(-WIDTH / 2 + i * w, GROUND_TOP, w - 4, h);
-            g.fill();
-            // 零星亮着的窗户
-            if (i % 3 === 1) {
-                g.fillColor = new Color(200, 170, 90, 160);
-                g.rect(-WIDTH / 2 + i * w + 12, GROUND_TOP + h - 30, 8, 10);
-                g.fill();
-            }
-        });
-        // 地面和马路
-        g.fillColor = hexColor('#3a3228');
-        g.rect(-WIDTH / 2, bottom, WIDTH, GROUND_TOP - bottom);
-        g.fill();
-        g.fillColor = hexColor('#2c2a28');
-        g.rect(-WIDTH / 2, GROUND_TOP - 170, WIDTH, 120);
-        g.fill();
-        g.fillColor = new Color(190, 170, 90, 150);
-        for (let x = -WIDTH / 2 + 20; x < WIDTH / 2; x += 70) {
-            g.rect(x, GROUND_TOP - 113, 36, 5);
-            g.fill();
-        }
-    }
-
-    private drawField(): void {
-        const g = this.field;
-        const bars = this.bars;
-        g.clear();
-        bars.clear();
-        if (!this.ensureBackdropImage()) this.drawBackdrop(g);
-        this.drawWaveBar(bars);
-
-        const alive = new Set<number>();
-        const withSprite: BattleUnit[] = [];
-        for (const u of this.battle.units) {
-            if (!u.alive) continue;
-            alive.add(u.uid);
-            const x = this.toScreenX(u.x);
-            // 走路时上下晃一点
-            const moving = Math.abs(u.x - (this.lastX.get(u.uid) ?? u.x)) > 1e-4;
-            this.lastX.set(u.uid, u.x);
-            const bob = moving && u.def.faction !== 'structure' ? Math.abs(Math.sin(this.clock * 9 + u.uid)) * 5 : 0;
-            const feet = this.feetY(u) + bob;
-            const scale = u.def.appearance.scale;
-            const flash = this.flashes.has(u.uid);
-            const frame = this.frameOf(u);
-            if (frame) {
-                withSprite.push(u);
-                let node = this.unitSprites.get(u.uid);
-                if (!node) {
-                    const box = u.tag === 'barricade' ? BARRICADE_SIZE : { width: SPRITE_HEIGHT * scale, height: SPRITE_HEIGHT * scale };
-                    const size = fitSize(frame, box.width, box.height);
-                    node = addSprite(this.unitsLayer, frame, size.width, size.height);
-                    this.unitSprites.set(u.uid, node);
-                    this.unitLabels.get(u.uid)?.node.destroy();
-                    this.unitLabels.delete(u.uid);
-                }
-                const h = u.tag === 'barricade' ? BARRICADE_SIZE.height : SPRITE_HEIGHT * scale;
-                node.setPosition(x, feet + h / 2);
-                const sprite = node.getComponent(Sprite);
-                if (sprite) sprite.color = flash ? FLASH_TINT : Color.WHITE;
-            } else if (u.tag === 'barricade') {
-                g.fillColor = hexColor(u.def.appearance.color);
-                g.roundRect(x - 14, feet, 28, BARRICADE_SIZE.height, 6);
-                g.fill();
-                this.unitLabel(u).node.setPosition(x, feet + BARRICADE_SIZE.height / 2);
-            } else {
-                const r = UNIT_RADIUS * scale;
-                const cy = feet + r;
-                g.fillColor = flash ? FLASH_TINT : hexColor(u.def.appearance.color);
-                g.circle(x, cy, r);
-                g.fill();
-                if (u.side === 'ally') {
-                    g.lineWidth = 3;
-                    g.strokeColor = COLORS.text;
-                    g.circle(x, cy, r);
-                    g.stroke();
-                }
-                this.unitLabel(u).node.setPosition(x, cy);
-            }
-            const top = this.topY(u);
-            if (u.statuses.some((s) => s.def.control?.stun)) {
-                bars.strokeColor = COLORS.crit;
-                bars.lineWidth = 3;
-                bars.circle(x, top + 22, 9);
-                bars.stroke();
-            }
-            this.hpBar(bars, x, top + 6, u.tag === 'barricade' ? 90 : 44 * scale, u);
-            const familiar = parseFamiliarTag(u.tag);
-            if (familiar) {
-                let tag = this.nameTags.get(u.uid);
-                if (!tag) {
-                    tag = addLabel(this.fx, `🧟${familiar.name}`, 18, hexColor('#d090ff'), { width: 160, height: 24 });
-                    this.nameTags.set(u.uid, tag);
-                    floatText(this.fx, `那是……${familiar.name}？`, x, top + 60, hexColor('#d090ff'), 26, 50, 2.5);
-                }
-                tag.node.setPosition(x, top + 28);
-            }
-        }
-        for (const [uid, tag] of this.nameTags) {
-            if (!alive.has(uid)) {
-                tag.node.destroy();
-                this.nameTags.delete(uid);
-            }
-        }
-        // 靠后车道的先画（被前面的挡住）
-        withSprite
-            .sort((a, b) => this.feetY(b) - this.feetY(a))
-            .forEach((u, i) => this.unitSprites.get(u.uid)?.setSiblingIndex(i));
-        // 倒下的角色收起来
-        for (const [uid, label] of this.unitLabels) {
-            if (!alive.has(uid)) {
-                label.node.destroy();
-                this.unitLabels.delete(uid);
-            }
-        }
-        for (const [uid, node] of this.unitSprites) {
-            if (!alive.has(uid)) {
-                this.fadeOut(node);
-                this.unitSprites.delete(uid);
-            }
-        }
-    }
-
-    private hpBar(g: Graphics, x: number, y: number, width: number, u: BattleUnit): void {
-        const ratio = Math.max(0, u.hp / u.stats.maxHp);
-        g.fillColor = hexColor('#111111');
-        g.rect(x - width / 2, y, width, 7);
-        g.fill();
-        g.fillColor = u.side === 'ally' ? (ratio > 0.3 ? COLORS.win : COLORS.lose) : hexColor('#c05050');
-        g.rect(x - width / 2, y, width * ratio, 7);
-        g.fill();
-    }
-
-    private unitLabel(u: BattleUnit): Label {
-        let label = this.unitLabels.get(u.uid);
-        if (!label) {
-            const text = u.tag === 'barricade' ? '栅\n栏' : u.def.name.slice(0, 1);
-            label = addLabel(this.fx, text, u.tag === 'barricade' ? 22 : 20, COLORS.text, { width: 40, height: u.tag === 'barricade' ? 60 : 30 });
-            this.unitLabels.set(u.uid, label);
-        }
-        return label;
-    }
-
-    /** 把新的战斗事件变成飘字 */
     private showNewEvents(): void {
         const events = this.battle.events;
         for (; this.seenEvents < events.length; this.seenEvents++) {
             const e = events[this.seenEvents];
-            if (e.type === 'damage') {
+            if (e.type === 'attack') {
+                const src = this.battle.getUnit(e.source);
+                const tgt = this.battle.getUnit(e.target);
+                if (src && tgt && src.stats.attackRange > 1.5 && this.shots.length < 40) this.shots.push({ from: { x: src.x, y: src.y }, to: { x: tgt.x, y: tgt.y }, ttl: 0.12, ally: src.side === 'ally' });
+            } else if (e.type === 'damage') {
                 const target = this.battle.getUnit(e.target);
                 if (!target || e.amount < 1) continue;
                 sfx(e.crit ? 'crit' : 'hit');
                 this.flashes.set(target.uid, 0.12);
-                if (target.tag === 'barricade' && e.amount >= target.stats.maxHp * 0.03) this.shake(0.15, 4);
-                else if (e.crit) this.shake(0.1, 3);
-                const color = target.side === 'ally' ? COLORS.lose : e.crit ? COLORS.crit : COLORS.text;
-                this.floatAt(`${e.crit ? '暴击 ' : ''}${Math.round(e.amount)}`, this.toScreenX(target.x), this.laneY(target) + 20, color, e.crit ? 28 : 22);
+                if (target.gate !== undefined && e.amount >= target.stats.maxHp * 0.04) this.shake(0.12, 3);
+                // 尸群一多飘字太乱：只飘自己人受的伤、暴击和建筑受的大伤害
+                if (target.side === 'ally' && target.def.faction !== 'structure') this.floatAt(`-${Math.round(e.amount)}`, target, COLORS.lose, 18);
+                else if (e.crit) this.floatAt(`暴击 ${Math.round(e.amount)}`, target, COLORS.crit, 20);
             } else if (e.type === 'heal') {
                 const target = this.battle.getUnit(e.target);
-                if (target) sfx('heal');
-                if (target) this.floatAt(`+${Math.round(e.amount)}`, this.toScreenX(target.x), this.laneY(target) + 20, COLORS.heal, 22);
+                if (target) {
+                    sfx(target.def.faction === 'structure' ? 'repair' : 'heal');
+                    this.floatAt(`+${Math.round(e.amount)}`, target, COLORS.heal, 20);
+                }
             } else if (e.type === 'skill') {
                 const source = this.battle.getUnit(e.source);
                 const def = this.battle.registry.skill(e.skill);
-                if (source && source.side === 'ally') sfx('skill');
-                if (source?.tag === 'barricade') this.shake(0.3, 7);
-                if (source && source.side === 'enemy' && def.icon) this.floatAt(`${def.icon}${def.name}`, this.toScreenX(source.x), this.topY(source) + 30, COLORS.lose, 22);
-                if (source && source.side === 'ally') this.floatAt(`${def.icon ?? '✨'}${def.name}`, this.toScreenX(source.x), this.laneY(source) + 50, COLORS.accent, 24);
+                if (!source) continue;
+                if (source.side === 'ally') {
+                    sfx('skill');
+                    if (source.gate !== undefined) this.shake(0.3, 7);
+                    this.floatAt(`${def.icon ?? '✨'}${def.name}`, source, COLORS.accent, 22);
+                } else if (def.icon) this.floatAt(`${def.icon}${def.name}`, source, COLORS.lose, 20);
             } else if (e.type === 'death') {
                 const unit = this.battle.getUnit(e.unit);
-                if (unit) sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
-                if (unit?.side === 'ally') this.shake(0.3, 8);
-                if (unit?.side === 'ally' && unit.tag !== 'barricade') this.floatAt(`${unit.def.name}倒下了！`, this.toScreenX(unit.x), this.topY(unit), COLORS.lose, 26);
+                if (!unit) continue;
+                if (unit.gate !== undefined) {
+                    this.banner(`💥 ${GATE_NAMES[unit.gate] ?? '门'}被打破了！`, COLORS.lose, 34);
+                    sfx('alarm');
+                    this.shake(0.4, 8);
+                    continue;
+                }
+                if (unit.def.faction === 'structure') continue;
+                sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
+                this.corpses.push({ p: { x: unit.x, y: unit.y }, color: this.colorOf(unit), r: this.radiusOf(unit), ttl: 0.6 });
+                if (this.corpses.length > 60) this.corpses.splice(0, this.corpses.length - 60);
+                if (unit.side === 'ally') {
+                    this.shake(0.3, 8);
+                    this.floatAt(`${this.nameOf(unit)}倒下了！`, unit, COLORS.lose, 24);
+                    if (this.selected === unit.uid) this.selected = null;
+                }
             } else if (e.type === 'leap') {
                 const unit = this.battle.getUnit(e.unit);
-                if (unit) this.floatAt(`🤸 ${unit.def.name}跳过了栅栏！`, this.toScreenX(unit.x), this.topY(unit) + 20, COLORS.lose, 26);
+                if (unit) this.floatAt(`🤸 ${unit.def.name}跳过了围墙！`, unit, COLORS.lose, 22);
                 sfx('alarm');
             } else if (e.type === 'burrow') {
                 const unit = this.battle.getUnit(e.unit);
-                if (unit) this.floatAt(`🕳️ ${unit.def.name}从地下钻出来了！`, this.toScreenX(unit.x), this.topY(unit) + 20, COLORS.lose, 26);
+                if (unit) this.floatAt(`🕳️ ${unit.def.name}钻进了营地！`, unit, COLORS.lose, 22);
                 this.shake(0.3, 6);
                 sfx('alarm');
+            } else if (e.type === 'spawn') {
+                const unit = this.battle.getUnit(e.unit);
+                const familiar = parseFamiliarTag(unit?.tag);
+                if (unit && familiar) this.floatAt(`那是……${familiar.name}？`, unit, hexColor('#d090ff'), 24);
             }
         }
     }
 
-    private floatAt(text: string, x: number, y: number, color: Color, size: number): void {
+    private floatAt(text: string, p: Point, color: Color, size: number): void {
         if (this.floats >= MAX_FLOATS) return;
         this.floats++;
-        floatText(this.fx, text, x, y, color, size, 60, 0.9);
+        const s = this.toScreen(p);
+        const half = FIELD_SIZE / 2 - 40;
+        floatText(this.fx, text, Math.max(-half, Math.min(half, s.x)), Math.max(-half, Math.min(half, s.y + 16)), color, size, 50, 0.9);
         setTimeout(() => this.floats--, 900);
     }
 
-    // ---------- 操作按钮 ----------
+    // ---------- 操作 ----------
+
+    /** 点战场：点到人 = 选中；选了人再点门附近 = 调过去；没选人点门 = 修门 */
+    private onFieldTap(e: EventTouch): void {
+        const live = this.opts.live;
+        const camp = this.battle.setup.camp;
+        if (!live || !camp || this.finished) return;
+        const ui = e.getUILocation();
+        const local = this.fieldNode.getComponent(UITransform)!.convertToNodeSpaceAR(new Vec3(ui.x, ui.y, 0));
+        const p = this.toWorld(local.x, local.y);
+        const person = live
+            .defenders()
+            .map((u) => ({ u, d: Math.hypot(u.x - p.x, u.y - p.y) }))
+            .sort((a, b) => a.d - b.d)[0];
+        if (person && person.d * this.scale <= 26) {
+            this.selected = this.selected === person.u.uid ? null : person.u.uid;
+            sfx('click');
+            return;
+        }
+        const gate = camp.gates
+            .map((g, i) => ({ i, d: Math.hypot(g.x - p.x, g.y - p.y) }))
+            .sort((a, b) => a.d - b.d)[0];
+        if (gate && gate.d <= 2.2) this.onGate(gate.i);
+        else this.selected = null;
+    }
+
+    private onGate(gate: number): void {
+        const live = this.opts.live;
+        const camp = this.battle.setup.camp;
+        if (!live || !camp || this.finished) return;
+        const g = camp.gates[gate];
+        if (this.selected !== null) {
+            const who = this.battle.getUnit(this.selected);
+            const error = live.assign(this.selected, gate);
+            if (error) this.floatAt(error, g, COLORS.lose, 22);
+            else if (who) this.floatAt(`${this.nameOf(who)} → ${GATE_NAMES[gate]}`, g, COLORS.accent, 22);
+            this.selected = null;
+            return;
+        }
+        const error = live.repair(gate);
+        if (error) this.floatAt(error, g, COLORS.lose, 22);
+        else this.floatAt('🪵 门加固了！', g, COLORS.heal, 24);
+    }
 
     private refreshControls(): void {
         const b = this.battle;
         const left = Math.max(0, Math.ceil(b.setup.timeLimit - b.time));
-        const wall = this.opts.live?.barricade ?? b.units.find((u) => u.tag === 'barricade');
-        const wallText = wall ? `栅栏 ${Math.max(0, Math.round((wall.hp / wall.stats.maxHp) * 100))}%` : '';
         const goal = b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
         const wave = this.waves.length > 1 ? `第 ${Math.max(1, this.currentWave())}/${this.waves.length} 波   ` : '';
-        setLabelText(this.status, this.finished ? '' : `${wave}${goal}   ${wallText}`, WIDTH, 24);
+        const core = b.units.find((u) => u.tag === CORE_UNIT);
+        const coreText = core ? `营地 ${Math.max(0, Math.round((core.hp / core.stats.maxHp) * 100))}%` : '';
+        setLabelText(this.status, this.finished ? '' : `${wave}${goal}   ${coreText}`, WIDTH, 24);
 
         this.speedButton.set(`速度 ×${this.speed}`, this.finished ? 'disabled' : 'normal');
         this.skipButton.set(this.opts.live ? '跳过（自动打完）' : '跳到结尾', this.finished ? 'disabled' : 'normal');
         const live = this.opts.live;
-        if (!live) {
-            setLabelText(this.hint, this.finished ? '' : '战斗回放', WIDTH, 20);
+        const camp = b.setup.camp;
+        if (!live || !camp) {
+            setLabelText(this.hint, this.finished ? '' : this.opts.replay?.report ? '战斗回放' : '演示战斗', WIDTH, 19);
             return;
         }
-        setLabelText(this.hint, this.finished ? '' : '技能好了就点！栅栏快撑不住时花木材修补', WIDTH, 20);
-        this.autoButton!.set(`自动技能：${b.autoCastActive ? '开' : '关'}`, this.finished ? 'disabled' : b.autoCastActive ? 'ready' : 'normal');
-
-        const { hp, wood } = live.repairCost();
+        const selected = this.selected !== null ? b.getUnit(this.selected) : undefined;
         const uses = live.repairsLeft();
-        const needed = wall ? wall.hp < wall.stats.maxHp * 0.6 : false;
-        const canRepair = !this.finished && uses > 0 && !!wall?.alive && live.state.resources.wood >= wood;
-        this.repairButton!.set(`🪵 修补栅栏 +${hp}（木材 ${wood}，还能修 ${uses} 次）`, !canRepair ? 'disabled' : needed ? 'highlight' : 'normal');
+        setLabelText(
+            this.hint,
+            this.finished
+                ? ''
+                : selected
+                  ? `已选中 ${this.nameOf(selected)}：点一个门，把他调过去`
+                  : `点一个人再点门 = 调人守门；直接点门 = 花木材修门（还能修 ${uses} 次）`,
+            WIDTH,
+            19,
+        );
 
-        // 技能按钮：每个有主动技能、还活着的角色一个，两列排
-        const buttons = live.skillButtons();
-        const keep = new Set(buttons.map((x) => x.uid));
-        for (const [uid, btn] of this.skillButtons) {
+        // 门的按钮：血量、几个人在守
+        const defenders = live.defenders();
+        camp.gates.forEach((_, i) => {
+            const btn = this.gateButtons[i];
+            const unit = b.gateUnit(i);
+            const guards = defenders.filter((d) => d.post === i).length;
+            const hp = unit?.alive ? `${Math.round((unit.hp / unit.stats.maxHp) * 100)}%` : '破了';
+            const { wood } = live.repairCost(i);
+            const attacked = b.units.some((u) => u.alive && u.side === 'enemy' && Math.hypot(u.x - camp.gates[i].x, u.y - camp.gates[i].y) < 4);
+            let text = `${GATE_NAMES[i]} ${hp} 👥${guards}`;
+            if (!selected && unit?.alive && unit.hp < unit.stats.maxHp && uses > 0) text = `${GATE_NAMES[i]} ${hp} 🪵${wood}`;
+            const style = this.finished ? 'disabled' : selected ? 'highlight' : !unit?.alive ? 'danger' : attacked ? 'ready' : 'normal';
+            btn.set(text, style);
+            const label = this.gateLabels[i];
+            if (label) setLabelText(label, `${GATE_NAMES[i]}${guards ? ` 👥${guards}` : ''}`, 120, 18);
+        });
+
+        // 守夜的人：一人一个按钮（颜色和场上的点一样），点一下选中
+        const keep = new Set(defenders.map((u) => u.uid));
+        for (const [uid, btn] of this.peopleButtons) {
             if (!keep.has(uid)) {
                 btn.node.destroy();
-                this.skillButtons.delete(uid);
+                this.peopleButtons.delete(uid);
             }
         }
-        const colWidth = (WIDTH - 10) / 2;
-        buttons.forEach((sb, i) => {
-            let btn = this.skillButtons.get(sb.uid);
+        const per = 4;
+        const w = (WIDTH - 10 * (per - 1)) / per;
+        defenders.slice(0, 8).forEach((u, i) => {
+            let btn = this.peopleButtons.get(u.uid);
             if (!btn) {
-                btn = new UIButton(this.controls, colWidth, 72, () => {
-                    const error = live.cast(sb.uid);
-                    if (error) this.floatAt(error, 0, 40, COLORS.lose, 22);
-                }, 22);
-                this.skillButtons.set(sb.uid, btn);
+                btn = new UIButton(this.controls, w, 52, () => {
+                    this.selected = this.selected === u.uid ? null : u.uid;
+                }, 19);
+                this.peopleButtons.set(u.uid, btn);
             }
-            btn.node.setPosition(i % 2 === 0 ? -colWidth / 2 - 5 : colWidth / 2 + 5, 180 - Math.floor(i / 2) * 82);
-            const ready = sb.cooldown <= 0 && !sb.blocked && !this.finished;
-            const text = `${sb.icon}${sb.unitName}·${sb.skillName}  ${ready ? '点我！' : sb.blocked ? '被控制' : `${Math.ceil(sb.cooldown)}秒`}`;
-            btn.set(text, this.finished ? 'disabled' : ready ? 'ready' : 'disabled', ready || sb.maxCooldown <= 0 ? 0 : sb.cooldown / sb.maxCooldown);
+            btn.node.setPosition(-WIDTH / 2 + w / 2 + (i % per) * (w + 10), 90 - Math.floor(i / per) * 62);
+            const hp = Math.round((u.hp / u.stats.maxHp) * 100);
+            const gate = u.post !== undefined ? GATE_NAMES[u.post] : '';
+            btn.set(`● ${this.nameOf(u)} ${gate} ${hp}%`, this.finished ? 'disabled' : this.selected === u.uid ? 'highlight' : 'normal');
+            btn.label.color = this.colorOf(u);
         });
     }
 
@@ -578,6 +659,7 @@ export class BattleView {
     private finish(): void {
         if (this.finished) return;
         this.finished = true;
+        this.selected = null;
         const report = this.opts.live ? this.opts.live.finish() : this.opts.replay!.report;
         this.showResult(report);
     }
@@ -589,7 +671,7 @@ export class BattleView {
         panel.setPosition(0, 150);
         drawPanel(panel.addComponent(Graphics), WIDTH, 420, COLORS.panel, 16, win ? COLORS.win : COLORS.lose, 4);
         const kind = report?.kind ?? 'raid';
-        const head = kind === 'raid' ? (win ? '🛡️ 守住了！' : '💀 栅栏被冲破了……') : win ? '🎒 探索成功！' : '🏃 小队撤退了';
+        const head = kind === 'raid' ? (win ? '🛡️ 守住了！' : '💀 尸群冲进了营地……') : win ? '🎒 探索成功！' : '🏃 小队撤退了';
         addLabel(panel, head, 44, win ? COLORS.win : COLORS.lose, { width: WIDTH - 40 }).node.setPosition(0, 150);
         const text = report?.summary ?? '这是演示战斗，不影响营地。';
         const summary = addLabel(panel, text, 24, COLORS.text, { width: WIDTH - 60, wrap: true, align: 'left' });

@@ -252,7 +252,7 @@ function swarmEnemies(config: GameConfig, enemies: UnitSetup[]): UnitSetup[] {
             ...e,
             hpMult: (e.hpMult ?? 1) * sw.hpMult,
             atkMult: (e.atkMult ?? 1) * sw.atkMult,
-            spawnAt: (e.spawnAt ?? 0) + k * 0.4,
+            spawnAt: (e.spawnAt ?? 0) + k * 0.3,
         }));
     });
 }

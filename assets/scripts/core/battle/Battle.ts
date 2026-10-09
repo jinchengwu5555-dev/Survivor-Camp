@@ -95,6 +95,8 @@ const POST_LEASH = 2.5;
 const POST_FALLBACK = 2.5;
 /** 冲进营地的丧尸：这么近的人会先被咬，远一点的不管，直奔营地核心 */
 const INSIDE_AGGRO = 1;
+/** 尸群里两只丧尸至少隔这么远（营地战斗） */
+const CROWD_SPACING = 0.45;
 
 export class Battle implements BattleContext {
     time = 0;
@@ -278,6 +280,7 @@ export class Battle implements BattleContext {
             updateSkills(this, u, STEP);
             this.act(u);
         }
+        this.separateCrowd();
         this.checkResult();
     }
 
@@ -375,6 +378,43 @@ export class Battle implements BattleContext {
         if (this.gateUnits[u.post]?.alive !== false) return false;
         const post = this.postPoint(u);
         return !!post && distance(u, post) > 0.3;
+    }
+
+    /**
+     * 营地战斗：尸群互相挤开，不会全叠在门口一个点上，而是沿着围墙排开一大片。
+     * 只推丧尸（不推人和建筑）；推完墙外的丧尸还在墙外。
+     */
+    private separateCrowd(): void {
+        const camp = this.setup.camp;
+        if (!camp) return;
+        const crowd = this.units.filter((u) => u.alive && u.side === 'enemy' && u.def.faction !== 'structure');
+        const min = CROWD_SPACING;
+        const outside = crowd.map((u) => !insideCamp(camp, u) && !u.ignoreStructures);
+        for (let i = 0; i < crowd.length; i++) {
+            const a = crowd[i];
+            for (let j = i + 1; j < crowd.length; j++) {
+                const b = crowd[j];
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const d2 = dx * dx + dy * dy;
+                if (d2 >= min * min) continue;
+                const d = Math.sqrt(d2);
+                // 完全重合时按 uid 定一个方向，保证结果可以重放
+                const nx = d > 1e-6 ? dx / d : Math.cos(a.uid * 2.4);
+                const ny = d > 1e-6 ? dy / d : Math.sin(a.uid * 2.4);
+                const push = (min - d) / 2;
+                a.x -= nx * push;
+                a.y -= ny * push;
+                b.x += nx * push;
+                b.y += ny * push;
+            }
+        }
+        crowd.forEach((u, i) => {
+            if (!outside[i] || this.nearOpenGate(u)) return;
+            const p = pushOutside(camp, u);
+            u.x = p.x;
+            u.y = p.y;
+        });
     }
 
     /** 没有目标时回到岗位 */

@@ -89,7 +89,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v2.12.1 功能慢慢解锁';
+const GAME_VERSION = 'v3.0 俯视守夜';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
