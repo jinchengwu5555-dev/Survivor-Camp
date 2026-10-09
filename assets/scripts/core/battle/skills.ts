@@ -11,6 +11,7 @@
 //   shieldBroken 自己的护盾被打光时触发一次
 
 import { nextRandom, pickOne } from '../rng';
+import { distance, Point } from './geometry';
 import { heal } from './damage';
 import { applyStatus, canCast, effectiveAtk } from './status';
 import { BattleContext, BattleUnit, SkillDef, SkillEffect, SkillState, SkillTargeting, TargetRule } from './types';
@@ -26,10 +27,10 @@ export function alliesOf(ctx: BattleContext, unit: BattleUnit): BattleUnit[] {
     return ctx.units.filter((u) => u.alive && u.side === unit.side && u.def.faction !== 'structure');
 }
 
-export function nearest(from: BattleUnit, candidates: BattleUnit[]): BattleUnit | undefined {
+export function nearest(from: Point, candidates: BattleUnit[]): BattleUnit | undefined {
     let best: BattleUnit | undefined;
     for (const c of candidates) {
-        if (!best || Math.abs(c.x - from.x) < Math.abs(best.x - from.x)) best = c;
+        if (!best || distance(c, from) < distance(best, from)) best = c;
     }
     return best;
 }
@@ -70,7 +71,7 @@ export function resolveTargets(ctx: BattleContext, caster: BattleUnit, targeting
     const center = primary[0];
     const result = [...primary];
     for (const u of ctx.units) {
-        if (u.alive && u.side === center.side && !result.includes(u) && Math.abs(u.x - center.x) <= targeting.radius) {
+        if (u.alive && u.side === center.side && !result.includes(u) && distance(u, center) <= targeting.radius) {
             result.push(u);
         }
     }
@@ -120,7 +121,7 @@ function applyEffect(ctx: BattleContext, caster: BattleUnit, target: BattleUnit,
 function inRange(ctx: BattleContext, unit: BattleUnit, skill: SkillDef): boolean {
     const target = ctx.getUnit(unit.targetUid);
     if (!target?.alive) return false;
-    return Math.abs(target.x - unit.x) <= (skill.range ?? unit.stats.attackRange);
+    return distance(target, unit) <= (skill.range ?? unit.stats.attackRange);
 }
 
 /** 自动技能的释放条件：治疗技能要有人受伤；其他技能要在交战距离内 */
@@ -145,7 +146,7 @@ export function updateSkills(ctx: BattleContext, unit: BattleUnit, dt: number): 
         } else if (trig.type === 'hpBelow' && !s.fired && unit.hp < unit.stats.maxHp * trig.ratio) {
             s.fired = true;
             castSkill(ctx, unit, s);
-        } else if (trig.type === 'enemyNear' && !s.fired && enemiesOf(ctx, unit).some((e) => Math.abs(e.x - unit.x) <= trig.distance)) {
+        } else if (trig.type === 'enemyNear' && !s.fired && enemiesOf(ctx, unit).some((e) => distance(e, unit) <= trig.distance)) {
             s.fired = true;
             castSkill(ctx, unit, s);
         }

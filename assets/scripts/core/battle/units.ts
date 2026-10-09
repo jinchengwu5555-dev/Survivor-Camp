@@ -20,6 +20,7 @@ export function createBattleUnit(
     side: Side,
     level: number,
     x: number,
+    y = 0,
 ): BattleUnit {
     const def = registry.unit(unitId);
     const stats = statsAtLevel(def, level);
@@ -31,6 +32,7 @@ export function createBattleUnit(
         stats,
         hp: stats.maxHp,
         x,
+        y,
         alive: true,
         attackCooldown: 0,
         targetUid: null,

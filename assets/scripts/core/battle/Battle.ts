@@ -1,10 +1,16 @@
 // 【模块 5b】对战流程：出生 / 分波刷怪、索敌、移动、普攻、胜负判定。
 //
+// 战场是俯视的二维平面。守夜时有营地布局（setup.camp）：方形围墙上开几个门，
+//   · 墙外的丧尸先打离自己最近的门；门被打破了，就从破口涌进营地，找人和营地核心
+//   · 守门的人分到某个门（post），只在围墙里面活动；墙外的敌人只在门附近打，墙里进了丧尸就去追
+// 没有营地布局时（探索）就是空旷的战场；老的横版战斗所有人 y = 0，结果和以前一样。
+//
 // 每一帧按固定顺序执行：
 //   刷怪 → 开战触发 → 状态结算（眩晕、持续伤害）→ 每个单位：技能 → 索敌 → 移动或普攻 → 胜负判定
 // 战斗逻辑以固定步长（STEP 秒）推进，结果只由种子决定，同一个种子可以完整重放。
 
 import { DamagePipeline } from './damage';
+import { CampLayout, clampInside, distance, gateNormal, insideCamp, Point, pushOutside, stepToward } from './geometry';
 import { BattleRegistry } from './registry';
 import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, fireShieldBroken, nearest, updateSkills } from './skills';
 import { canAct, canMove, effectiveAtk, effectiveAttackInterval, effectiveMoveSpeed, updateStatuses } from './status';
@@ -18,6 +24,11 @@ export interface UnitSetup {
     level?: number;
     /** 出生位置；不写则自动排队 */
     x?: number;
+    y?: number;
+    /** 这是营地的第几个门（栅栏单位） */
+    gate?: number;
+    /** 守门的人：分到第几个门 */
+    post?: number;
     /** 第几秒出场（用于尸潮分波） */
     spawnAt?: number;
     /** 覆盖最大生命（比如栅栏的生命由营地安全值决定） */
@@ -49,8 +60,10 @@ export interface BattleSetup {
     autoCastActive?: boolean;
     /** 这些 tag 的我方单位倒下就算输（守夜时栅栏被拆 = 尸群冲进营地） */
     mustSurvive?: string[];
-    /** 我方最远只能走到这个位置（守夜时大家守在栅栏后面） */
+    /** 我方最远只能走到这个位置（老的横版守夜：大家守在栅栏后面） */
     allyHoldLine?: number;
+    /** 营地布局（俯视守夜）：方形围墙和门 */
+    camp?: CampLayout;
     /** 玩家的操作记录：重放战报时按时间点原样执行（手动守夜的战报靠它完整重放） */
     inputs?: BattleInput[];
 }
@@ -60,14 +73,25 @@ export interface BattleSetup {
  *   cast：让 uid 这个单位放手动技能
  *   auto：切换“手动技能自动释放”
  *   heal：给 tag 这个单位回 amount 点血（比如花木材修补栅栏）
+ *   post：把 uid 这个人调去守第 gate 个门
  */
-export type BattleInput = { t: number; cast: number } | { t: number; auto: boolean } | { t: number; heal: string; amount: number };
+export type BattleInput =
+    | { t: number; cast: number }
+    | { t: number; auto: boolean }
+    | { t: number; heal: string; amount: number }
+    | { t: number; post: number; gate: number };
 
 /** 我方从 x=0 往左排，敌方从 x=ENEMY_START 往右排 */
 const ENEMY_START = 10;
 const SPACING = 0.8;
 /** 撑杆跳落在建筑后面多远 */
 const VAULT_LANDING = 1.2;
+/** 门被打破后，离门中心这么近的地方可以穿过围墙 */
+const GATE_GAP = 1.0;
+/** 守门的人站在门里面多深、并排时隔多远、为了打墙外的敌人最多离开岗位多远 */
+const POST_INSET = 0.4;
+const POST_SPACING = 0.7;
+const POST_LEASH = 2.5;
 
 export class Battle implements BattleContext {
     time = 0;
@@ -83,7 +107,7 @@ export class Battle implements BattleContext {
     private nextUid = 1;
     private started = false;
     private accumulator = 0;
-    private readonly pending: { setup: UnitSetup; side: Side; x: number }[] = [];
+    private readonly pending: { setup: UnitSetup; side: Side; x: number; y: number }[] = [];
     /** 重放用：还没执行的操作 */
     private readonly scripted: BattleInput[];
 
@@ -92,8 +116,17 @@ export class Battle implements BattleContext {
         this.autoCastActive = setup.autoCastActive ?? false;
         this.damage = damage;
         this.scripted = [...(setup.inputs ?? [])].sort((a, b) => a.t - b.t);
-        setup.allies.forEach((s, i) => this.pending.push({ setup: s, side: 'ally', x: s.x ?? -i * SPACING }));
-        setup.enemies.forEach((s, i) => this.pending.push({ setup: s, side: 'enemy', x: s.x ?? ENEMY_START + i * SPACING }));
+        const camp = setup.camp;
+        setup.allies.forEach((s, i) => this.pending.push({ setup: s, side: 'ally', x: s.x ?? (camp ? 0 : -i * SPACING), y: s.y ?? 0 }));
+        setup.enemies.forEach((s, i) =>
+            this.pending.push({
+                setup: s,
+                side: 'enemy',
+                // 营地战斗里没写位置的敌人从东边来
+                x: s.x ?? (camp ? camp.half + ENEMY_START : ENEMY_START + i * SPACING),
+                y: s.y ?? (camp ? ((i % 7) - 3) * SPACING : 0),
+            }),
+        );
         this.spawnDue();
     }
 
@@ -166,6 +199,38 @@ export class Battle implements BattleContext {
         return null;
     }
 
+    /** 把 uid 这个人调去守第 gate 个门；返回 null 表示成功 */
+    assignPost(uid: number, gate: number): string | null {
+        if (this.result !== 'ongoing') return '战斗已结束';
+        const camp = this.setup.camp;
+        if (!camp || gate < 0 || gate >= camp.gates.length) return '没有这个门';
+        const unit = this.getUnit(uid);
+        if (!unit || unit.side !== 'ally' || !unit.alive || unit.def.faction === 'structure') return '找不到这个人';
+        if (unit.post === gate) return '已经在守这个门了';
+        unit.post = gate;
+        unit.targetUid = null;
+        this.inputs.push({ t: this.time, post: uid, gate });
+        return null;
+    }
+
+    /** 第 gate 个门对应的栅栏单位 */
+    gateUnit(gate: number): BattleUnit | undefined {
+        return this.units.find((u) => u.gate === gate && u.side === 'ally');
+    }
+
+    /** 守门的人站在哪：门里面一点，同一个门的人沿着墙并排站 */
+    postPoint(u: BattleUnit): Point | null {
+        const camp = this.setup.camp;
+        if (!camp || u.post === undefined) return null;
+        const gate = camp.gates[u.post];
+        const n = gateNormal(camp, gate);
+        const mates = this.units.filter((x) => x.alive && x.side === 'ally' && x.post === u.post && x.def.faction !== 'structure');
+        const k = Math.max(0, mates.indexOf(u));
+        const max = camp.half - 0.5;
+        const offset = Math.max(-max, Math.min(max, (k - (mates.length - 1) / 2) * POST_SPACING));
+        return { x: gate.x - n.x * POST_INSET - n.y * offset, y: gate.y - n.y * POST_INSET + n.x * offset };
+    }
+
     side(side: Side): BattleUnit[] {
         return this.units.filter((u) => u.side === side);
     }
@@ -194,6 +259,7 @@ export class Battle implements BattleContext {
     private replayInput(input: BattleInput): void {
         if ('cast' in input) this.useSkill(input.cast);
         else if ('auto' in input) this.setAutoCast(input.auto);
+        else if ('post' in input) this.assignPost(input.post, input.gate);
         else this.healTagged(input.heal, input.amount);
     }
 
@@ -202,22 +268,24 @@ export class Battle implements BattleContext {
         if (!u.alive || !canAct(u)) return;
 
         const target = this.pickTarget(u);
-        if (!target) return;
-        const dist = Math.abs(target.x - u.x);
+        if (!target) {
+            if (canMove(u)) this.returnToPost(u);
+            return;
+        }
+        const dist = distance(u, target);
         const range = u.stats.attackRange;
         if (dist > range) {
-            if (!canMove(u)) return;
-            const dir = Math.sign(target.x - u.x);
-            let x = u.x + dir * Math.min(effectiveMoveSpeed(u) * STEP, dist - range);
-            const line = this.setup.allyHoldLine;
-            if (u.side === 'ally' && line !== undefined) x = Math.min(x, Math.max(u.x, line));
-            u.x = x;
+            if (canMove(u)) this.moveToward(u, target, range);
             return;
         }
         if (u.def.vault && !u.ignoreStructures && target.def.faction === 'structure') {
             // 撑杆跳：越过栅栏落到后面，之后只打人
             u.ignoreStructures = true;
-            u.x = target.x + Math.sign(target.x - u.x || -1) * VAULT_LANDING;
+            const d = dist || 1;
+            const dx = (target.x - u.x) / d || -1;
+            const dy = (target.y - u.y) / d;
+            u.x = target.x + dx * VAULT_LANDING;
+            u.y = target.y + dy * VAULT_LANDING;
             u.targetUid = null;
             this.emit({ t: this.time, type: 'leap', unit: u.uid, over: target.uid });
             return;
@@ -236,18 +304,99 @@ export class Battle implements BattleContext {
         if (u.alive) fireOnAttack(this, u);
     }
 
+    /** 朝目标走（停在攻击距离上）；营地战斗里墙外的丧尸要从破口进来，守门的人不出围墙 */
+    private moveToward(u: BattleUnit, target: BattleUnit, range: number): void {
+        const camp = this.setup.camp;
+        let dest: Point = target;
+        let stop = range;
+        if (camp && u.side === 'enemy' && !insideCamp(camp, u) && insideCamp(camp, target) && target.gate === undefined) {
+            const gap = this.nearestOpenGate(u);
+            if (gap) {
+                dest = gap;
+                stop = 0;
+            }
+        }
+        const d = distance(u, dest);
+        let next = stepToward(u, dest, Math.min(effectiveMoveSpeed(u) * STEP, Math.max(0, d - stop)));
+        if (camp) {
+            if (u.side === 'ally') {
+                next = clampInside(camp, next);
+                // 墙外的敌人：只在岗位附近打，不跑远
+                const post = this.postPoint(u);
+                if (post && !insideCamp(camp, target) && distance(next, post) > POST_LEASH) next = stepToward(post, next, POST_LEASH);
+            } else if (!insideCamp(camp, u) && !this.nearOpenGate(next)) {
+                next = pushOutside(camp, next);
+            }
+        } else {
+            const line = this.setup.allyHoldLine;
+            if (u.side === 'ally' && line !== undefined) next.x = Math.min(next.x, Math.max(u.x, line));
+        }
+        u.x = next.x;
+        u.y = next.y;
+    }
+
+    /** 没有目标时回到岗位 */
+    private returnToPost(u: BattleUnit): void {
+        const post = this.postPoint(u);
+        if (!post || distance(u, post) < 0.05) return;
+        const next = stepToward(u, post, effectiveMoveSpeed(u) * STEP);
+        u.x = next.x;
+        u.y = next.y;
+    }
+
+    /** 被打破的门（门的位置） */
+    private openGates(): Point[] {
+        const camp = this.setup.camp;
+        if (!camp) return [];
+        return camp.gates.filter((_, i) => !this.gateUnit(i)?.alive);
+    }
+
+    private nearestOpenGate(p: Point): Point | undefined {
+        let best: Point | undefined;
+        for (const g of this.openGates()) if (!best || distance(g, p) < distance(best, p)) best = g;
+        return best;
+    }
+
+    private nearOpenGate(p: Point): boolean {
+        return this.openGates().some((g) => distance(g, p) <= GATE_GAP);
+    }
+
     /**
-     * 索敌：当前目标还活着、并且在攻击距离内就继续打；否则换最近的敌人。
+     * 索敌：当前目标还活着、并且在攻击距离内就继续打；否则重新找。
      * 不在攻击距离内也要重新找——守夜时大家不能越过栅栏，锁定远处的敌人会让近战的人站着发呆。
      */
     private pickTarget(u: BattleUnit): BattleUnit | undefined {
         const current = this.getUnit(u.targetUid);
-        if (current?.alive && Math.abs(current.x - u.x) <= u.stats.attackRange) return current;
-        const enemies = enemiesOf(this, u);
-        const people = u.ignoreStructures ? enemies.filter((e) => e.def.faction !== 'structure') : enemies;
-        const next = nearest(u, people.length ? people : enemies);
+        if (current?.alive && distance(current, u) <= u.stats.attackRange) return current;
+        const next = this.chooseTarget(u);
         u.targetUid = next?.uid ?? null;
         return next;
+    }
+
+    private chooseTarget(u: BattleUnit): BattleUnit | undefined {
+        const enemies = enemiesOf(this, u);
+        const camp = this.setup.camp;
+        if (!camp) {
+            const people = u.ignoreStructures ? enemies.filter((e) => e.def.faction !== 'structure') : enemies;
+            return nearest(u, people.length ? people : enemies);
+        }
+        if (u.side === 'ally') {
+            // 营地里进了丧尸先去追；否则打离自己岗位最近的
+            const inside = enemies.filter((e) => insideCamp(camp, e));
+            if (inside.length) return nearest(u, inside);
+            return nearest(this.postPoint(u) ?? u, enemies);
+        }
+        // 丧尸：墙外先打离自己最近的门；门破了就进去找人和营地核心
+        const people = enemies.filter((e) => e.gate === undefined);
+        if (!insideCamp(camp, u) && !u.ignoreStructures) {
+            let gate = 0;
+            camp.gates.forEach((g, i) => {
+                if (distance(g, u) < distance(camp.gates[gate], u)) gate = i;
+            });
+            const unit = this.gateUnit(gate);
+            if (unit?.alive) return unit;
+        }
+        return nearest(u, people.length ? people : enemies);
     }
 
     private spawnDue(): void {
@@ -258,11 +407,15 @@ export class Battle implements BattleContext {
                 continue;
             }
             this.pending.splice(i, 1);
-            const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x);
-            const wall = unit.def.burrow ? this.frontStructure(p.side === 'ally' ? 'enemy' : 'ally') : undefined;
+            const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x, p.y);
+            unit.gate = p.setup.gate;
+            unit.post = p.setup.post;
+            const wall = unit.def.burrow ? this.nearestStructure(p.side === 'ally' ? 'enemy' : 'ally', unit) : undefined;
             if (wall) {
-                // 从地下钻出来：落在栅栏后面
-                unit.x = wall.x + (p.side === 'enemy' ? -1 : 1) * unit.def.burrow!;
+                // 从地下钻出来：从出生点朝栅栏的方向，落在栅栏后面
+                const d = distance(unit, wall) || 1;
+                unit.x = wall.x + ((wall.x - unit.x) / d) * unit.def.burrow!;
+                unit.y = wall.y + ((wall.y - unit.y) / d) * unit.def.burrow!;
                 unit.ignoreStructures = true;
             }
             if (p.setup.maxHp !== undefined) unit.stats.maxHp = unit.hp = p.setup.maxHp;
@@ -283,10 +436,10 @@ export class Battle implements BattleContext {
         }
     }
 
-    /** 某一方还立着的、最靠前（离对面最近）的建筑 */
-    private frontStructure(side: Side): BattleUnit | undefined {
-        const walls = this.units.filter((u) => u.alive && u.side === side && u.def.faction === 'structure');
-        return walls.sort((a, b) => (side === 'ally' ? b.x - a.x : a.x - b.x))[0];
+    /** 某一方还立着的、离 p 最近的建筑（门、栅栏） */
+    private nearestStructure(side: Side, p: Point): BattleUnit | undefined {
+        const walls = this.units.filter((u) => u.alive && u.side === side && u.def.faction === 'structure' && (u.gate !== undefined || !this.setup.camp));
+        return nearest(p, walls);
     }
 
     private aliveUnits(): BattleUnit[] {

@@ -1,4 +1,4 @@
-// 战斗系统的类型定义。战斗是一维横版：我方在左、敌方在右，x 为位置（单位：格）。
+// 战斗系统的类型定义。战斗是俯视的二维战场：x 向右、y 向上（单位：格）；老的横版战斗 y 都是 0。
 // 所有时间单位都是秒。
 
 import type { RngHolder } from '../rng';
@@ -167,6 +167,7 @@ export interface BattleUnit {
     stats: UnitStats;
     hp: number;
     x: number;
+    y: number;
     alive: boolean;
     attackCooldown: number;
     targetUid: number | null;
@@ -174,6 +175,10 @@ export interface BattleUnit {
     statuses: StatusInstance[];
     /** 不打建筑（撑杆跳过栅栏、从地下钻出来的丧尸） */
     ignoreStructures?: boolean;
+    /** 营地的门：第几个门（营地布局 BattleSetup.camp.gates 的下标） */
+    gate?: number;
+    /** 守门的人：分到第几个门 */
+    post?: number;
 }
 
 export type BattleResult = 'ongoing' | 'win' | 'lose';
