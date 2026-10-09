@@ -66,6 +66,20 @@ export interface BalanceDef {
     firstRaidMinutes: number;
     /** 守夜时花木材修补栅栏：每次回 hpRatio 的栅栏生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
     raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
+    /**
+     * 俯视守夜的营地：半边长 half 的方形围墙，四面各一个门；丧尸从离墙 spawnDistance 格的地方来。
+     * 每个门的生命 = 栅栏总生命 × gateHpShare，营地核心 = × coreHpShare（核心被拆就算输）。
+     * swarm：这些丧尸一只变成 count 只小的（生命 × hpMult、攻击 × atkMult），尸群看起来有几十只。
+     */
+    camp?: {
+        half: number;
+        spawnDistance: number;
+        gateHpShare: number;
+        coreHpShare: number;
+        swarm?: { units: string[]; count: number; hpMult: number; atkMult: number };
+    };
+    /** 守夜时倒下的人牺牲的概率倍率（在营地里，同伴能把人拖回来） */
+    raidDeathScale?: number;
     /** 栅栏上陷阱的攻击力 = base + perLevel × (战斗等级 - 1)（工坊做的 trap 物品按这个算伤害） */
     trapAtk?: { base: number; perLevel: number };
     /** 守夜时最多几个人上阵 */
@@ -387,6 +401,8 @@ export interface RaidDef {
     enemies: UnitSetup[];
     /** 撑过多少秒就算守住 */
     timeLimit: number;
+    /** 尸群从几个方向来（1～4，默认 1）；哪几个方向每晚随机 */
+    sides?: number;
     reward: ResourceBag;
     /** 守住后可能得到的道具 */
     drops?: PropDrop[];

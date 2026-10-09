@@ -3,7 +3,7 @@
 import { Effect, GameConfig, GEAR_SLOTS, Objective, PropDrop, RESOURCE_IDS, ResourceBag } from './types';
 import { BattleRegistry } from './battle/registry';
 import { UnitSetup } from './battle/Battle';
-import { BARRICADE_UNIT, DOG_UNIT } from './combat';
+import { BARRICADE_UNIT, CORE_UNIT, DOG_UNIT } from './combat';
 
 export function validateConfig(config: GameConfig): string[] {
     const errors: string[] = [];
@@ -146,6 +146,8 @@ export function validateConfig(config: GameConfig): string[] {
         if (s.battleUnit && !battle.hasUnit(s.battleUnit)) errors.push(`幸存者 ${s.id}：未知战斗角色 ${s.battleUnit}`);
     }
     if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的栅栏`);
+    if (!battle.hasUnit(CORE_UNIT)) errors.push(`units.json 里必须有 id 为 ${CORE_UNIT} 的营地核心`);
+    for (const r of config.raids) if (r.sides !== undefined && (r.sides < 1 || r.sides > 4)) errors.push(`尸潮 ${r.id}：sides 要在 1～4 之间`);
     if (!battle.hasUnit(DOG_UNIT)) errors.push(`units.json 里必须有 id 为 ${DOG_UNIT} 的狗`);
     checkBag('治疗花费', config.balance.healCost);
 

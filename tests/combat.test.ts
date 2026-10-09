@@ -162,10 +162,12 @@ describe('尸潮夜袭', () => {
         game.tick(T0 + RAID);
         const report = game.state.reports[0];
         expect(report).toMatchObject({ kind: 'raid', title: '尸群', result: 'win', loot: { parts: 10, wood: 20 } });
-        expect(report.setup.allies[0].tag).toBe('barricade');
-        expect(report.setup.allies.map((a) => a.tag).sort()).toEqual(['barricade', 'derek', 'ethan', 'martha', 'sophie', 'toby']);
-        expect(report.setup.allies[0].maxHp).toBe(25 * 30);
-        expect(report.setup.mustSurvive).toEqual(['barricade']);
+        // 四个门 + 营地核心 + 守夜的人；每个门分到栅栏总生命的一部分
+        expect(report.setup.allies.map((a) => a.tag).sort()).toEqual(['camp_core', 'derek', 'ethan', 'gate_0', 'gate_1', 'gate_2', 'gate_3', 'martha', 'sophie', 'toby']);
+        const gate = report.setup.allies.find((a) => a.gate !== undefined)!;
+        expect(gate.maxHp).toBe(Math.round(25 * 30 * game.config.balance.camp!.gateHpShare));
+        expect(report.setup.mustSurvive).toEqual(['camp_core']);
+        expect(report.setup.camp?.gates).toHaveLength(4);
         expect(game.state.resources.parts).toBeGreaterThanOrEqual(parts + 10);
     });
 
@@ -174,17 +176,20 @@ describe('尸潮夜袭', () => {
         game.state.flags.push('raids_started');
         game.state.buildings.training.level = 2;
         game.tick(T0 + RAID);
-        expect(game.state.reports[0].setup.allies[1].level).toBe(3);
+        expect(game.state.reports[0].setup.allies.find((a) => a.tag === 'ethan')!.level).toBe(3);
     });
 
-    it('栅栏被拆就算输，哪怕守夜的人都还活着', () => {
+    it('门被打破、营地核心被拆就算输', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 1;
         const raid = game.config.raids.find((r) => r.id === 'great_horde')!;
         const report = runRaid(game.config, game.state, raid, T0);
         expect(report.result).toBe('lose');
-        expect(report.injured.length).toBeLessThan(5);
+        const replay = new Battle(battleRegistry(game.config), report.setup);
+        replay.runToEnd();
+        expect(replay.units.find((u) => u.tag === 'camp_core')!.alive).toBe(false);
+        expect(replay.units.some((u) => u.gate !== undefined && !u.alive)).toBe(true);
     });
 
     it('没人守、栅栏被拆：守夜失败，损失 10% 资源，之后的尸潮减弱（喘息）', () => {

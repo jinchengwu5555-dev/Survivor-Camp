@@ -5,14 +5,14 @@
 
 import { expect, it } from 'vitest';
 import { Battle, BattleSetup } from '../assets/scripts/core/battle/Battle';
-import { BARRICADE_UNIT, battleRegistry, expeditionSetup, raidSetup } from '../assets/scripts/core/combat';
+import { battleRegistry, expeditionSetup, raidSetup } from '../assets/scripts/core/combat';
 import { loadConfig } from './helpers';
 
 const showReport = (import.meta as unknown as { env: { MODE: string } }).env.MODE === 'balance';
 const RUNS = 50;
 
 // 要打上千场战斗，平时跑 npm test 时跳过
-it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
+it.runIf(showReport)('数值平衡报告', { timeout: 600_000 }, () => {
     const config = loadConfig();
     const reg = battleRegistry(config);
     const member = (id: string) => ({ id, unit: config.survivors.find((d) => d.id === id)!.battleUnit! });
@@ -29,7 +29,7 @@ it.runIf(showReport)('数值平衡报告', { timeout: 120_000 }, () => {
         for (let seed = 1; seed <= RUNS; seed++) {
             const b = new Battle(reg, make(seed));
             if (b.runToEnd() === 'win') wins++;
-            fallen += b.side('ally').filter((u) => !u.alive && u.tag !== BARRICADE_UNIT).length;
+            fallen += b.side('ally').filter((u) => !u.alive && u.def.faction !== 'structure').length;
         }
         return `${String(Math.round((wins / RUNS) * 100)).padStart(3)}%(${(fallen / RUNS).toFixed(1)}伤)`;
     };

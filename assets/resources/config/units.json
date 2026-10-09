@@ -55,6 +55,12 @@
         "skills": []
     },
     {
+        "id": "camp_core", "name": "营地", "faction": "structure",
+        "appearance": { "sprite": "camp_core", "color": "#b08a4a", "scale": 1.4 },
+        "stats": { "maxHp": 1, "atk": 0, "def": 25, "moveSpeed": 0, "attackRange": 0, "attackInterval": 1, "critRate": 0, "critDamage": 1 },
+        "skills": []
+    },
+    {
         "id": "walker", "name": "行尸", "faction": "zombie",
         "appearance": { "sprite": "zombie_walker", "color": "#6a8a5a", "scale": 1 },
         "stats": { "maxHp": 240, "atk": 24, "def": 5, "moveSpeed": 0.6, "attackRange": 0.8, "attackInterval": 1.6, "critRate": 0, "critDamage": 1.5 },

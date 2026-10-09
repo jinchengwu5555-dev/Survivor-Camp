@@ -109,7 +109,7 @@ describe('血月夜（R26）和营地的狗（R10）', () => {
         const raid = currentRaid(game.config, game.state, T0)!;
         const reports = [1, 2, 3, 4].map(() => runRaid(game.config, game.state, raid, T0));
         expect(reports.map((r) => r.title)).toEqual(['小股尸群', '小股尸群', '小股尸群', '血月·小股尸群']);
-        expect(reports[3].setup.enemies).toHaveLength(raid.enemies.length + Math.ceil(raid.enemies.length / 2));
+        expect(reports[3].setup.enemies.length).toBeGreaterThan(reports[0].setup.enemies.length * 1.4);
         expect(reports[3].result).toBe('win');
         expect(reports[3].loot.parts).toBe(raid.reward.parts! * 2);
         expect(game.state.stats.blood_moons_won).toBe(1);

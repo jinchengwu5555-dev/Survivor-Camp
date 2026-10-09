@@ -29,6 +29,8 @@
     "nightWatch": { "survivorsPerWatcher": 4, "watchCost": 40, "restGain": 35, "tiredBelow": 50, "minFactor": 0.6, "understaffedWallFactor": 0.7 },
     "raidRepair": { "hpRatio": 0.2, "woodPerHp": 0.1, "minWood": 10, "maxUses": 3 },
     "trapAtk": { "base": 30, "perLevel": 2 },
+    "raidDeathScale": 0.2,
+    "camp": { "half": 6, "spawnDistance": 9, "gateHpShare": 0.7, "coreHpShare": 0.5, "swarm": { "units": ["walker", "runner", "frenzied"], "count": 3, "hpMult": 0.45, "atkMult": 0.4 } },
     "maxDefenders": 5,
     "barricadeHpPerSafety": 30,
     "raidLossRatio": 0.1,

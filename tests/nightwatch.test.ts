@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Battle, BattleSetup, UnitSetup, waveTimes } from '../assets/scripts/core/battle/Battle';
 import { BattleRegistry } from '../assets/scripts/core/battle/registry';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { expeditionSetup, raidSetup, squadOf, trapAtk } from '../assets/scripts/core/combat';
+import { attackedGates, expeditionSetup, raidSetup, squadOf, trapAtk } from '../assets/scripts/core/combat';
 import { consumeUsedItems, equipItems } from '../assets/scripts/core/crafting';
 import { loadConfig, T0 } from './helpers';
 
@@ -77,11 +77,14 @@ describe('R74 最后防线：陷阱', () => {
         const squad = squadOf(config, state, state.survivors.slice(0, 3).map((s) => s.id));
         const raid = raidSetup(config, config.raids[0], squad, 800, 1, 1);
         const carried = equipItems(config, state, raid.allies);
-        const wall = raid.allies.find((a) => a.tag === 'barricade')!;
-        expect(wall.extraSkills).toEqual(['trap_bear', 'trap_mine']);
-        expect(wall.atk).toBe(trapAtk(config, 1));
-        expect(carried.filter((c) => c.tag === 'barricade').map((c) => c.item.id)).toEqual(['bear_trap', 'landmine']);
-        expect(raid.allies.some((a) => a.tag !== 'barricade' && a.extraSkills?.includes('item_molotov'))).toBe(true);
+        // 陷阱依次装在门上，今晚被攻打的门排在最前面
+        const walls = raid.allies.filter((a) => a.unit === 'barricade');
+        expect(walls[0].gate).toBe(attackedGates(config.raids[0], 1)[0]);
+        expect(walls[0].extraSkills).toEqual(['trap_bear']);
+        expect(walls[1].extraSkills).toEqual(['trap_mine']);
+        expect(walls[0].atk).toBe(trapAtk(config, 1));
+        expect(carried.filter((c) => c.item.trap).map((c) => c.item.id)).toEqual(['bear_trap', 'landmine']);
+        expect(raid.allies.some((a) => a.unit !== 'barricade' && a.extraSkills?.includes('item_molotov'))).toBe(true);
 
         const exp = expeditionSetup(config, config.locations[0], squad, 1, 1);
         const expCarried = equipItems(config, state, exp.allies);

@@ -7,6 +7,7 @@
 import { recordWallDamage, wallWear } from './wall';
 import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
 import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
+import { CampLayout } from './battle/geometry';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
@@ -44,13 +45,26 @@ import {
     SurvivorState,
 } from './types';
 
-/** 栅栏在战斗里对应的角色 id（units.json） */
+/** 栅栏在战斗里对应的角色 id（units.json）；营地的每个门都是一个栅栏单位 */
 export const BARRICADE_UNIT = 'barricade';
+/** 营地核心（units.json）：尸群冲进来拆掉它就算输 */
+export const CORE_UNIT = 'camp_core';
+/** 四个门的名字（顺序和 campLayout 一致） */
+export const GATE_NAMES = ['北门', '东门', '南门', '西门'];
+
+/** 第几个门的 tag */
+export function gateTag(gate: number): string {
+    return `gate_${gate}`;
+}
+
+/** 俯视守夜的营地布局：方形围墙，每面墙正中一个门（北、东、南、西） */
+export function campLayout(config: GameConfig): CampLayout {
+    const h = config.balance.camp?.half ?? 6;
+    return { half: h, gates: [{ x: 0, y: h }, { x: h, y: 0 }, { x: 0, y: -h }, { x: -h, y: 0 }] };
+}
 /** 营地的狗（收养后跟大家一起守夜） */
 export const DOG_UNIT = 'dog';
 export const DOG_FLAG = 'has_dog';
-/** 栅栏站在我方最前面 */
-const BARRICADE_X = 1.5;
 const MAX_REPORTS = 10;
 
 const registries = new WeakMap<GameConfig, BattleRegistry>();
@@ -219,7 +233,34 @@ export function trapAtk(config: GameConfig, level: number): number {
     return t.base + t.perLevel * Math.max(0, level - 1);
 }
 
-/** 守夜战斗的参数：栅栏站在最前面，大家守在栅栏后面，栅栏被拆就算输，撑到时间结束算赢 */
+/** 尸群今晚从哪几个门来（门的下标；按种子轮换起始方向） */
+export function attackedGates(raid: RaidDef, seed: number): number[] {
+    const n = Math.max(1, Math.min(4, raid.sides ?? 1));
+    const start = Math.abs(seed) % 4;
+    // 两个方向时是对面的两个门，三个方向时空着一面
+    const order = n === 2 ? [0, 2] : [0, 1, 2, 3];
+    return order.slice(0, n).map((k) => (start + k) % 4);
+}
+
+/** 小丧尸一只变几只（swarm），看起来是一大群 */
+function swarmEnemies(config: GameConfig, enemies: UnitSetup[]): UnitSetup[] {
+    const sw = config.balance.camp?.swarm;
+    if (!sw || sw.count <= 1) return enemies;
+    return enemies.flatMap((e) => {
+        if (!sw.units.includes(e.unit) || e.tag) return [e];
+        return Array.from({ length: sw.count }, (_, k) => ({
+            ...e,
+            hpMult: (e.hpMult ?? 1) * sw.hpMult,
+            atkMult: (e.atkMult ?? 1) * sw.atkMult,
+            spawnAt: (e.spawnAt ?? 0) + k * 0.4,
+        }));
+    });
+}
+
+/**
+ * 守夜战斗的参数（俯视营地）：四面围墙各一个门，中间是营地核心；
+ * 尸群从今晚的几个方向涌来，守夜的人分到这几个门。核心被拆就算输，撑到时间结束算赢。
+ */
 export function raidSetup(
     config: GameConfig,
     raid: RaidDef,
@@ -229,16 +270,48 @@ export function raidSetup(
     seed: number,
     options: RaidOptions = {},
 ): BattleSetup {
-    const dog: UnitSetup[] = options.dog ? [{ unit: DOG_UNIT, level, tag: DOG_UNIT }] : [];
+    const camp = campLayout(config);
+    const cfg = config.balance.camp ?? { half: 6, spawnDistance: 9, gateHpShare: 0.5, coreHpShare: 0.6 };
+    const sides = attackedGates(raid, seed);
+    // 门：被攻打的排在前面（陷阱先装在这些门上）
+    const gateOrder = [...sides, ...[0, 1, 2, 3].filter((g) => !sides.includes(g))];
+    const gates: UnitSetup[] = gateOrder.map((g) => ({
+        unit: BARRICADE_UNIT,
+        x: camp.gates[g].x,
+        y: camp.gates[g].y,
+        gate: g,
+        maxHp: Math.max(1, Math.round(wallHp * cfg.gateHpShare)),
+        tag: gateTag(g),
+        atk: trapAtk(config, level),
+    }));
+    const core: UnitSetup = { unit: CORE_UNIT, x: 0, y: 0, maxHp: Math.max(1, Math.round(wallHp * cfg.coreHpShare)), tag: CORE_UNIT };
+    const people = squadSetups(defenders, level);
+    if (options.dog) people.push({ unit: DOG_UNIT, level, tag: DOG_UNIT });
+    // 守门的人轮流分到今晚被攻打的门，站在门里面
+    people.forEach((p, i) => {
+        const g = sides[i % sides.length];
+        const gate = camp.gates[g];
+        p.post = g;
+        p.x = gate.x * 0.8;
+        p.y = gate.y * 0.8;
+    });
+    const base = levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0);
+    const enemies = swarmEnemies(config, base).map((e, i) => {
+        const g = camp.gates[sides[i % sides.length]];
+        const n = { x: Math.sign(g.x), y: Math.sign(g.y) };
+        const along = (((i * 7) % 9) - 4) * 0.9;
+        const out = camp.half + cfg.spawnDistance + ((i * 5) % 4) * 0.5;
+        return { ...e, x: n.x * out - n.y * along, y: n.y * out + n.x * along };
+    });
     return {
-        allies: [{ unit: BARRICADE_UNIT, x: BARRICADE_X, maxHp: wallHp, tag: BARRICADE_UNIT, atk: trapAtk(config, level) }, ...squadSetups(defenders, level), ...dog],
-        enemies: levelUpEnemies(options.bloodMoon ? bloodMoonEnemies(raid.enemies) : raid.enemies, options.enemyBonus ?? 0),
+        allies: [...gates, core, ...people],
+        enemies,
         timeLimit: raid.timeLimit,
         timeoutResult: 'win',
         seed,
         autoCastActive: true,
-        mustSurvive: [BARRICADE_UNIT],
-        allyHoldLine: BARRICADE_X,
+        mustSurvive: [CORE_UNIT],
+        camp,
     };
 }
 
@@ -511,9 +584,9 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
     const enemyBonus = raidEnemyBonus(config, state, at) + flareBonus;
     const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
-    // 上一晚没修好的栅栏：带着伤出场（wall.ts）
+    // 上一晚没修好的栅栏：每个门都带着伤出场（wall.ts）
     const wear = wallWear(state);
-    if (wear > 0) setup.allies[0] = { ...setup.allies[0], hpRatio: 1 - wear };
+    if (wear > 0) setup.allies = setup.allies.map((a) => (a.gate !== undefined ? { ...a, hpRatio: 1 - wear } : a));
     // 死在外面的熟人可能混在尸群里（familiar.ts）
     const familiar = addFamiliar(config, state, setup, Math.max(1, ...setup.enemies.map((e) => e.level ?? 1)), at);
     const carried = equipItems(config, state, setup.allies).map((c) => ({ tag: c.tag, item: c.item.id }));
@@ -562,11 +635,14 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         changeMoodAll(state, -10, '尸群冲破了栅栏', at);
     }
     // 栅栏的损伤留到下一晚
-    const wallUnit = battle.side('ally').find((u) => u.tag === BARRICADE_UNIT);
-    recordWallDamage(config, state, wallUnit && wallUnit.alive ? wallUnit.hp / wallUnit.stats.maxHp : 0, result === 'lose' || !wallUnit?.alive);
+    const walls = battle.side('ally').filter((u) => u.def.id === BARRICADE_UNIT);
+    const remaining = walls.length ? walls.reduce((sum, u) => sum + (u.alive ? u.hp / u.stats.maxHp : 0), 0) / walls.length : 0;
+    recordWallDamage(config, state, remaining, result === 'lose' || walls.some((u) => !u.alive));
     const defenderIds = pending.setup.allies.map((u) => u.tag).filter((t): t is string => !!t && survivorIds.has(t));
     recordSharedBattle(state, defenderIds);
-    const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了', true, undefined, hasMedic(config, state, defenderIds) ? 0.5 : 1);
+    // 在营地里倒下的人多半能被同伴拖回来：牺牲概率按 raidDeathScale 打折
+    const raidScale = config.balance.raidDeathScale ?? 1;
+    const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了', true, undefined, (hasMedic(config, state, defenderIds) ? 0.5 : 1) * raidScale);
     // 栅栏被冲破：尸群冲进营地，有人被咬死
     if (result === 'lose') {
         for (let i = 0; i < config.balance.raidBreachDeaths && state.survivors.length > 0; i++) {

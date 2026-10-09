@@ -1,11 +1,12 @@
 // 亲手守夜：尸潮来了以后，界面用 LiveRaid 把战斗实时演出来，玩家可以
 //   · 点角色的技能按钮放手动技能（也可以打开“自动释放”）
-//   · 花木材修补栅栏（每场有次数限制）
+//   · 花木材修补营地的门（每场有次数限制）
+//   · 把守夜的人调去守别的门
 // 所有操作都记在 Battle.inputs 里，写进战报后可以完整重放。
 
 import { Battle } from './battle/Battle';
 import { BattleUnit } from './battle/types';
-import { BARRICADE_UNIT, battleRegistry, finishRaid } from './combat';
+import { battleRegistry, CORE_UNIT, finishRaid, gateTag } from './combat';
 import { addStat } from './state';
 import { BattleReport, GameConfig, GameState, PendingRaid } from './types';
 
@@ -58,14 +59,36 @@ export class LiveRaid {
         this.battle.setAutoCast(on);
     }
 
+    /** 营地的门（按门的下标排） */
+    gates(): BattleUnit[] {
+        return this.battle.units.filter((u) => u.gate !== undefined).sort((a, b) => a.gate! - b.gate!);
+    }
+
+    get core(): BattleUnit | undefined {
+        return this.battle.units.find((u) => u.tag === CORE_UNIT);
+    }
+
+    /** 还立着、伤得最重的门（没指定门时修这个） */
     get barricade(): BattleUnit | undefined {
-        return this.battle.units.find((u) => u.tag === BARRICADE_UNIT);
+        const alive = this.gates().filter((g) => g.alive);
+        return alive.sort((a, b) => a.hp / a.stats.maxHp - b.hp / b.stats.maxHp)[0];
+    }
+
+    /** 能调动的守夜的人 */
+    defenders(): BattleUnit[] {
+        return this.battle.side('ally').filter((u) => u.alive && u.def.faction !== 'structure');
+    }
+
+    /** 把 uid 调去守第 gate 个门；返回 null 表示成功 */
+    assign(uid: number, gate: number): string | null {
+        return this.battle.assignPost(uid, gate);
     }
 
     /** 修补一次能回多少血、花多少木材 */
-    repairCost(): { hp: number; wood: number } {
+    repairCost(gate = this.barricade?.gate): { hp: number; wood: number } {
         const r = this.config.balance.raidRepair;
-        const hp = Math.ceil((this.barricade?.stats.maxHp ?? 0) * r.hpRatio);
+        const unit = gate === undefined ? undefined : this.battle.gateUnit(gate);
+        const hp = Math.ceil((unit?.stats.maxHp ?? 0) * r.hpRatio);
         return { hp, wood: Math.max(r.minWood, Math.ceil(hp * r.woodPerHp)) };
     }
 
@@ -73,12 +96,13 @@ export class LiveRaid {
         return Math.max(0, this.config.balance.raidRepair.maxUses - this.pending.repairs);
     }
 
-    /** 花木材修补栅栏；返回 null 表示成功 */
-    repair(): string | null {
+    /** 花木材修补一个门（不指定就修伤得最重的）；返回 null 表示成功 */
+    repair(gate = this.barricade?.gate): string | null {
         if (this.repairsLeft() <= 0) return '这一夜已经修不动了';
-        const { hp, wood } = this.repairCost();
+        if (gate === undefined) return '门都已经被打破了';
+        const { hp, wood } = this.repairCost(gate);
         if (this.state.resources.wood < wood) return `木材不够（需要 ${wood}）`;
-        const error = this.battle.healTagged(BARRICADE_UNIT, hp);
+        const error = this.battle.healTagged(gateTag(gate), hp);
         if (error) return error;
         this.state.resources.wood -= wood;
         this.pending.repairs += 1;

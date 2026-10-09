@@ -1,6 +1,6 @@
 [
     {
-        "id": "small_horde",
+        "id": "small_horde", "sides": 1,
         "name": "小股尸群",
         "conditions": { "flags": ["raids_started"] },
         "enemies": [ { "unit": "walker" }, { "unit": "walker", "spawnAt": 3 }, { "unit": "walker", "spawnAt": 6 } ],
@@ -9,7 +9,7 @@
         "drops": [ { "prop": "ration_s", "chance": 0.3 }, { "prop": "chocolate", "chance": 0.2 } ]
     },
     {
-        "id": "horde",
+        "id": "horde", "sides": 2,
         "name": "尸群",
         "conditions": { "minDay": 6, "flags": ["raids_started"] },
         "enemies": [
@@ -24,7 +24,7 @@
         "drops": [ { "prop": "parts_s", "chance": 0.5 }, { "prop": "wrench", "chance": 0.3 } ]
     },
     {
-        "id": "strange_horde",
+        "id": "strange_horde", "sides": 3,
         "name": "怪异尸群",
         "conditions": { "minDay": 12, "flags": ["raids_started"] },
         "enemies": [
@@ -39,7 +39,7 @@
         "drops": [ { "prop": "parts_s", "chance": 0.5 }, { "prop": "toolbox", "chance": 0.2 } ]
     },
     {
-        "id": "great_horde",
+        "id": "great_horde", "sides": 3,
         "name": "大尸潮",
         "conditions": { "minDay": 18, "flags": ["raids_started"] },
         "enemies": [

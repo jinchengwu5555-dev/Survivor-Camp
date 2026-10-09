@@ -46,7 +46,7 @@ export function craftItem(config: GameConfig, state: GameState, itemId: string, 
     return { ok: true };
 }
 
-/** 陷阱装在栅栏上（和 combat.ts 的 BARRICADE_UNIT 一致） */
+/** 陷阱装在栅栏（营地的门）上（和 combat.ts 的 BARRICADE_UNIT 一致） */
 const TRAP_HOLDER = 'barricade';
 
 export interface CarriedItem {
@@ -55,18 +55,20 @@ export interface CarriedItem {
 }
 
 /**
- * 给上阵的人分配物品：每种有库存的物品带一个，依次分给不同的人；陷阱每种一个装在栅栏上（没有栅栏就不带）。
+ * 给上阵的人分配物品：每种有库存的物品带一个，依次分给不同的人；
+ * 陷阱每种一个，依次装在门上（排在前面的门先装：今晚被攻打的门；没有栅栏就不带）。
  * 直接修改 setups 的 extraSkills，返回谁带了什么，战后用来结算消耗。
  */
 export function equipItems(config: GameConfig, state: GameState, setups: UnitSetup[]): CarriedItem[] {
     // 只有幸存者会带物品（栅栏、狗也有 tag，但不算）
     const carriers = setups.filter((s) => s.tag && state.survivors.some((x) => x.id === s.tag));
-    const wall = setups.find((s) => s.tag === TRAP_HOLDER);
+    const walls = setups.filter((s) => s.unit === TRAP_HOLDER && s.tag);
     const carried: CarriedItem[] = [];
     let handed = 0;
+    let traps = 0;
     for (const item of config.items) {
         if (itemCount(state, item.id) <= 0) continue;
-        const carrier = item.trap ? wall : carriers.length ? carriers[handed++ % carriers.length] : undefined;
+        const carrier = item.trap ? walls[traps++ % Math.max(1, walls.length)] : carriers.length ? carriers[handed++ % carriers.length] : undefined;
         if (!carrier) continue;
         carrier.extraSkills = [...(carrier.extraSkills ?? []), item.battleSkill];
         carried.push({ tag: carrier.tag!, item });
