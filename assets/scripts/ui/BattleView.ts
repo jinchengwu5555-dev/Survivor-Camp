@@ -158,6 +158,14 @@ export class BattleView {
             });
         }
 
+        if (!camp) {
+            // 地点的招牌：图标 + 名字（标题里“回放：xxx”的地点名）
+            const b = this.sceneBuilding();
+            const top = this.toScreen({ x: (b.x1 + b.x2) / 2, y: b.y2 });
+            const name = opts.title.replace(/^[^：]*：/, '');
+            const icon = this.battle.setup.scene?.icon ?? '🏚️';
+            addLabel(this.fx, `${icon} ${name}`, 20, COLORS.accent, { width: 360, height: 28 }).node.setPosition(top.x, top.y + 22);
+        }
         this.controls = makeNode('Controls', this.root, WIDTH, 440);
         this.controls.setPosition(0, -420);
         const small = (WIDTH - 20) / 3;
@@ -271,11 +279,7 @@ export class BattleView {
         drawPanel(g, FIELD_SIZE, FIELD_SIZE, FIELD_BG, 10);
         const camp = this.battle.setup.camp;
         if (camp) this.drawCamp(g);
-        else {
-            g.fillColor = GROUND;
-            g.rect(-half + 8, -half / 2, FIELD_SIZE - 16, half);
-            g.fill();
-        }
+        else this.drawScene(g);
         this.drawWaveBar(g);
 
         // 倒下的残影
@@ -320,6 +324,73 @@ export class BattleView {
                 g.stroke();
             }
             if (u.hp < u.stats.maxHp && (u.side === 'ally' || this.isSpecial(u))) this.hpBar(g, s.x, s.y + r + 4, Math.max(18, r * 2.4), u);
+        }
+    }
+
+    /** 探索地点的建筑（世界坐标）：敌人一开始都在里面，左边墙上开门，小队从左边的路上走过来 */
+    private sceneBuilding(): { x1: number; x2: number; y1: number; y2: number } {
+        const xs = this.battle.setup.enemies.map((s, i) => s.x ?? 10 + i * 0.8);
+        const min = xs.length ? Math.min(...xs) : 10;
+        const max = xs.length ? Math.max(...xs) : 14;
+        return { x1: min - 1.6, x2: Math.max(min + 5, max + 1.8), y1: -3.4, y2: 3.4 };
+    }
+
+    /** 探索战斗：地面、通往建筑的路、地点的建筑（门口朝小队）、周围的废车和杂物 */
+    private drawScene(g: Graphics): void {
+        const half = FIELD_SIZE / 2;
+        g.fillColor = hexColor('#1a2124');
+        g.rect(-half + 8, -half + 8, FIELD_SIZE - 16, FIELD_SIZE - 16);
+        g.fill();
+        const b = this.sceneBuilding();
+        // 路：从左边一直通到门口
+        const roadTop = this.toScreen({ x: 0, y: 1.3 }).y;
+        const roadBottom = this.toScreen({ x: 0, y: -1.3 }).y;
+        const door = this.toScreen({ x: b.x1, y: 0 });
+        g.fillColor = hexColor('#262c2e');
+        g.rect(-half + 8, roadBottom, door.x + half - 8, roadTop - roadBottom);
+        g.fill();
+        g.fillColor = new Color(200, 190, 120, 90);
+        for (let x = -half + 30; x < door.x - 20; x += 50) {
+            g.rect(x, (roadTop + roadBottom) / 2 - 2, 24, 4);
+            g.fill();
+        }
+        // 杂物：几辆废车、一些箱子（每次画都一样）
+        for (let k = 0; k < 7; k++) {
+            const p = this.toScreen({ x: -3 + ((k * 37) % 13) * 0.9, y: (k % 2 ? 1 : -1) * (2.2 + ((k * 11) % 5) * 0.5) });
+            if (p.x > door.x - 30) continue;
+            g.fillColor = k % 3 === 0 ? hexColor('#3a3430') : hexColor('#2e3a40');
+            g.roundRect(p.x - 16, p.y - 8, k % 3 === 0 ? 24 : 34, k % 3 === 0 ? 18 : 16, 3);
+            g.fill();
+        }
+        // 建筑：屋顶 + 外墙，左墙中间是门
+        const lo = this.toScreen({ x: b.x1, y: b.y1 });
+        const hi = this.toScreen({ x: b.x2, y: b.y2 });
+        g.fillColor = hexColor('#232c30');
+        g.rect(lo.x, lo.y, hi.x - lo.x, hi.y - lo.y);
+        g.fill();
+        // 屋里的地砖
+        g.strokeColor = new Color(255, 255, 255, 12);
+        g.lineWidth = 1;
+        for (let x = lo.x + 30; x < hi.x; x += 30) {
+            g.moveTo(x, lo.y);
+            g.lineTo(x, hi.y);
+        }
+        g.stroke();
+        const t = Math.max(6, this.scale * 0.3);
+        const gap = this.scale * 1.3;
+        g.fillColor = WALL_COLOR;
+        g.rect(lo.x - t / 2, hi.y - t / 2, hi.x - lo.x + t, t);
+        g.rect(lo.x - t / 2, lo.y - t / 2, hi.x - lo.x + t, t);
+        g.rect(hi.x - t / 2, lo.y, t, hi.y - lo.y);
+        g.rect(lo.x - t / 2, lo.y, t, door.y - gap - lo.y);
+        g.rect(lo.x - t / 2, door.y + gap, t, hi.y - door.y - gap);
+        g.fill();
+        // 屋里的货架 / 隔断（挡不住人，只是看起来像个地方）
+        g.fillColor = hexColor('#2f3b40');
+        for (let k = 0; k < 4; k++) {
+            const x = lo.x + (hi.x - lo.x) * (0.3 + k * 0.17);
+            g.rect(x, lo.y + (k % 2 ? (hi.y - lo.y) * 0.62 : 12), 10, (hi.y - lo.y) * 0.26);
+            g.fill();
         }
     }
 

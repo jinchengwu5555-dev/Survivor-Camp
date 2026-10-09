@@ -223,6 +223,7 @@ export function expeditionSetup(
         enemies: levelUpEnemies(loc.enemies, enemyBonus),
         timeLimit: loc.timeLimit,
         timeoutResult: 'lose',
+        scene: { icon: loc.icon ?? '🏚️', location: loc.id },
         seed,
         autoCastActive: true,
     };

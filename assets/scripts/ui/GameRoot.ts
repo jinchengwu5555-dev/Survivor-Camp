@@ -38,7 +38,7 @@ import { seasonAt } from '../core/seasons';
 import { loadGame, saveGame } from '../core/save';
 import { currentDay, hasFlag } from '../core/state';
 import { currentEpisode, objectiveDone, objectiveProgress } from '../core/story';
-import { CandidateState, GearSlot, PropDef, HuntingGround, BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
+import { CandidateState, GearSlot, LocationDef, PropDef, HuntingGround, BattleReport, BuildingDef, BuildingLevelDef, DistrictDef, GameConfig, GEAR_SLOTS, LootPiece, RESOURCE_IDS, ResourceBag, SurvivorRow, WatchMode } from '../core/types';
 import { validateConfig } from '../core/validate';
 import { carryOverAchievements, loadRecords, MetaRecords, recordRun, saveRecords } from '../core/records';
 import { survivorInfo, survivorName } from '../core/roster';
@@ -92,7 +92,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.6 门随栅栏升级';
+const GAME_VERSION = 'v3.7 探索场景';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -2994,6 +2994,7 @@ export class GameRoot extends Component {
         const lostGear = state.droppedGear?.[loc.id];
         if (lostGear) this.text(`💀 牺牲的战友把装备留在了这里：${formatProps(config, lostGear)}（打下这里才能捡回来）`, 18, LOSE);
         this.text(`战利品 ${formatBag(config, expeditionLoot(config, state, loc))}${drops.length ? `   可能找到：${drops.join('、')}` : ''}`, 18);
+        this.text(`🧟 可能遇到：${enemyHint(config, loc)}`, 18, LOSE);
         const ex = state.expeditions.find((e) => e.location === loc.id);
         if (ex) {
             const left = realSeconds(config, ex.returnsAt - now);
@@ -3508,6 +3509,17 @@ const HELP_LINES = [
     '· 黄金只在前期值钱，早点花掉。',
     '· 人会死，全死光营地就覆灭。比的是你能坚持多少天。',
 ];
+
+/** 地点里可能遇到的敌人：种类 + 大概的数量（1 只 / 几只 / 一群），特殊的排前面 */
+function enemyHint(config: GameConfig, loc: LocationDef): string {
+    const reg = battleRegistry(config);
+    const counts = new Map<string, number>();
+    for (const e of loc.enemies) counts.set(e.unit, (counts.get(e.unit) ?? 0) + 1);
+    const parts = [...counts.entries()]
+        .sort((a, b) => a[1] - b[1])
+        .map(([id, n]) => `${reg.hasUnit(id) ? reg.unit(id).name : id}${n === 1 ? ' 1 只' : n <= 3 ? ' 几只' : ' 一群'}`);
+    return parts.join('、') || '看不出来';
+}
 
 /** 背包里每种东西一个颜色 */
 function pieceColor(p: LootPiece): Color {

@@ -64,6 +64,8 @@ export interface BattleSetup {
     allyHoldLine?: number;
     /** 营地布局（俯视守夜）：方形围墙和门 */
     camp?: CampLayout;
+    /** 探索战斗的场景（只用来画）：在哪个地点打（图标、地点 id） */
+    scene?: { icon: string; location?: string };
     /** 玩家的操作记录：重放战报时按时间点原样执行（手动守夜的战报靠它完整重放） */
     inputs?: BattleInput[];
 }
