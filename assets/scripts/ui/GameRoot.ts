@@ -17,6 +17,7 @@ import {
     DOG_FLAG,
     expeditionLoot,
     formatBag,
+    GATE_NAMES,
     isOnExpedition,
     nextRaidIsBloodMoon,
     raidDefenders,
@@ -75,7 +76,7 @@ import { campPoint, exploredRatio, isRevealed, locationStatus, prerequisiteOf, r
 import { activeScoutSpots, scoutKind } from '../core/scouting';
 import { BadgeGroup, farmTodos } from '../core/badges';
 import { latestEntries } from '../core/diary';
-import { repairBlocker, wallDurability, wallRepairCost } from '../core/wall';
+import { campGates, nextGateUnlock, repairBlocker, wallDurability, wallRepairCost } from '../core/wall';
 import { todayIntel } from '../core/intel';
 import { AnimalSpace, SPACE_NAMES, spaceOf, animalDef, gardenKeepers, cropDef, dailyFeed, foodGrowth, growMinutes, isGreenhouse, penCapacity, petBlocker, plantBlocker, produceFood, readyPlots } from '../core/farming';
 import { formatProps, propBlocker, propCount, propDef, propReward, treasureValue } from '../core/props';
@@ -91,7 +92,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.5 守夜就在营地里';
+const GAME_VERSION = 'v3.6 门随栅栏升级';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -1096,15 +1097,21 @@ export class GameRoot extends Component {
         const cy = (bottom + top) / 2;
         const w = style.width;
         // 四条墙，中间留门
+        // 只有开了的门才在墙上留缺口（0 北、1 东、2 南、3 西，随栅栏等级一个个开）
+        const open = campGates(camp.config, camp.state);
+        const gN = open.includes(0) ? gap : 0;
+        const gS = open.includes(2) ? gap : 0;
+        const gW = open.includes(3) ? gap : 0;
+        const gE = open.includes(1) ? gap : 0;
         const segs: [number, number, number, number][] = [
-            [left, top - w / 2, cx - gap - left, w],
-            [cx + gap, top - w / 2, right - cx - gap, w],
-            [left, bottom - w / 2, cx - gap - left, w],
-            [cx + gap, bottom - w / 2, right - cx - gap, w],
-            [left - w / 2, bottom, w, cy - gap - bottom],
-            [left - w / 2, cy + gap, w, top - cy - gap],
-            [right - w / 2, bottom, w, cy - gap - bottom],
-            [right - w / 2, cy + gap, w, top - cy - gap],
+            [left, top - w / 2, cx - gN - left, w],
+            [cx + gN, top - w / 2, right - cx - gN, w],
+            [left, bottom - w / 2, cx - gS - left, w],
+            [cx + gS, bottom - w / 2, right - cx - gS, w],
+            [left - w / 2, bottom, w, cy - gW - bottom],
+            [left - w / 2, cy + gW, w, top - cy - gW],
+            [right - w / 2, bottom, w, cy - gE - bottom],
+            [right - w / 2, cy + gE, w, top - cy - gE],
         ];
         for (const [x, y, sw, sh] of segs) {
             g.fillColor = style.color;
@@ -1120,10 +1127,10 @@ export class GameRoot extends Component {
         const k = 0.45 + 0.55 * Math.max(0, Math.min(1, durability / 100));
         const gateFill = new Color(Math.round(122 * k), Math.round(90 * k), Math.round(52 * k));
         const gates: [number, number, number, number][] = [
-            [cx - gap, top - w / 2 - 3, gap * 2, w + 6],
-            [cx - gap, bottom - w / 2 - 3, gap * 2, w + 6],
-            [left - w / 2 - 3, cy - gap, w + 6, gap * 2],
-            [right - w / 2 - 3, cy - gap, w + 6, gap * 2],
+            ...(gN ? [[cx - gap, top - w / 2 - 3, gap * 2, w + 6] as [number, number, number, number]] : []),
+            ...(gS ? [[cx - gap, bottom - w / 2 - 3, gap * 2, w + 6] as [number, number, number, number]] : []),
+            ...(gW ? [[left - w / 2 - 3, cy - gap, w + 6, gap * 2] as [number, number, number, number]] : []),
+            ...(gE ? [[right - w / 2 - 3, cy - gap, w + 6, gap * 2] as [number, number, number, number]] : []),
         ];
         for (const [x, y, gw, gh] of gates) {
             g.fillColor = gateFill;
@@ -1973,6 +1980,9 @@ export class GameRoot extends Component {
     /** 栅栏：耐久和修补（守夜打坏的部分会留到下一晚） */
     private renderWallRepair(camp: CampGame): void {
         const { config, state } = camp;
+        const gates = campGates(config, state).map((g) => GATE_NAMES[g]).join('、');
+        const next = nextGateUnlock(config, state);
+        this.text(`🚪 现在的门：${gates}${next ? `（栅栏升到 ${next.level} 级开${GATE_NAMES[next.gate]}）` : '（四面都有门了）'}。门越多尸群越分散，但要守的口子也越多`, 20, ACCENT);
         const durability = wallDurability(state);
         this.text(`🧱 耐久 ${durability}%${durability < 100 ? '：守夜时被打坏了，不修的话下一晚栅栏会带着伤出场' : '：完好'}`, 22, durability < 60 ? LOSE : durability < 100 ? ACCENT : WIN);
         if (durability < 100) {

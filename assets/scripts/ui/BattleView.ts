@@ -10,7 +10,7 @@
 
 import { Color, EventTouch, Graphics, Label, Node, UITransform, Vec3 } from 'cc';
 import { Battle, BattleSetup, waveTimes } from '../core/battle/Battle';
-import { campBounds, campCenter, gateNormal, Point } from '../core/battle/geometry';
+import { campBounds, campCenter, gateNormal, gateOpen, Point } from '../core/battle/geometry';
 import { BattleUnit } from '../core/battle/types';
 import { battleRegistry, CORE_UNIT, GATE_NAMES } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
@@ -75,9 +75,9 @@ export class BattleView {
     private readonly controls: Node;
     private readonly speedButton: UIButton;
     private readonly skipButton: UIButton;
-    private readonly gateButtons: UIButton[] = [];
+    private readonly gateButtons: (UIButton | null)[] = [];
     private readonly peopleButtons = new Map<number, UIButton>();
-    private readonly gateLabels: Label[] = [];
+    private readonly gateLabels: (Label | null)[] = [];
     private speed = 1;
     private seenEvents = 0;
     /** 视野：世界坐标的中心和缩放（像素 / 格） */
@@ -146,6 +146,10 @@ export class BattleView {
                 addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale), height: 20 }).node.setPosition(sp.x, sp.y - 18);
             }
             camp.gates.forEach((g, i) => {
+                if (!gateOpen(camp, i)) {
+                    this.gateLabels.push(null);
+                    return;
+                }
                 const n = gateNormal(camp, g);
                 const label = addLabel(this.fx, GATE_NAMES[i] ?? `门${i + 1}`, 18, COLORS.text, { width: 120, height: 24 });
                 const s = this.toScreen({ x: g.x + n.x * 1.1, y: g.y + n.y * 1.1 });
@@ -166,11 +170,17 @@ export class BattleView {
 
         const live = opts.live;
         if (live && camp) {
-            // 四个门的按钮：选了人 = 调过去；没选人 = 修门
-            const w = (WIDTH - 30) / 4;
+            // 每个门一个按钮（只有开了的门）：选了人 = 调过去；没选人 = 修门
+            const open = camp.gates.map((_, i) => i).filter((i) => gateOpen(camp, i));
+            const w = (WIDTH - 10 * (open.length - 1)) / open.length;
             camp.gates.forEach((_, i) => {
+                const k = open.indexOf(i);
+                if (k < 0) {
+                    this.gateButtons.push(null);
+                    return;
+                }
                 const btn = new UIButton(this.controls, w, 64, () => this.onGate(i), 20);
-                btn.node.setPosition(-WIDTH / 2 + w / 2 + i * (w + 10), 170);
+                btn.node.setPosition(-WIDTH / 2 + w / 2 + k * (w + 10), 170);
                 this.gateButtons.push(btn);
             });
             // 有手动技能的话交给自动释放（现在幸存者都没有技能，物品是自动用的）
@@ -339,14 +349,16 @@ export class BattleView {
         // 围墙：四条边，门的位置留出缺口
         const gap = 1.1 * this.scale;
         const segs: [number, number, number, number][] = [];
-        for (const gate of camp.gates) {
+        for (const [gi, gate] of camp.gates.entries()) {
             const gs = this.toScreen(gate);
+            // 没开门的那面是一整堵墙
+            const g0 = gateOpen(camp, gi) ? gap : 0;
             const horizontal = gateNormal(camp, gate).y !== 0;
             const fixed = horizontal ? gs.y : gs.x;
             const along = horizontal ? gs.x : gs.y;
             const from = horizontal ? lo.x : lo.y;
             const to = horizontal ? hi.x : hi.y;
-            for (const [a, b] of [[from - t / 2, along - gap], [along + gap, to + t / 2]] as [number, number][]) {
+            for (const [a, b] of [[from - t / 2, along - g0], [along + g0, to + t / 2]] as [number, number][]) {
                 if (horizontal) segs.push([a, fixed - t / 2, b - a, t]);
                 else segs.push([fixed - t / 2, a, t, b - a]);
             }
@@ -362,6 +374,7 @@ export class BattleView {
         }
         // 门：木门，越破颜色越暗；被打破了画成一地碎木头
         camp.gates.forEach((gate, i) => {
+            if (!gateOpen(camp, i)) return;
             const unit = this.battle.gateUnit(i);
             const s = this.toScreen(gate);
             const horizontal = gateNormal(camp, gate).y !== 0;
@@ -584,7 +597,7 @@ export class BattleView {
             return;
         }
         const gate = camp.gates
-            .map((g, i) => ({ i, d: Math.hypot(g.x - p.x, g.y - p.y) }))
+            .map((g, i) => ({ i, d: gateOpen(camp, i) ? Math.hypot(g.x - p.x, g.y - p.y) : Infinity }))
             .sort((a, b) => a.d - b.d)[0];
         if (gate && gate.d <= 2.2) this.onGate(gate.i);
         else this.selected = null;
@@ -642,6 +655,7 @@ export class BattleView {
         const defenders = live.defenders();
         camp.gates.forEach((_, i) => {
             const btn = this.gateButtons[i];
+            if (!btn) return;
             const unit = b.gateUnit(i);
             const guards = defenders.filter((d) => d.post === i).length;
             const hp = unit?.alive ? `${Math.round((unit.hp / unit.stats.maxHp) * 100)}%` : '破了';

@@ -4,7 +4,7 @@
 // 所有战斗都是按种子自动结算的，战报里保存了完整的 BattleSetup，
 // 界面以后可以用同一个种子把整场战斗重放出来（结果完全一致）。
 
-import { recordWallDamage, wallWear } from './wall';
+import { campGates, recordWallDamage, wallWear } from './wall';
 import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
 import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
 import { CampBuilding, campCenter, CampLayout, gateNormal, Rect } from './battle/geometry';
@@ -53,6 +53,9 @@ export const BARRICADE_UNIT = 'barricade';
 export const CORE_UNIT = 'camp_core';
 /** 四个门的名字（顺序和 campLayout 一致） */
 export const GATE_NAMES = ['北门', '东门', '南门', '西门'];
+
+/** 门少时每个门的生命加成：× (4 / 门数)^这个数 */
+const GATE_FEW_BONUS = 0.75;
 
 /** 第几个门的 tag */
 export function gateTag(gate: number): string {
@@ -234,6 +237,8 @@ export interface RaidOptions {
     enemyBonus?: number;
     /** 营地真实的围墙和建筑（营地地图上清理出来的范围）；不给就是标准的正方形营地 */
     camp?: { rect: Rect; buildings: CampBuilding[] };
+    /** 营地有哪几个门（0 北、1 东、2 南、3 西）；不给就是四个门都有 */
+    gates?: number[];
 }
 
 /** 血月夜的敌人：原来的尸群里每隔一只再来一只（多 50%），晚 2 秒出场 */
@@ -286,17 +291,26 @@ export function raidSetup(
     options: RaidOptions = {},
 ): BattleSetup {
     const camp = campLayout(config, options.camp?.rect, options.camp?.buildings);
+    const open = options.gates?.length ? options.gates : [0, 1, 2, 3];
+    if (open.length < 4) camp.closed = [0, 1, 2, 3].filter((g) => !open.includes(g));
     const center = campCenter(camp);
     const cfg = config.balance.camp ?? { half: 6, spawnDistance: 9, gateHpShare: 0.5, coreHpShare: 0.6 };
-    const sides = attackedGates(raid, seed);
-    // 门：被攻打的排在前面（陷阱先装在这些门上）
-    const gateOrder = [...sides, ...[0, 1, 2, 3].filter((g) => !sides.includes(g))];
+    const open0 = options.gates?.length ? options.gates : [0, 1, 2, 3];
+    // 尸群冲着门来：今晚要来的方向上没开门，就改从离它最近的门那边来（相邻的方向优先）
+    const nearestOpen = (g: number) => [...open0].sort((a, b) => Math.min((a - g + 4) % 4, (g - a + 4) % 4) - Math.min((b - g + 4) % 4, (g - b + 4) % 4) || a - b)[0];
+    const sides = attackedGates(raid, seed).map((g) => (open0.includes(g) ? g : nearestOpen(g)));
+    // 门：只有开了的门才有栅栏；被攻打的方向排在前面（陷阱先装在这些门上）
+    const gateOrder = [...new Set([...sides, 0, 1, 2, 3])].filter((g) => open.includes(g));
+    // 守门的人分到被攻打方向上的门；那个方向没开门，就守离得最近的门
+    const postGates = gateOrder.filter((g) => sides.includes(g));
+    if (!postGates.length) postGates.push(...gateOrder);
     const gates: UnitSetup[] = gateOrder.map((g) => ({
         unit: BARRICADE_UNIT,
         x: camp.gates[g].x,
         y: camp.gates[g].y,
         gate: g,
-        maxHp: Math.max(1, Math.round(wallHp * cfg.gateHpShare)),
+        // 门少的时候，整圈栅栏的料都用在这几个门上：门越少每个门越结实
+        maxHp: Math.max(1, Math.round(wallHp * cfg.gateHpShare * Math.pow(4 / open.length, GATE_FEW_BONUS))),
         tag: gateTag(g),
         atk: trapAtk(config, level),
     }));
@@ -305,7 +319,7 @@ export function raidSetup(
     if (options.dog) people.push({ unit: DOG_UNIT, level, tag: DOG_UNIT });
     // 守门的人轮流分到今晚被攻打的门，站在门里面
     people.forEach((p, i) => {
-        const g = sides[i % sides.length];
+        const g = postGates[i % postGates.length];
         const gate = camp.gates[g];
         p.post = g;
         p.x = gate.x + (center.x - gate.x) * 0.2;
@@ -598,7 +612,7 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
     const flareBonus = state.flare ? config.balance.flare?.raidBonus ?? 0 : 0;
     state.flare = false;
     const enemyBonus = raidEnemyBonus(config, state, at) + flareBonus;
-    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus, camp: battleCamp(config, state) };
+    const options: RaidOptions = { bloodMoon, dog: hasFlag(state, DOG_FLAG), enemyBonus, camp: battleCamp(config, state), gates: campGates(config, state) };
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state) * wallFactor, level, randomSeed(state), options);
     // 上一晚没修好的栅栏：每个门都带着伤出场（wall.ts）
     const wear = wallWear(state);
@@ -692,7 +706,7 @@ export function fightStragglers(config: GameConfig, state: GameState, group: Str
     const defenders = squadOf(config, state, raidDefenders(config, state));
     // 种子 % 4 决定从哪个门来（attackedGates）
     const seed = Math.floor(nextRandom(state) * 2 ** 28) * 4 + group.gate;
-    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed, { camp: battleCamp(config, state) });
+    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed, { camp: battleCamp(config, state), gates: campGates(config, state) });
     const wear = wallWear(state);
     if (wear > 0) setup.allies = setup.allies.map((a) => (a.gate !== undefined ? { ...a, hpRatio: 1 - wear } : a));
     const battle = new Battle(battleRegistry(config), setup);

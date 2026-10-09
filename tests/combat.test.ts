@@ -162,10 +162,12 @@ describe('尸潮夜袭', () => {
         game.tick(T0 + RAID);
         const report = game.state.reports[0];
         expect(report).toMatchObject({ kind: 'raid', title: '尸群', result: 'win', loot: { parts: 10, wood: 20 } });
-        // 四个门 + 营地核心 + 守夜的人；每个门分到栅栏总生命的一部分
-        expect(report.setup.allies.map((a) => a.tag).sort()).toEqual(['camp_core', 'derek', 'ethan', 'gate_0', 'gate_1', 'gate_2', 'gate_3', 'martha', 'sophie', 'toby']);
+        // 栅栏 2 级只有南门 + 营地核心 + 守夜的人；门分到栅栏总生命的一部分
+        expect(report.setup.allies.map((a) => a.tag).sort()).toEqual(['camp_core', 'derek', 'ethan', 'gate_2', 'martha', 'sophie', 'toby']);
+        expect(report.setup.camp?.closed).toEqual([0, 1, 3]);
         const gate = report.setup.allies.find((a) => a.gate !== undefined)!;
-        expect(gate.maxHp).toBe(Math.round(25 * 30 * game.config.balance.camp!.gateHpShare));
+        // 只有一个门：整圈栅栏的料都用在它身上（× (4 / 门数)^0.75）
+        expect(gate.maxHp).toBe(Math.round(25 * 30 * game.config.balance.camp!.gateHpShare * Math.pow(4, 0.75)));
         expect(report.setup.mustSurvive).toEqual(['camp_core']);
         expect(report.setup.camp?.gates).toHaveLength(4);
         expect(game.state.resources.parts).toBeGreaterThanOrEqual(parts + 10);
@@ -181,6 +183,8 @@ describe('尸潮夜袭', () => {
 
     it('门被打破、营地核心被拆就算输', () => {
         const game = newGame();
+        // 四面都有门（不按栅栏等级开门）
+        game.config.balance.camp!.gateUnlocks = undefined;
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 1;
         const raid = game.config.raids.find((r) => r.id === 'great_horde')!;

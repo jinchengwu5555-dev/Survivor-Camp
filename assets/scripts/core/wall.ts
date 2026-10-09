@@ -11,6 +11,21 @@ export function wallWear(state: GameState): number {
 }
 
 /** 现在的耐久百分比（100 = 完好） */
+/** 营地现在有哪几个门（0 北、1 东、2 南、3 西）：随栅栏等级一个个开出来 */
+export function campGates(config: GameConfig, state: GameState): number[] {
+    const unlocks = config.balance.camp?.gateUnlocks;
+    if (!unlocks?.length) return [0, 1, 2, 3];
+    const level = Math.max(1, state.buildings.wall?.level ?? 0);
+    const open = unlocks.filter((u) => level >= u.level).map((u) => u.gate);
+    return open.length ? [...new Set(open)].sort() : [unlocks[0].gate];
+}
+
+/** 下一个门在栅栏几级开（都开了返回 null） */
+export function nextGateUnlock(config: GameConfig, state: GameState): { level: number; gate: number } | null {
+    const level = state.buildings.wall?.level ?? 0;
+    return (config.balance.camp?.gateUnlocks ?? []).filter((u) => u.level > level).sort((a, b) => a.level - b.level)[0] ?? null;
+}
+
 export function wallDurability(state: GameState): number {
     return Math.round((1 - wallWear(state)) * 100);
 }

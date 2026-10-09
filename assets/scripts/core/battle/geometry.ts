@@ -25,7 +25,77 @@ export interface CampLayout {
     rect?: Rect;
     /** 营地里的建筑（只用来画，不挡路） */
     buildings?: CampBuilding[];
+    /** 这些位置还没开门，是实心的墙（gates 的下标） */
+    closed?: number[];
 }
+
+export function gateOpen(camp: CampLayout, index: number): boolean {
+    return !(camp.closed ?? []).includes(index);
+}
+
+/** 线段 a→b 有没有穿过围墙里面（擦着墙线走不算） */
+export function crossesCamp(camp: CampLayout, a: Point, b: Point): boolean {
+    const r = campBounds(camp);
+    const e = 0.05;
+    const x1 = r.x1 + e, x2 = r.x2 - e, y1 = r.y1 + e, y2 = r.y2 - e;
+    // Liang–Barsky 裁剪
+    let t0 = 0;
+    let t1 = 1;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const checks: [number, number][] = [
+        [-dx, a.x - x1],
+        [dx, x2 - a.x],
+        [-dy, a.y - y1],
+        [dy, y2 - a.y],
+    ];
+    for (const [p, q] of checks) {
+        if (Math.abs(p) < 1e-12) {
+            if (q < 0) return false;
+            continue;
+        }
+        const t = q / p;
+        if (p < 0) t0 = Math.max(t0, t);
+        else t1 = Math.min(t1, t);
+        if (t0 > t1) return false;
+    }
+    return t1 - t0 > 1e-6;
+}
+
+/**
+ * 墙外的人要去 to：直线会穿过营地的话，先绕到营地的一个角上（选总路程最短、过去不穿墙的那个角）。
+ * 每一步重新算一次，走到角上自然会转向下一个角或者目的地。
+ */
+export function detour(camp: CampLayout, from: Point, to: Point): Point {
+    if (!crossesCamp(camp, from, to)) return to;
+    const r = campBounds(camp);
+    const m = 0.7;
+    const corners = [
+        { x: r.x1 - m, y: r.y1 - m },
+        { x: r.x2 + m, y: r.y1 - m },
+        { x: r.x1 - m, y: r.y2 + m },
+        { x: r.x2 + m, y: r.y2 + m },
+    ];
+    // 从角 c 到 to 的路程：能直接走就直接走，否则再经过一个角（矩形最多绕两个角）
+    const rest = (c: Point): number => {
+        if (!crossesCamp(camp, c, to)) return distance(c, to);
+        let best = Infinity;
+        for (const c2 of corners) if (c2 !== c && !crossesCamp(camp, c, c2) && !crossesCamp(camp, c2, to)) best = Math.min(best, distance(c, c2) + distance(c2, to));
+        return best;
+    };
+    let pick: Point | undefined;
+    let cost = Infinity;
+    for (const c of corners) {
+        if (distance(c, from) <= 0.05 || crossesCamp(camp, from, c)) continue;
+        const total = distance(from, c) + rest(c);
+        if (total < cost) {
+            cost = total;
+            pick = c;
+        }
+    }
+    return pick ?? to;
+}
+
 
 export interface Rect {
     x1: number;

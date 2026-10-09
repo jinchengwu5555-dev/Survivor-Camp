@@ -10,7 +10,7 @@
 // 战斗逻辑以固定步长（STEP 秒）推进，结果只由种子决定，同一个种子可以完整重放。
 
 import { DamagePipeline } from './damage';
-import { campBounds, CampLayout, clampInside, distance, gateNormal, insideCamp, Point, pushOutside, stepToward } from './geometry';
+import { campBounds, CampLayout, clampInside, detour, distance, gateNormal, gateOpen, insideCamp, Point, pushOutside, stepToward } from './geometry';
 import { BattleRegistry } from './registry';
 import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, fireShieldBroken, nearest, updateSkills } from './skills';
 import { canAct, canMove, effectiveAtk, effectiveAttackInterval, effectiveMoveSpeed, updateStatuses } from './status';
@@ -213,6 +213,7 @@ export class Battle implements BattleContext {
         if (this.result !== 'ongoing') return '战斗已结束';
         const camp = this.setup.camp;
         if (!camp || gate < 0 || gate >= camp.gates.length) return '没有这个门';
+        if (!gateOpen(camp, gate)) return '那里还没有门';
         const unit = this.getUnit(uid);
         if (!unit || unit.side !== 'ally' || !unit.alive || unit.def.faction === 'structure') return '找不到这个人';
         if (unit.post === gate) return '已经在守这个门了';
@@ -232,7 +233,7 @@ export class Battle implements BattleContext {
         const camp = this.setup.camp;
         if (!camp) return;
         this.gateUnits = camp.gates.map((_, i) => this.gateUnit(i));
-        this.openGateCache = camp.gates.filter((_, i) => !this.gateUnits[i]?.alive);
+        this.openGateCache = camp.gates.filter((_, i) => gateOpen(camp, i) && !this.gateUnits[i]?.alive);
         this.postMates.clear();
         for (const u of this.units) {
             if (!u.alive || u.side !== 'ally' || u.post === undefined || u.def.faction === 'structure') continue;
@@ -347,6 +348,14 @@ export class Battle implements BattleContext {
             const gap = this.nearestOpenGate(u);
             if (gap) {
                 dest = gap;
+                stop = 0;
+            }
+        }
+        // 墙外的丧尸：直线会穿过营地就先绕到墙角
+        if (camp && u.side === 'enemy' && !insideCamp(camp, u)) {
+            const via = detour(camp, u, dest);
+            if (via !== dest) {
+                dest = via;
                 stop = 0;
             }
         }
@@ -470,11 +479,12 @@ export class Battle implements BattleContext {
         // 丧尸：墙外先打离自己最近的门；门破了就冲进去拆营地核心，路上有人挡着就先咬人
         const people = enemies.filter((e) => e.gate === undefined);
         if (!insideCamp(camp, u) && !u.ignoreStructures) {
-            let gate = 0;
+            // 只看真的有门的位置（没开门的那面是实心墙，要绕过去）
+            let gate = -1;
             camp.gates.forEach((g, i) => {
-                if (distance(g, u) < distance(camp.gates[gate], u)) gate = i;
+                if (gateOpen(camp, i) && (gate < 0 || distance(g, u) < distance(camp.gates[gate], u))) gate = i;
             });
-            const unit = this.gateUnits[gate];
+            const unit = gate >= 0 ? this.gateUnits[gate] : undefined;
             if (unit?.alive) return unit;
         }
         const near = nearest(u, people.filter((e) => e.def.faction !== 'structure'));

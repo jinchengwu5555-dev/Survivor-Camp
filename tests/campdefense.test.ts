@@ -4,6 +4,7 @@ import { Battle } from '../assets/scripts/core/battle/Battle';
 import { insideCamp } from '../assets/scripts/core/battle/geometry';
 import { CampGame } from '../assets/scripts/core/CampGame';
 import { attackedGates, battleRegistry, raidSetup, squadOf } from '../assets/scripts/core/combat';
+import { campGates } from '../assets/scripts/core/wall';
 import { loadConfig, T0 } from './helpers';
 
 function setup(raidId = 'horde', wallHp = 1500, seed = 2) {
@@ -76,5 +77,31 @@ describe('俯视守夜', () => {
         const b = new Battle(battleRegistry(config), s);
         b.runToEnd();
         expect(b.result).toBe('lose');
+    });
+
+    it('开局只有一个门，栅栏升级一个个开；没门的那面丧尸要绕到门口', () => {
+        const config = loadConfig();
+        const game = CampGame.newGame(config, T0, 1);
+        game.state.buildings.wall.level = 1;
+        expect(campGates(config, game.state)).toEqual([2]);
+        game.state.buildings.wall.level = 3;
+        expect(campGates(config, game.state)).toEqual([0, 2]);
+        game.state.buildings.wall.level = 9;
+        expect(campGates(config, game.state)).toEqual([0, 1, 2, 3]);
+        // 只有南门，尸群从北边来：要绕过去打南门，门没破之前进不了营地
+        const raid = { ...config.raids.find((r) => r.id === 'horde')!, sides: 1 };
+        const squad = squadOf(config, game.state, game.state.survivors.map((s) => s.id));
+        const s = raidSetup(config, raid, squad, 3000, 1, 4 * 7 + 0, { gates: [2] });
+        expect(s.allies.filter((a) => a.gate !== undefined).map((a) => a.gate)).toEqual([2]);
+        const b = new Battle(battleRegistry(config), s);
+        let hitSouth = false;
+        while (b.result === 'ongoing') {
+            const before = b.events.length;
+            b.step();
+            for (const e of b.events.slice(before)) if (e.type === 'attack' && b.getUnit(e.target)?.gate === 2) hitSouth = true;
+            const gate = b.gateUnit(2);
+            if (gate?.alive) for (const u of b.units) if (u.side === 'enemy' && u.alive && !u.ignoreStructures) expect(insideCamp(s.camp!, u)).toBe(false);
+        }
+        expect(hitSouth).toBe(true);
     });
 });

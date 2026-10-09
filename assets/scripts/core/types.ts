@@ -77,6 +77,8 @@ export interface BalanceDef {
         gateHpShare: number;
         coreHpShare: number;
         swarm?: { units: string[]; count: number; hpMult: number; atkMult: number };
+        /** 栅栏升到几级开第几个门（0 北、1 东、2 南、3 西）；不写就是四个门都有 */
+        gateUnlocks?: { level: number; gate: number }[];
     };
     /**
      * 白天的游荡丧尸（core/stragglers.ts）：每隔大约 intervalMinutes 游戏分钟按 chance 刷一群（size 只，从 units 里随机），
