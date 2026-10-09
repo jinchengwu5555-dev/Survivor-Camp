@@ -22,6 +22,7 @@ import { checkEpisode, startStory } from './story';
 import { finishExpeditionNow, maybeRunRaid, recoverInjuries, resolveExpeditions, scheduleFirstRaid, startExpedition, suggestSquad, treatSurvivor } from './combat';
 import { LiveRaid } from './liveRaid';
 import { collectPickup, PickupResult, updatePickups } from './pickups';
+import { resolveStragglers, updateStragglers } from './stragglers';
 import { claimDaily, claimDailyChest, refreshDaily } from './daily';
 import { addWorker, autoAssign, removeWorker } from './workers';
 import { refreshTraderOffers, trade, updateTrader } from './trader';
@@ -158,6 +159,7 @@ export class CampGame {
         maybeRunRaid(this.config, s, now, this.liveRaids);
         maybeTriggerRandomEvent(this.config, s, now);
         updatePickups(this.config, s, now);
+        updateStragglers(this.config, s, now, this.liveRaids);
         updateTrader(this.config, s, now);
         updateScoutSpots(this.config, s, now);
         updateChatter(this.config, s, now);
@@ -186,6 +188,14 @@ export class CampGame {
         const result = action();
         this.settle(now);
         return result;
+    }
+
+    /** 派人去清理白天晃到营地外的丧尸（stragglers.ts），返回战报（可以回放） */
+    clearStragglers(id: number, now: number): ActionResult & { report?: BattleReport } {
+        return this.act(now, () => {
+            const report = resolveStragglers(this.config, this.state, id, now, true);
+            return report ? { ok: true, message: report.summary, report } : { ok: false, reason: '它们已经走了' };
+        });
     }
 
     upgrade(buildingId: string, now: number): ActionResult {

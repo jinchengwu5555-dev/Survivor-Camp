@@ -280,6 +280,15 @@ npm run economy
 - 界面开着时（`camp.liveRaids = true`）尸潮放进 `state.pendingRaid` 由玩家亲手打；测试和数值模拟里自动结算。所有操作记在 `BattleSetup.inputs` 里，战报回放时原样执行。
 - 探索战斗的逻辑还是横向一条线（数值按它校准），画面上按人错开几排显示。
 
+### 白天的游荡丧尸（`core/stragglers.ts`，`balance.stragglers`）
+
+尸潮开始以后（第 2 天起），白天（7 点到 19 点）大约每 25 游戏分钟有 60% 的机会，一小群丧尸（2～4 只，拆成尸群后十来只小点）从某个门晃过来，营地地图的门口会出现一团紫点和“🧟×N 点我清理”的牌子，同时最多 2 群。
+
+- **及时点牌子**：派守夜的人去清理（守夜的营地布局，只从那个门来），自动结算后直接回放这场战斗；打赢得到 `reward`（零件、木材）。
+- **没人管**：`arriveMinutes`（6 游戏分钟）后它们自己撞上门，打完没有奖励，门额外损伤 `wallDamage`。
+- 倒下的人只会受伤、不会牺牲；门的损伤和守夜一样留到晚上。统计 `stragglers_cleared`。
+- 测试和模拟里（`liveRaids = false`）一出现就当作玩家去清理了。
+
 ### 路边拾荒（`core/pickups.ts`）
 
 营地附近平均每 10 游戏分钟（约 75 秒在线）出现一样东西——补给箱、废铁堆、急救箱、落单的行尸、罐头——显示成屏幕上方的金色按钮，点一下就捡走。最多同时 3 个，60 游戏分钟没人捡就消失。奖励随指挥部等级按探索战利品的倍率成长（罐头不成长）。配置在 `pickups.json`。
@@ -884,6 +893,7 @@ npm run economy
 | `props_used` | 使用背包道具的次数 |
 | `scouts_done`、`rescued_by_scouts` | 侦察回来的次数 / 侦察时救回的人 |
 | `quiet_nights` | 没有尸潮的夜晚 |
+| `stragglers_cleared` | 打退白天游荡丧尸的次数 |
 | `raiders_killed` | 击杀的掠夺者 |
 | `gear_equipped`、`gear_forged` | 穿上装备 / 在工坊打造装备的次数 |
 | `chats` | 营地闲聊的次数 |

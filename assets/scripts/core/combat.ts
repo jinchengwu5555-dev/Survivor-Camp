@@ -42,6 +42,7 @@ import {
     RESOURCE_IDS,
     ResourceBag,
     SurvivorRow,
+    StragglerGroup,
     SurvivorState,
 } from './types';
 
@@ -662,6 +663,41 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
         casualtyText(config, state, injured, dead) +
         usedText(itemsUsed);
     return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost, injured, dead, summary });
+}
+
+// ---------- 白天的游荡丧尸 ----------
+
+/**
+ * 白天晃到营地外的一小群丧尸（stragglers.ts）：用守夜的营地布局打一场小仗（只从一个门来），自动结算。
+ * 倒下的人只会受伤、不会牺牲；noticed = 玩家及时派人清理（有奖励），否则门还会被抓挠出额外的损伤。
+ */
+export function fightStragglers(config: GameConfig, state: GameState, group: StragglerGroup, at: number, noticed: boolean): BattleReport {
+    const cfg = config.balance.stragglers!;
+    const raid: RaidDef = { id: 'stragglers', name: '游荡的丧尸', enemies: group.enemies, timeLimit: cfg.timeLimit, reward: {}, sides: 1 };
+    const defenders = squadOf(config, state, raidDefenders(config, state));
+    // 种子 % 4 决定从哪个门来（attackedGates）
+    const seed = Math.floor(nextRandom(state) * 2 ** 28) * 4 + group.gate;
+    const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed);
+    const wear = wallWear(state);
+    if (wear > 0) setup.allies = setup.allies.map((a) => (a.gate !== undefined ? { ...a, hpRatio: 1 - wear } : a));
+    const battle = new Battle(battleRegistry(config), setup);
+    battle.runToEnd();
+    const { result, fallen } = battleOutcome(config, state, battle, []);
+    const walls = battle.side('ally').filter((u) => u.gate !== undefined);
+    const remaining = walls.length ? walls.reduce((sum, u) => sum + (u.alive ? u.hp / u.stats.maxHp : 0), 0) / walls.length : 1;
+    recordWallDamage(config, state, remaining, walls.some((u) => !u.alive));
+    if (!noticed && (config.balance.wallRepair?.maxWear ?? 0) > 0) state.wallWear = Math.min(config.balance.wallRepair!.maxWear, wallWear(state) + cfg.wallDamage);
+    const survivorIds = new Set(state.survivors.map((s) => s.id));
+    const { injured } = resolveFallen(config, state, fallen.filter((t) => survivorIds.has(t)), at, '', false);
+    let loot: ResourceBag = {};
+    if (result === 'win') {
+        addStat(state, 'stragglers_cleared');
+        if (noticed) loot = grantResources(config, state, cfg.reward);
+    }
+    const title = '游荡的丧尸';
+    const head = result === 'win' ? (noticed ? '把晃到营地外的丧尸清理掉了' : '丧尸摸到了门口，大家手忙脚乱地把它们打退了') : '丧尸在门口闹了一阵，大家没能打退它们，只好关紧门等它们散去';
+    const summary = `【${title}】${head}。${formatBag(config, loot) ? `捡到 ${formatBag(config, loot)}。` : ''}${!noticed ? '门被抓挠得不轻。' : ''}${casualtyText(config, state, injured, [])}`;
+    return addReport(state, { kind: 'raid', title, at, result, setup: { ...setup, inputs: [] }, loot, lost: {}, injured, dead: [], summary });
 }
 
 // ---------- 伤员 ----------

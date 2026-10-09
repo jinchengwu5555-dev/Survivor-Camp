@@ -148,6 +148,12 @@ export function validateConfig(config: GameConfig): string[] {
     if (!battle.hasUnit(BARRICADE_UNIT)) errors.push(`units.json 里必须有 id 为 ${BARRICADE_UNIT} 的栅栏`);
     if (!battle.hasUnit(CORE_UNIT)) errors.push(`units.json 里必须有 id 为 ${CORE_UNIT} 的营地核心`);
     for (const r of config.raids) if (r.sides !== undefined && (r.sides < 1 || r.sides > 4)) errors.push(`尸潮 ${r.id}：sides 要在 1～4 之间`);
+    const st = config.balance.stragglers;
+    if (st) {
+        for (const u of st.units) if (!battle.hasUnit(u)) errors.push(`balance.stragglers：未知战斗单位 ${u}`);
+        if (st.units.length === 0 || st.size[0] < 1 || st.size[1] < st.size[0]) errors.push('balance.stragglers：units 不能为空，size 要写成 [最少, 最多]');
+        checkBag('balance.stragglers.reward', st.reward);
+    }
     if (!battle.hasUnit(DOG_UNIT)) errors.push(`units.json 里必须有 id 为 ${DOG_UNIT} 的狗`);
     checkBag('治疗花费', config.balance.healCost);
 

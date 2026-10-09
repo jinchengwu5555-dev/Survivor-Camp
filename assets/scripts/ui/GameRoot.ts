@@ -49,6 +49,7 @@ import { GlobalRanking, scoreEntry } from '../core/leaderboard';
 import { GuideHint, nextHint } from '../core/guide';
 import { eventSpeaker, portraitOf } from '../core/portrait';
 import { activePickups, pickupKind } from '../core/pickups';
+import { activeStragglers } from '../core/stragglers';
 import { dailyChest, dailyProgress, dailyTaskDef } from '../core/daily';
 import { idleSurvivors, workersIn } from '../core/workers';
 import { traderPresent } from '../core/trader';
@@ -89,7 +90,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.1 俯视营地';
+const GAME_VERSION = 'v3.2 白天游荡丧尸';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -315,6 +316,7 @@ export class GameRoot extends Component {
     private seenLevels: Record<string, number> = {};
     private seenReportId = 0;
     private raidWarned = false;
+    private readonly seenStragglers = new Set<number>();
 
     onLoad(): void {
         try {
@@ -489,6 +491,12 @@ export class GameRoot extends Component {
             if (r.id <= this.seenReportId) continue;
             this.seenReportId = r.id;
             if (r.kind === 'expedition') this.effect(`${r.result === 'win' ? '🎒' : '🏃'} ${r.summary}`, r.result === 'win' ? WIN : LOSE, 24, r.result === 'win' ? 'coin' : 'lose');
+            else if (r.title === '游荡的丧尸') this.effect(`🧟 ${r.summary}`, r.result === 'win' ? ACCENT : LOSE, 22, 'hit');
+        }
+        for (const g of activeStragglers(state)) {
+            if (this.seenStragglers.has(g.id)) continue;
+            this.seenStragglers.add(g.id);
+            this.effect('🧟 有一小群丧尸朝营地晃过来了！点门口的牌子派人清理', LOSE, 26, 'alarm');
         }
         const raidLeft = realSeconds(config, state.nextRaidAt - camp.now);
         if (currentRaid(config, state, camp.now) && raidLeft <= 15 && !state.pendingRaid) {
@@ -926,6 +934,7 @@ export class GameRoot extends Component {
         const guided = this.guide?.target?.match(/^(upgrade|speedup):(.+)$/)?.[2];
         config.buildings.forEach((def, i) => this.renderMapBuilding(map, camp, def, i, now, guided === def.id));
         this.drawIdlePeople(map, camp, now);
+        this.renderStragglers(map, camp, now);
 
         // 地上能捡的东西
         activePickups(state, now).forEach((p, i) => {
@@ -1146,6 +1155,52 @@ export class GameRoot extends Component {
         g.stroke();
         const site = currentSite(camp.config, camp.state);
         addLabel(map, `${site?.icon ?? ''} ${site?.name ?? ''}`, 18, new Color(255, 220, 150, 120), { width: 300 }).node.setPosition(-200, bottom - 22);
+    }
+
+    /** 白天晃到门外的丧尸：门口一团紫色小点 + “点我清理”的牌子，点了打一场小仗并回放 */
+    private renderStragglers(map: Node, camp: CampGame, now: number): void {
+        const { config, state } = camp;
+        const { left, right, bottom, top } = CAMP_WALL;
+        const cx = (left + right) / 2;
+        const cy = (bottom + top) / 2;
+        // 北、东、南、西：门的位置和朝外的方向
+        const gates = [
+            { x: cx, y: top, nx: 0, ny: 1 },
+            { x: right, y: cy, nx: 1, ny: 0 },
+            { x: cx, y: bottom, nx: 0, ny: -1 },
+            { x: left, y: cy, nx: -1, ny: 0 },
+        ];
+        for (const group of activeStragglers(state)) {
+            const gate = gates[group.gate] ?? gates[0];
+            const node = makeNode('Stragglers', map, 10, 10);
+            const g = node.addComponent(Graphics);
+            // 门外一团紫色小点（越接近门口越挤）
+            const t = now / 600;
+            group.enemies.forEach((_, i) => {
+                const along = ((i % 4) - 1.5) * 16 + Math.sin(t + i) * 3;
+                const out = 10 + Math.floor(i / 4) * 14;
+                g.fillColor = hexColor('#9a5ad0');
+                g.circle(gate.x + gate.nx * out - gate.ny * along, gate.y + gate.ny * out + gate.nx * along, 7);
+                g.fill();
+            });
+            const left2 = realSeconds(config, group.arriveAt - now);
+            const pw = 230;
+            const pill = makeNode('StragglerPill', map, pw, 40);
+            pill.setPosition(gate.x - gate.nx * 130, gate.y - gate.ny * 46);
+            drawPanel(pill.addComponent(Graphics), pw, 40, new Color(60, 24, 70, 235), 20, hexColor('#d090ff'), 2);
+            addLabel(pill, `🧟×${group.enemies.length} ${formatTime(left2)} 点我清理`, 19, TEXT, { width: pw - 10 });
+            pill.on(Node.EventType.TOUCH_END, () => {
+                if (this.dragDistance > DRAG_THRESHOLD) return;
+                punch(pill);
+                const res = camp.clearStragglers(group.id, camp.now);
+                if (!res.ok) this.showToast(res.reason);
+                else if (res.report) {
+                    this.seenReportId = Math.max(this.seenReportId, res.report.id);
+                    this.openReplay(res.report);
+                }
+                this.save();
+            });
+        }
     }
 
     /** 闲着的人：营地中间走来走去的小圆点（颜色是角色的主色） */

@@ -78,6 +78,23 @@ export interface BalanceDef {
         coreHpShare: number;
         swarm?: { units: string[]; count: number; hpMult: number; atkMult: number };
     };
+    /**
+     * 白天的游荡丧尸（core/stragglers.ts）：每隔大约 intervalMinutes 游戏分钟按 chance 刷一群（size 只，从 units 里随机），
+     * arriveMinutes 后摸到门口；minDay 天以后、尸潮开始以后才有，同时最多 maxGroups 群。
+     * 及时清理奖励 reward；没人管撞上门，门额外损伤 wallDamage（0～1）。战斗最长 timeLimit 秒。
+     */
+    stragglers?: {
+        intervalMinutes: number;
+        chance: number;
+        arriveMinutes: number;
+        minDay: number;
+        maxGroups: number;
+        size: [number, number];
+        units: string[];
+        timeLimit: number;
+        reward: ResourceBag;
+        wallDamage: number;
+    };
     /** 守夜时倒下的人牺牲的概率倍率（在营地里，同伴能把人拖回来） */
     raidDeathScale?: number;
     /** 栅栏上陷阱的攻击力 = base + perLevel × (战斗等级 - 1)（工坊做的 trap 物品按这个算伤害） */
@@ -906,6 +923,9 @@ export interface GameState {
     /** 营地附近可以捡的东西（老存档没有，用到时补上） */
     pickups?: PickupState[];
     nextPickupAt?: number;
+    /** 白天晃到营地外的丧尸（core/stragglers.ts） */
+    stragglers?: StragglerGroup[];
+    nextStragglerAt?: number;
     /** 今天的每日目标（老存档没有，用到时补上） */
     daily?: DailyState;
     /** 流浪商人（老存档没有，用到时补上） */
@@ -1353,6 +1373,17 @@ export interface FarmState {
     pettedDay?: number;
     /** 送过开局种子了 */
     starter?: boolean;
+}
+
+/** 白天晃到营地外的一小群丧尸 */
+export interface StragglerGroup {
+    id: number;
+    /** 从第几个门来（北、东、南、西） */
+    gate: number;
+    enemies: UnitSetup[];
+    spawnedAt: number;
+    /** 什么时候摸到门口（没人管就自己打起来） */
+    arriveAt: number;
 }
 
 /** 一个慢慢解锁的功能（unlocks.json） */
