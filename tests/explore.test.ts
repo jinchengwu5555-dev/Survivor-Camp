@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CampGame } from '../assets/scripts/core/CampGame';
-import { expeditionBlocker, getLocation } from '../assets/scripts/core/combat';
+import { expeditionBlocker, expeditionOdds, getLocation } from '../assets/scripts/core/combat';
 import { districtAt, districtDef, districtExplored } from '../assets/scripts/core/districts';
 import { autoPack, carryHome, makePieces, newHaul, occupancy, packedWeight, placePiece } from '../assets/scripts/core/packing';
 import { propCount, propDef } from '../assets/scripts/core/props';
@@ -186,5 +186,15 @@ describe('不同种类的背包（三角洲式）', () => {
     it('开局伊森背着书包', () => {
         const game = CampGame.newGame(loadConfig({ soloStart: true }), T0, 1);
         expect(game.state.survivors[0].gear?.bag).toBe('school_bag');
+    });
+});
+
+describe('地图上的难度标记', () => {
+    it('近的地点简单，军方检查站一开始很致命；不动营地的随机数', () => {
+        const game = CampGame.newGame(loadConfig(), T0, 1);
+        const rng = game.state.rngState;
+        expect(expeditionOdds(game.config, game.state, 'gas_station').level).toBe(0);
+        expect(expeditionOdds(game.config, game.state, 'military_checkpoint').level).toBe(3);
+        expect(game.state.rngState).toBe(rng);
     });
 });

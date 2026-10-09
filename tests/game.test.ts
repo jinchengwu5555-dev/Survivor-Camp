@@ -29,7 +29,8 @@ describe('生产和消耗', () => {
         expect(game.assign('martha', 'kitchen', T0).ok).toBe(true); // 厨师，1.5 倍；天赋“巧手大厨”再 ×1.3
         expect(game.assign('toby', 'kitchen', T0).ok).toBe(true); // 天赋“勤快” ×1.15
         const rate = productionPerMinute(game.config, game.state).food;
-        expect(rate).toBeCloseTo(1.2 * 1.5 * 1.3 + 1.2 * 1.15);
+        const k1 = game.config.buildings.find((b) => b.id === 'kitchen')!.levels[0].production!.food!;
+        expect(rate).toBeCloseTo(k1 * 1.5 * 1.3 + k1 * 1.15);
         expect(foodConsumptionPerMinute(game.config, game.state)).toBeCloseTo(5 * game.config.balance.foodPerSurvivorPerMinute);
     });
 

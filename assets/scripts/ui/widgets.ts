@@ -205,7 +205,8 @@ export class UIButton {
     ) {
         this.node = makeNode('Button', parent, width, height);
         this.g = this.node.addComponent(Graphics);
-        this.label = addLabel(this.node, '', size, COLORS.text, { width: width - 12, height });
+        // 先放一个空格：Cocos 的 Label 从空字符串改成别的内容时，用自定义字体有时不会重新渲染（按钮上看不到字）
+        this.label = addLabel(this.node, ' ', size, COLORS.text, { width: width - 12, height });
         this.node.on(Node.EventType.TOUCH_END, () => {
             if (this.style === 'disabled') return;
             sfx('click');
@@ -216,8 +217,9 @@ export class UIButton {
 
     set(text: string, style: ButtonStyle = 'normal', progress = 0): void {
         if (this.label.string !== text) {
-            this.label.string = text;
+            this.label.string = text || ' ';
             fitLabel(this.label, text, this.width - 16, this.size);
+            this.label.updateRenderData(true);
         }
         if (style === this.style && Math.abs(progress - this.progress) < 0.02) return;
         this.style = style;

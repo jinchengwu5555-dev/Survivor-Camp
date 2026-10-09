@@ -26,6 +26,8 @@ const FIELD_SIZE = 680;
 const FIELD_Y = 150;
 /** 守夜时视野的半径（格）：围墙半边 6 格，尸群从更远的地方走进画面 */
 const CAMP_VIEW_MARGIN = 5;
+/** 营地里的建筑在战斗画面上画成地图上大小的几成（太大会显得人和丧尸很小） */
+const BUILDING_DRAW = 0.6;
 /** 同时最多几个飘字，避免尸群一多卡顿 */
 const MAX_FLOATS = 12;
 const FIELD_BG = hexColor('#141a1c');
@@ -142,8 +144,8 @@ export class BattleView {
             // 营地里的建筑：和营地地图上同样的位置，中间写图标和名字
             for (const b of camp.buildings ?? []) {
                 const sp = this.toScreen(b);
-                addLabel(this.fx, `${b.icon}`, Math.max(16, Math.min(30, b.h * this.scale * 0.35)), new Color(200, 210, 215, 150), { width: 80, height: 34 }).node.setPosition(sp.x, sp.y + 6);
-                addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale), height: 20 }).node.setPosition(sp.x, sp.y - 18);
+                addLabel(this.fx, `${b.icon}`, Math.max(16, Math.min(30, b.h * this.scale * BUILDING_DRAW * 0.45)), new Color(200, 210, 215, 150), { width: 80, height: 34 }).node.setPosition(sp.x, sp.y + 6);
+                addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale * BUILDING_DRAW), height: 20 }).node.setPosition(sp.x, sp.y - 18);
             }
             camp.gates.forEach((g, i) => {
                 if (!gateOpen(camp, i)) {
@@ -240,8 +242,10 @@ export class BattleView {
     }
 
     private radiusOf(u: BattleUnit): number {
-        const base = u.side === 'ally' ? 0.42 : this.isSpecial(u) ? 0.42 : 0.28;
-        return Math.max(4, base * this.scale * Math.min(1.6, u.def.appearance.scale));
+        // 人和丧尸画大一点（看得清），建筑画小一点（BUILDING_DRAW）
+        const base = u.side === 'ally' ? 0.62 : this.isSpecial(u) ? 0.62 : 0.44;
+        const min = u.side === 'ally' ? 12 : 8;
+        return Math.max(min, base * this.scale * Math.min(1.6, u.def.appearance.scale));
     }
 
     /** 特殊的敌人（不是一群里的小丧尸）：画成粉色大点 */
@@ -332,7 +336,7 @@ export class BattleView {
         const xs = this.battle.setup.enemies.map((s, i) => s.x ?? 10 + i * 0.8);
         const min = xs.length ? Math.min(...xs) : 10;
         const max = xs.length ? Math.max(...xs) : 14;
-        return { x1: min - 1.6, x2: Math.max(min + 5, max + 1.8), y1: -3.4, y2: 3.4 };
+        return { x1: min - 1.4, x2: Math.max(min + 4, max + 1.4), y1: -2.6, y2: 2.6 };
     }
 
     /** 探索战斗：地面、通往建筑的路、地点的建筑（门口朝小队）、周围的废车和杂物 */
@@ -407,8 +411,8 @@ export class BattleView {
         // 营地里的建筑（只是画出来，不挡路）
         for (const b of camp.buildings ?? []) {
             const c = this.toScreen(b);
-            const w = b.w * this.scale;
-            const h = b.h * this.scale;
+            const w = b.w * this.scale * BUILDING_DRAW;
+            const h = b.h * this.scale * BUILDING_DRAW;
             g.fillColor = hexColor('#26323a');
             g.roundRect(c.x - w / 2, c.y - h / 2, w, h, 6);
             g.fill();

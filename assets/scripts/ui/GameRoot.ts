@@ -17,6 +17,9 @@ import {
     DOG_FLAG,
     expeditionLoot,
     formatBag,
+    DANGER_LEVELS,
+    expeditionEnemyBonus,
+    expeditionOdds,
     GATE_NAMES,
     isOnExpedition,
     nextRaidIsBloodMoon,
@@ -92,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.7 探索场景';
+const GAME_VERSION = 'v3.8 难度标记·粮水更紧';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -2801,6 +2804,18 @@ export class GameRoot extends Component {
                 g.stroke();
             }
             if (guidedLoc === loc.id) addLabel(node, '👉', 30, TEXT, { width: 40 }).node.setPosition(-48, 0);
+            // 难度：按现在最强的小队估计的胜率，标颜色圈和角标
+            if (!rumor) {
+                const danger = DANGER_LEVELS[this.odds(camp, loc.id).level];
+                g.lineWidth = 4;
+                g.strokeColor = hexColor(danger.color);
+                g.circle(0, 0, 31);
+                g.stroke();
+                const tag = makeNode('Danger', node, 64, 22);
+                tag.setPosition(30, 26);
+                drawPanel(tag.addComponent(Graphics), 64, 22, new Color(15, 17, 15, 220), 11, hexColor(danger.color), 2);
+                addLabel(tag, danger.name, 14, hexColor(danger.color), { width: 60, height: 20 });
+            }
             node.on(Node.EventType.TOUCH_END, () => {
                 punch(node);
                 this.selectedLocation = loc.id;
@@ -2908,6 +2923,29 @@ export class GameRoot extends Component {
     }
 
     /** 地图上的一个标记：圆形底 + 图标 + 名字（+ 一行小字） */
+    /** 地点难度（估计胜率）：营地的人、装备、等级不变就用缓存，不每帧都模拟 */
+    private oddsKey = '';
+    private oddsCache = new Map<string, { winRate: number; level: number }>();
+    private odds(camp: CampGame, locationId: string): { winRate: number; level: number } {
+        const { config, state } = camp;
+        const key = [
+            state.survivors.map((s) => `${s.id}${s.injured ? '!' : ''}${s.gear ? JSON.stringify(s.gear) : ''}${Math.round((s.sleep ?? 100) / 25)}${Math.round(s.mood / 25)}`).join(','),
+            survivorBattleLevel(config, state),
+            expeditionEnemyBonus(config, state),
+            state.expeditions.length,
+        ].join('|');
+        if (key !== this.oddsKey) {
+            this.oddsKey = key;
+            this.oddsCache.clear();
+        }
+        let o = this.oddsCache.get(locationId);
+        if (!o) {
+            o = expeditionOdds(config, state, locationId);
+            this.oddsCache.set(locationId, o);
+        }
+        return o;
+    }
+
     private mapMarker(parent: Node, at: { x: number; y: number }, icon: string, name: string, fill: Color, r: number, sub?: string): Node {
         const node = makeNode('Marker', parent, r * 2 + 20, r * 2 + 50);
         node.setPosition(at.x, at.y);
@@ -2995,6 +3033,9 @@ export class GameRoot extends Component {
         if (lostGear) this.text(`💀 牺牲的战友把装备留在了这里：${formatProps(config, lostGear)}（打下这里才能捡回来）`, 18, LOSE);
         this.text(`战利品 ${formatBag(config, expeditionLoot(config, state, loc))}${drops.length ? `   可能找到：${drops.join('、')}` : ''}`, 18);
         this.text(`🧟 可能遇到：${enemyHint(config, loc)}`, 18, LOSE);
+        const odds = this.odds(camp, loc.id);
+        const danger = DANGER_LEVELS[odds.level];
+        this.text(`${danger.icon} 难度：${danger.name}（派现在最强的小队，估计胜率 ${Math.round(odds.winRate * 100)}%）`, 18, hexColor(danger.color));
         const ex = state.expeditions.find((e) => e.location === loc.id);
         if (ex) {
             const left = realSeconds(config, ex.returnsAt - now);

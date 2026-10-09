@@ -33,7 +33,7 @@ describe('流浪者', () => {
         for (const s of state.survivors) game.assign(s.id, null, T0);
         state.survivors.forEach((s) => (s.mood = 50));
         game.assign(w.id, 'kitchen', T0);
-        expect(productionPerMinute(config, state).food).toBeCloseTo(1.2 * config.balance.specialtyBonus);
+        expect(productionPerMinute(config, state).food).toBeCloseTo(config.buildings.find((b) => b.id === 'kitchen')!.levels[0].production!.food! * config.balance.specialtyBonus);
     });
 
     it('名字不重复；没有床位时加入失败', () => {
@@ -179,7 +179,7 @@ describe('换营地', () => {
         for (const s of state.survivors) game.assign(s.id, null, T0);
         state.survivors.forEach((s) => (s.mood = 50));
         game.assign('martha', 'kitchen', T0);
-        expect(productionPerMinute(config, state).food).toBeCloseTo(1.2 * 1.5 * 1.3 * 1.6 + 0.5); // 专长 ×1.5，天赋 ×1.3，农场 ×1.6
+        expect(productionPerMinute(config, state).food).toBeCloseTo(config.buildings.find((b) => b.id === 'kitchen')!.levels[0].production!.food! * 1.5 * 1.3 * 1.6 + 0.5); // 专长 ×1.5，天赋 ×1.3，农场 ×1.6
         expect(relocationBlocker(config, state, 'police', T0)).toBe('刚搬过家，3 天内不能再搬');
     });
 

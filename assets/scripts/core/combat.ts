@@ -142,6 +142,34 @@ export function survivorPower(config: GameConfig, state: GameState, survivorId: 
     return Math.round((stats.maxHp * m.hp * stats.atk * m.atk) / 100);
 }
 
+/** 难度等级：0 简单 / 1 有把握 / 2 危险 / 3 致命 */
+export const DANGER_LEVELS = [
+    { name: '简单', icon: '🟢', color: '#5ac46a' },
+    { name: '有把握', icon: '🟡', color: '#e0c040' },
+    { name: '危险', icon: '🟠', color: '#e0803a' },
+    { name: '致命', icon: '🔴', color: '#d04040' },
+];
+
+/**
+ * 估计现在派最强的小队去这个地点能不能打赢：用固定的几个种子模拟几场（不动营地的随机数），
+ * 返回胜率和难度等级。界面拿来在地图上标难度（结果要自己缓存，别每帧算）。
+ */
+export function expeditionOdds(config: GameConfig, state: GameState, locationId: string, runs = 6): { winRate: number; level: number } {
+    const loc = getLocation(config, locationId);
+    const ids = suggestSquad(config, state);
+    if (!loc || ids.length === 0) return { winRate: 0, level: 3 };
+    const squad = squadOf(config, state, ids);
+    const level = survivorBattleLevel(config, state);
+    const bonus = expeditionEnemyBonus(config, state);
+    let wins = 0;
+    for (let seed = 1; seed <= runs; seed++) {
+        const b = new Battle(battleRegistry(config), expeditionSetup(config, loc, squad, level, seed * 7919, bonus));
+        if (b.runToEnd() === 'win') wins++;
+    }
+    const winRate = wins / runs;
+    return { winRate, level: winRate >= 0.9 ? 0 : winRate >= 0.6 ? 1 : winRate >= 0.25 ? 2 : 3 };
+}
+
 /** 能上阵的人：没受伤、不在外面探索、有战斗角色 */
 export function availableFighters(config: GameConfig, state: GameState): SurvivorState[] {
     return state.survivors.filter((s) => !s.injured && !isOnExpedition(state, s.id) && !!battleUnitOf(config, state, s.id));

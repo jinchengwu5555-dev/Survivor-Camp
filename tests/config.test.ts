@@ -26,7 +26,7 @@ describe('建筑成长公式', () => {
         const lv10 = kitchen.levels[9];
         expect(lv10.requiresHq).toBe(10);
         expect(lv10.cost.wood).toBe(niceRound(120 * Math.pow(1.5, 7)));
-        expect(lv10.production!.food).toBeCloseTo(2.0 * Math.pow(1.1, 7), 1);
+        expect(lv10.production!.food).toBeCloseTo(kitchen.levels[2].production!.food! * Math.pow(1.1, 7), 1);
         expect(lv10.workerSlots).toBe(4 + Math.floor(7 / 3));
     });
 

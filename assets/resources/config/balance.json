@@ -1,6 +1,6 @@
 {
-    "foodPerSurvivorPerMinute": 0.25,
-    "waterPerSurvivorPerMinute": 0.15,
+    "foodPerSurvivorPerMinute": 0.34,
+    "waterPerSurvivorPerMinute": 0.22,
     "clock": { "onlineTimeScale": 8, "onlineGapSeconds": 15 },
     "offline": { "capHours": 8, "minMinutes": 5, "gameMinutesPerRealMinute": 0.25, "resources": ["food", "water", "wood", "parts"] },
     "specialtyBonus": 1.5,
