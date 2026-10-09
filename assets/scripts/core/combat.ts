@@ -49,6 +49,8 @@ import {
 
 /** 栅栏在战斗里对应的角色 id（units.json）；营地的每个门都是一个栅栏单位 */
 export const BARRICADE_UNIT = 'barricade';
+/** 白天游荡丧尸的小仗（PendingRaid.raid） */
+export const STRAGGLERS = 'stragglers';
 /** 营地核心（units.json）：尸群冲进来拆掉它就算输 */
 export const CORE_UNIT = 'camp_core';
 /** 四个门的名字（顺序和 campLayout 一致） */
@@ -655,6 +657,7 @@ export function prepareRaid(config: GameConfig, state: GameState, raid: RaidDef,
 
 /** 守夜结束：发奖励或扣物资、处理伤亡、写战报。battle 必须已经分出胜负 */
 export function finishRaid(config: GameConfig, state: GameState, pending: PendingRaid, battle: Battle): BattleReport {
+    if (pending.stragglers) return finishStragglers(config, state, pending, battle);
     const raid = config.raids.find((r) => r.id === pending.raid) ?? config.raids[0];
     const { at, title, bloodMoon, enemyBonus } = pending;
     const carried: CarriedItem[] = pending.carried.flatMap((c) => {
@@ -726,20 +729,27 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
 // ---------- 白天的游荡丧尸 ----------
 
 /**
- * 白天晃到营地外的一小群丧尸（stragglers.ts）：用守夜的营地布局打一场小仗（只从一个门来），自动结算。
- * 倒下的人只会受伤、不会牺牲；noticed = 玩家及时派人清理（有奖励），否则门还会被抓挠出额外的损伤。
+ * 白天晃到营地外的一小群丧尸（stragglers.ts）：和守夜一样在营地里打（同一个营地布局，只从一个门来）。
+ * 界面开着时放进 state.pendingRaid 让玩家亲手打；测试和模拟里直接自动打完。
+ * 倒下的人只会受伤、不会牺牲；noticed = 玩家及时迎战（有奖励），否则门还会被抓挠出额外的损伤。
  */
-export function fightStragglers(config: GameConfig, state: GameState, group: StragglerGroup, at: number, noticed: boolean): BattleReport {
+export function prepareStragglers(config: GameConfig, state: GameState, group: StragglerGroup, at: number, noticed: boolean): PendingRaid {
     const cfg = config.balance.stragglers!;
-    const raid: RaidDef = { id: 'stragglers', name: '游荡的丧尸', enemies: group.enemies, timeLimit: cfg.timeLimit, reward: {}, sides: 1 };
+    const raid: RaidDef = { id: STRAGGLERS, name: '游荡的丧尸', enemies: group.enemies, timeLimit: cfg.timeLimit, reward: {}, sides: 1 };
     const defenders = squadOf(config, state, raidDefenders(config, state));
     // 种子 % 4 决定从哪个门来（attackedGates）
     const seed = Math.floor(nextRandom(state) * 2 ** 28) * 4 + group.gate;
     const setup = raidSetup(config, raid, defenders, barricadeHp(config, state), survivorBattleLevel(config, state), seed, { camp: battleCamp(config, state), gates: campGates(config, state) });
     const wear = wallWear(state);
     if (wear > 0) setup.allies = setup.allies.map((a) => (a.gate !== undefined ? { ...a, hpRatio: 1 - wear } : a));
-    const battle = new Battle(battleRegistry(config), setup);
-    battle.runToEnd();
+    return { raid: STRAGGLERS, at, title: '游荡的丧尸', bloodMoon: false, enemyBonus: 0, setup, carried: [], repairs: 0, stragglers: { noticed } };
+}
+
+/** 白天的小仗打完：伤员、门的损伤、奖励、战报 */
+export function finishStragglers(config: GameConfig, state: GameState, pending: PendingRaid, battle: Battle): BattleReport {
+    const cfg = config.balance.stragglers!;
+    const noticed = !!pending.stragglers?.noticed;
+    const at = pending.at;
     const { result, fallen } = battleOutcome(config, state, battle, []);
     const walls = battle.side('ally').filter((u) => u.gate !== undefined);
     const remaining = walls.length ? walls.reduce((sum, u) => sum + (u.alive ? u.hp / u.stats.maxHp : 0), 0) / walls.length : 1;
@@ -752,10 +762,19 @@ export function fightStragglers(config: GameConfig, state: GameState, group: Str
         addStat(state, 'stragglers_cleared');
         if (noticed) loot = grantResources(config, state, cfg.reward);
     }
-    const title = '游荡的丧尸';
+    const title = pending.title;
     const head = result === 'win' ? (noticed ? '把晃到营地外的丧尸清理掉了' : '丧尸摸到了门口，大家手忙脚乱地把它们打退了') : '丧尸在门口闹了一阵，大家没能打退它们，只好关紧门等它们散去';
     const summary = `【${title}】${head}。${formatBag(config, loot) ? `捡到 ${formatBag(config, loot)}。` : ''}${!noticed ? '门被抓挠得不轻。' : ''}${casualtyText(config, state, injured, [])}`;
-    return addReport(state, { kind: 'raid', title, at, result, setup: { ...setup, inputs: [] }, loot, lost: {}, injured, dead: [], summary });
+    const setup: BattleSetup = { ...pending.setup, inputs: [...battle.inputs] };
+    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost: {}, injured, dead: [], summary });
+}
+
+/** 自动打完一场白天的小仗（测试、模拟） */
+export function fightStragglers(config: GameConfig, state: GameState, group: StragglerGroup, at: number, noticed: boolean): BattleReport {
+    const pending = prepareStragglers(config, state, group, at, noticed);
+    const battle = new Battle(battleRegistry(config), pending.setup);
+    battle.runToEnd();
+    return finishStragglers(config, state, pending, battle);
 }
 
 // ---------- 伤员 ----------

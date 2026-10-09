@@ -25,7 +25,7 @@ function daytime(game: CampGame, from: number): number {
 }
 
 describe('白天的游荡丧尸', () => {
-    it('白天到时间会刷出一群，摸到门口之前可以派人清理，打赢有奖励', () => {
+    it('白天到时间会刷出一群；点迎战就和守夜一样亲手打，打赢有奖励', () => {
         const { game, config, t } = newGame();
         const now = daytime(game, t);
         game.state.nextStragglerAt = now;
@@ -36,22 +36,30 @@ describe('白天的游荡丧尸', () => {
         const parts = game.state.resources.parts;
         const res = game.clearStragglers(group.id, now + MIN);
         expect(res.ok).toBe(true);
-        expect(res.report?.setup.camp).toBeDefined();
+        // 和守夜一样：进 pendingRaid，用同一个守夜界面打
+        expect(game.state.pendingRaid?.stragglers).toEqual({ noticed: true });
+        expect(game.liveRaid()?.battle.setup.camp).toBeDefined();
         expect(activeStragglers(game.state)).toHaveLength(0);
-        if (res.report!.result === 'win') {
+        const report = game.finishLiveRaid(now + 2 * MIN)!;
+        expect(report.title).toBe('游荡的丧尸');
+        expect(game.state.pendingRaid).toBeNull();
+        expect(game.state.raidCount).toBe(0);
+        if (report.result === 'win') {
             expect(game.state.resources.parts).toBeGreaterThan(parts);
             expect(game.state.stats.stragglers_cleared).toBe(1);
         }
         expect(game.clearStragglers(group.id, now + 2 * MIN).ok).toBe(false);
     });
 
-    it('没人管：到时间自己打起来，没有奖励，门额外受损', () => {
+    it('没人管：到时间摸到门口，一样要打，打完没有奖励，门额外受损', () => {
         const { game, config, t } = newGame();
         const now = daytime(game, t);
         const group = spawnStragglers(config, game.state, now);
         game.state.wallWear = 0;
         updateStragglers(config, game.state, group.arriveAt, true);
         expect(activeStragglers(game.state)).toHaveLength(0);
+        expect(game.state.pendingRaid?.stragglers).toEqual({ noticed: false });
+        game.finishLiveRaid(group.arriveAt + MIN);
         expect(game.state.reports[game.state.reports.length - 1].title).toBe('游荡的丧尸');
         expect(game.state.wallWear).toBeGreaterThanOrEqual(config.balance.stragglers!.wallDamage);
     });

@@ -1283,6 +1283,8 @@ export interface PendingRaid {
     repairs: number;
     /** 混在尸群里的熟人（墓地 id，见 core/familiar.ts） */
     familiar?: string;
+    /** 白天晃过来的一小群丧尸（stragglers.ts），不是夜里的尸潮；noticed = 玩家及时迎战 */
+    stragglers?: { noticed: boolean };
 }
 
 export interface GameOverInfo {

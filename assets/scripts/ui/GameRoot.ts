@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.8 难度标记·粮水更紧';
+const GAME_VERSION = 'v3.9 白天晚上同一种打法';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -501,7 +501,7 @@ export class GameRoot extends Component {
         for (const g of activeStragglers(state)) {
             if (this.seenStragglers.has(g.id)) continue;
             this.seenStragglers.add(g.id);
-            this.effect('🧟 有一小群丧尸朝营地晃过来了！点门口的牌子派人清理', LOSE, 26, 'alarm');
+            this.effect('🧟 有一小群丧尸朝营地晃过来了！点门口的牌子迎战（和守夜一样打）', LOSE, 26, 'alarm');
         }
         const raidLeft = realSeconds(config, state.nextRaidAt - camp.now);
         if (currentRaid(config, state, camp.now) && raidLeft <= 15 && !state.pendingRaid) {
@@ -536,7 +536,7 @@ export class GameRoot extends Component {
         if (!camp || !live || !this.overlay) return;
         this.openBattle(
             new BattleView(this.overlay, {
-                title: `🌙 守夜：${live.pending.title}`,
+                title: live.pending.stragglers ? `☀️ 白天：${live.pending.title}` : `🌙 守夜：${live.pending.title}`,
                 live,
                 onClose: () => {
                     const report = camp.finishLiveRaid(camp.now);
@@ -1268,16 +1268,13 @@ export class GameRoot extends Component {
             const pill = makeNode('StragglerPill', map, pw, 40);
             pill.setPosition(gate.x - gate.nx * 130, gate.y - gate.ny * 46);
             drawPanel(pill.addComponent(Graphics), pw, 40, new Color(60, 24, 70, 235), 20, hexColor('#d090ff'), 2);
-            addLabel(pill, `🧟×${group.enemies.length} ${formatTime(left2)} 点我清理`, 19, TEXT, { width: pw - 10 });
+            addLabel(pill, `🧟×${group.enemies.length} ${formatTime(left2)} 点我迎战`, 19, TEXT, { width: pw - 10 });
             pill.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
                 punch(pill);
                 const res = camp.clearStragglers(group.id, camp.now);
                 if (!res.ok) this.showToast(res.reason);
-                else if (res.report) {
-                    this.seenReportId = Math.max(this.seenReportId, res.report.id);
-                    this.openReplay(res.report);
-                }
+                else if (camp.liveRaid()) this.openLiveRaid();
                 this.save();
             });
         }

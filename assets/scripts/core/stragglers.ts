@@ -1,12 +1,12 @@
 // 白天的游荡丧尸（balance.stragglers）：白天时不时有一小群丧尸从某个方向晃到营地外，
-// 过几分钟就会摸到门口。玩家及时点一下派人清理，打完有一点战利品；
-// 没人管，它们自己撞上门，打完也没有奖励，门还会被抓挠出额外的损伤。
-// 战斗用守夜的营地布局（只从一个门来），自动结算，战报可以回放。
-// 没有界面在看（测试、模拟）时一出现就当作玩家去清理了。
+// 过几分钟就会摸到门口。白天和晚上是同一个营地、同一种打法：
+// 玩家及时点“迎战”，就和守夜一样亲手打（调人守门、修门），打赢有一点战利品；
+// 没人管，它们自己撞上门，一样要打，只是没有奖励，门还会被抓挠出额外的损伤。
+// 没有界面在看（测试、模拟）时一出现就当作玩家去清理了，自动打完。
 
 import { UnitSetup } from './battle/Battle';
 import { timeOfDay } from './clock';
-import { fightStragglers, raidEnemyBonus } from './combat';
+import { fightStragglers, prepareStragglers, raidEnemyBonus } from './combat';
 import { nextRandom } from './rng';
 import { addLog, currentDay, hasFlag } from './state';
 import { BattleReport, GameConfig, GameState, StragglerGroup } from './types';
@@ -28,7 +28,7 @@ export function updateStragglers(config: GameConfig, state: GameState, now: numb
     const reports: BattleReport[] = [];
     for (const g of [...activeStragglers(state)]) {
         if (g.arriveAt <= now) {
-            const r = resolveStragglers(config, state, g.id, g.arriveAt, false);
+            const r = resolveStragglers(config, state, g.id, g.arriveAt, false, live);
             if (r) reports.push(r);
         }
     }
@@ -68,10 +68,17 @@ export function spawnStragglers(config: GameConfig, state: GameState, now: numbe
     return group;
 }
 
-/** 打这一群：noticed = 玩家及时派人去了（有奖励）；否则是它们自己摸到了门口 */
-export function resolveStragglers(config: GameConfig, state: GameState, id: number, now: number, noticed: boolean): BattleReport | null {
+/**
+ * 打这一群：noticed = 玩家及时迎战（有奖励）；否则是它们自己摸到了门口。
+ * live = 界面开着：和守夜一样放进 pendingRaid 让玩家亲手打（返回 null）；已经在打别的仗时直接自动打完。
+ */
+export function resolveStragglers(config: GameConfig, state: GameState, id: number, now: number, noticed: boolean, live = false): BattleReport | null {
     const group = activeStragglers(state).find((g) => g.id === id);
     if (!group) return null;
     state.stragglers = activeStragglers(state).filter((g) => g.id !== id);
+    if (live && !state.pendingRaid) {
+        state.pendingRaid = prepareStragglers(config, state, group, now, noticed);
+        return null;
+    }
     return fightStragglers(config, state, group, now, noticed);
 }

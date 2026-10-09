@@ -197,11 +197,16 @@ export class CampGame {
         return this.act(now, () => startClearingZone(this.config, this.state, id, now));
     }
 
-    /** 派人去清理白天晃到营地外的丧尸（stragglers.ts），返回战报（可以回放） */
+    /**
+     * 迎战白天晃到营地外的丧尸（stragglers.ts）：界面开着时和守夜一样亲手打（进 pendingRaid），
+     * 否则自动打完返回战报
+     */
     clearStragglers(id: number, now: number): ActionResult & { report?: BattleReport } {
         return this.act(now, () => {
-            const report = resolveStragglers(this.config, this.state, id, now, true);
-            return report ? { ok: true, message: report.summary, report } : { ok: false, reason: '它们已经走了' };
+            if (!(this.state.stragglers ?? []).some((g) => g.id === id)) return { ok: false, reason: '它们已经走了' };
+            if (this.liveRaids && this.state.pendingRaid) return { ok: false, reason: '正在打仗' };
+            const report = resolveStragglers(this.config, this.state, id, now, true, this.liveRaids);
+            return report ? { ok: true, message: report.summary, report } : { ok: true, message: '迎战！' };
         });
     }
 
