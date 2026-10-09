@@ -44,7 +44,7 @@
         ],
         "timeLimit": 90,
         "loot": { "wood": 60, "parts": 25 },
-        "drops": [ { "prop": "lumber_s", "chance": 0.6 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "wrench", "chance": 0.3 }, { "prop": "crowbar", "chance": 0.15 }, { "prop": "work_gloves", "chance": 0.15 } ],
+        "drops": [ { "prop": "lumber_s", "chance": 0.6 }, { "prop": "parts_s", "chance": 0.4 }, { "prop": "wrench", "chance": 0.3 }, { "prop": "crowbar", "chance": 0.15 }, { "prop": "machete", "chance": 0.1 }, { "prop": "work_gloves", "chance": 0.15 } ],
         "discoversSite": "farm",
         "recruitChance": 0.15
     },
