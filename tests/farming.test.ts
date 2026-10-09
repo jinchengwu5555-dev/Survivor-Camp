@@ -115,7 +115,8 @@ describe('种菜', () => {
     it('模拟模式（没有界面）会自动种、自动收', () => {
         const game = newGame(4, false);
         game.state.buildings.garden.level = 1;
-        for (let t = T0; t <= T0 + DAY; t += 5 * MIN) game.tick(t);
+        // 土豆这类要长一天多，跑两天
+        for (let t = T0; t <= T0 + 2 * DAY; t += 5 * MIN) game.tick(t);
         expect(game.state.stats.harvests ?? 0).toBeGreaterThan(0);
     });
 });

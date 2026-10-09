@@ -96,7 +96,7 @@ describe('菜园', () => {
         state.buildings.garden.level = 1;
         game.tick(T0 + 1);
         expect(game.assign('martha', 'garden', T0 + 2).ok).toBe(true);
-        for (let t = T0; t < dayStart(2); t += 5 * MIN) game.tick(t);
+        for (let t = T0; t < dayStart(3); t += 5 * MIN) game.tick(t);
         expect(state.stats.harvests ?? 0).toBeGreaterThan(0);
     });
 });

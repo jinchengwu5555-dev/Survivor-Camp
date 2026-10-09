@@ -1,5 +1,5 @@
 {
-    "_doc": "种菜和养殖，见 core/farming.ts。时间都是游戏分钟（一天 80 分钟）；食物产量会跟着指挥部等级一起涨（和打猎一样）。",
+    "_doc": "种菜和养殖，见 core/farming.ts。时间都是游戏分钟（一天 64 分钟）；食物产量会跟着指挥部等级一起涨（和打猎一样）。",
     "seasonGrowth": { "summer": 1, "autumn": 1.15, "winter": 0, "spring": 1.1 },
     "greenhouseLevel": 10,
     "greenhouseWinter": 0.6,

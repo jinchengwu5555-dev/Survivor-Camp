@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.10 打仗时留着资源栏';
+const GAME_VERSION = 'v3.11 一天缩短到 8 分钟';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -1768,7 +1768,7 @@ export class GameRoot extends Component {
     private renderRanking(camp: CampGame, now: number): void {
         const entry = scoreEntry(camp.config, camp.state, this.records, now);
         this.text(`这一局：第 ${entry.days} 天   我的最长纪录：${entry.bestDays} 天`, 24, ACCENT);
-        this.text('天数只按在线时间算：在线约 10 分钟过一天，离线时营地暂停。', 20, DIM);
+        this.text('天数只按在线时间算：在线约 8 分钟过一天，离线时营地暂停。', 20, DIM);
         this.gap(8);
         this.text('—— 全服排行（最长存活天数）——', 22, DIM);
         if (this.rankingError) this.text(this.rankingError, 22, LOSE);

@@ -1,5 +1,5 @@
 {
-    "dayLengthMinutes": 80,
+    "dayLengthMinutes": 64,
     "onlineTimeScale": 8,
     "tolerance": 1.2,
     "graceDays": 2,
