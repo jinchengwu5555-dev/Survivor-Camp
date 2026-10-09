@@ -23,7 +23,9 @@ import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelTex
 const WIDTH = 680;
 /** 战场：正方形，中心在屏幕上的位置 */
 const FIELD_SIZE = 680;
-const FIELD_Y = 150;
+/** 最上面留给营地的资源栏（GameRoot 的 HUD，打仗时也看得到资源） */
+const TOP = 505;
+const FIELD_Y = 70;
 /** 守夜时视野的半径（格）：围墙半边 6 格，尸群从更远的地方走进画面 */
 const CAMP_VIEW_MARGIN = 5;
 /** 营地里的建筑在战斗画面上画成地图上大小的几成（太大会显得人和丧尸很小） */
@@ -110,14 +112,18 @@ export class BattleView {
         this.battle = opts.live ? opts.live.battle : new Battle(battleRegistry(this.config), opts.replay!.setup);
         this.waves = waveTimes(this.battle.setup);
         this.root = makeNode('BattleView', parent, WIDTH, 1280);
-        drawPanel(this.root.addComponent(Graphics), 720, 1280, COLORS.bg, 0);
+        // 背景只盖到资源栏下面
+        const bg = this.root.addComponent(Graphics);
+        bg.fillColor = COLORS.bg;
+        bg.rect(-360, -640, 720, 640 + TOP + 10);
+        bg.fill();
 
         const title = addLabel(this.root, opts.title, 32, COLORS.accent, { width: WIDTH });
-        title.node.setPosition(0, 600);
+        title.node.setPosition(0, TOP - 18);
         this.status = addLabel(this.root, '', 24, COLORS.text, { width: WIDTH });
-        this.status.node.setPosition(0, 560);
+        this.status.node.setPosition(0, TOP - 50);
         this.hint = addLabel(this.root, '', 19, COLORS.dim, { width: WIDTH });
-        this.hint.node.setPosition(0, 528);
+        this.hint.node.setPosition(0, TOP - 76);
 
         // 视野：守夜固定看整个营地；探索按双方的站位自动框住
         const camp = this.battle.setup.camp;
@@ -190,7 +196,7 @@ export class BattleView {
                     return;
                 }
                 const btn = new UIButton(this.controls, w, 64, () => this.onGate(i), 20);
-                btn.node.setPosition(-WIDTH / 2 + w / 2 + k * (w + 10), 170);
+                btn.node.setPosition(-WIDTH / 2 + w / 2 + k * (w + 10), 115);
                 this.gateButtons.push(btn);
             });
             // 有手动技能的话交给自动释放（现在幸存者都没有技能，物品是自动用的）
@@ -762,7 +768,7 @@ export class BattleView {
                 }, 19);
                 this.peopleButtons.set(u.uid, btn);
             }
-            btn.node.setPosition(-WIDTH / 2 + w / 2 + (i % per) * (w + 10), 90 - Math.floor(i / per) * 62);
+            btn.node.setPosition(-WIDTH / 2 + w / 2 + (i % per) * (w + 10), 48 - Math.floor(i / per) * 60);
             const hp = Math.round((u.hp / u.stats.maxHp) * 100);
             const gate = u.post !== undefined ? GATE_NAMES[u.post] : '';
             btn.set(`● ${this.nameOf(u)} ${gate} ${hp}%`, this.finished ? 'disabled' : this.selected === u.uid ? 'highlight' : 'normal');

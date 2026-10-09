@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.9 白天晚上同一种打法';
+const GAME_VERSION = 'v3.10 打仗时留着资源栏';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -414,6 +414,8 @@ export class GameRoot extends Component {
             this.submitScore();
             this.detectChanges();
             if (!this.battleView && this.camp.liveRaid()) this.openLiveRaid();
+            // 打仗时资源栏照样每秒刷新（修门花木材，要看得到还剩多少）
+            if (this.battleView) this.renderHud(this.camp, this.camp.now);
             music(this.battleView ? 'night' : 'day');
             if (!this.battleView) this.render();
         }
@@ -583,6 +585,7 @@ export class GameRoot extends Component {
         this.battleView = view;
         this.setMainVisible(false);
         this.setFriendView(false);
+        if (this.camp) this.renderHud(this.camp, this.camp.now);
     }
 
     private closeBattle(): void {
@@ -592,9 +595,9 @@ export class GameRoot extends Component {
         this.render();
     }
 
-    /** 战斗画面打开时隐藏主界面（否则点击会穿透到下面的地图和按钮） */
+    /** 战斗画面打开时隐藏主界面（否则点击会穿透到下面的地图和按钮）；上面的资源栏一直留着 */
     private setMainVisible(visible: boolean): void {
-        for (const node of [this.content, this.mapLayer, this.hud, this.nav]) if (node) node.active = visible;
+        for (const node of [this.content, this.mapLayer, this.nav]) if (node) node.active = visible;
     }
 
     // ---------- 成绩和排行 ----------
@@ -807,6 +810,7 @@ export class GameRoot extends Component {
         bar.setPosition(0, centerY);
         bar.addComponent(BlockInputEvents);
         drawPanel(bar.addComponent(Graphics), 720, height, COLORS.panel, 0);
+        const fighting = !!this.battleView;
         const { season, dayInSeason } = seasonAt(config, state, now);
         const site = currentSite(config, state);
         // 左边的文字只占到右边按钮前面，按钮不会压住文字
@@ -879,9 +883,14 @@ export class GameRoot extends Component {
             this.resetScroll();
             this.render();
         });
+        // 打仗时资源栏只看不点（设置、背包这些按钮会跳走）
+        if (fighting) {
+            const block = makeNode('HudBlock', hud, 720, height);
+            block.setPosition(0, centerY);
+            block.addComponent(BlockInputEvents);
+        }
     }
 
-    /** 底部导航：两行，每行四个 */
     private renderNav(camp: CampGame): void {
         const nav = this.nav!;
         nav.destroyAllChildren();
