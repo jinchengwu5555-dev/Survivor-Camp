@@ -74,8 +74,8 @@ export class BattleView {
     private readonly fieldNode: Node;
     private readonly field: Graphics;
     private readonly fx: Node;
-    private readonly status: Label;
-    private readonly hint: Label;
+    private status: Label;
+    private hint: Label;
     private readonly controls: Node;
     private readonly speedButton: UIButton;
     private readonly skipButton: UIButton;
@@ -120,9 +120,9 @@ export class BattleView {
 
         const title = addLabel(this.root, opts.title, 32, COLORS.accent, { width: WIDTH });
         title.node.setPosition(0, TOP - 18);
-        this.status = addLabel(this.root, '', 24, COLORS.text, { width: WIDTH });
+        this.status = addLabel(this.root, ' ', 24, COLORS.text, { width: WIDTH });
         this.status.node.setPosition(0, TOP - 50);
-        this.hint = addLabel(this.root, '', 19, COLORS.dim, { width: WIDTH });
+        this.hint = addLabel(this.root, ' ', 19, COLORS.dim, { width: WIDTH });
         this.hint.node.setPosition(0, TOP - 76);
 
         // 视野：守夜固定看整个营地；探索按双方的站位自动框住
@@ -709,19 +709,19 @@ export class BattleView {
         const wave = this.waves.length > 1 ? `第 ${Math.max(1, this.currentWave())}/${this.waves.length} 波   ` : '';
         const core = b.units.find((u) => u.tag === CORE_UNIT);
         const coreText = core ? `营地 ${Math.max(0, Math.round((core.hp / core.stats.maxHp) * 100))}%` : '';
-        setLabelText(this.status, this.finished ? '' : `${wave}${goal}   ${coreText}`, WIDTH, 24);
+        this.status = setLabelText(this.status, this.finished ? '' : `${wave}${goal}   ${coreText}`, WIDTH, 24);
 
         this.speedButton.set(`速度 ×${this.speed}`, this.finished ? 'disabled' : 'normal');
         this.skipButton.set(this.opts.live ? '跳过（自动打完）' : '跳到结尾', this.finished ? 'disabled' : 'normal');
         const live = this.opts.live;
         const camp = b.setup.camp;
         if (!live || !camp) {
-            setLabelText(this.hint, this.finished ? '' : this.opts.replay?.report ? '战斗回放' : '演示战斗', WIDTH, 19);
+            this.hint = setLabelText(this.hint, this.finished ? '' : this.opts.replay?.report ? '战斗回放' : '演示战斗', WIDTH, 19);
             return;
         }
         const selected = this.selected !== null ? b.getUnit(this.selected) : undefined;
         const uses = live.repairsLeft();
-        setLabelText(
+        this.hint = setLabelText(
             this.hint,
             this.finished
                 ? ''
@@ -747,7 +747,7 @@ export class BattleView {
             const style = this.finished ? 'disabled' : selected ? 'highlight' : !unit?.alive ? 'danger' : attacked ? 'ready' : 'normal';
             btn.set(text, style);
             const label = this.gateLabels[i];
-            if (label) setLabelText(label, `${GATE_NAMES[i]}${guards ? ` 👥${guards}` : ''}`, 120, 18);
+            if (label) this.gateLabels[i] = setLabelText(label, `${GATE_NAMES[i]}${guards ? ` 👥${guards}` : ''}`, 120, 18);
         });
 
         // 守夜的人：一人一个按钮（颜色和场上的点一样），点一下选中

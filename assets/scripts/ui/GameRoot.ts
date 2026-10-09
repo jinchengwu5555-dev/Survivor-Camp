@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.11 一天缩短到 8 分钟';
+const GAME_VERSION = 'v3.12 界面文字修复';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -1036,7 +1036,7 @@ export class GameRoot extends Component {
         const diaryEntries = state.diary ?? [];
         if (diaryEntries.length > 0) {
             const book = makeNode('Diary', map, 110, 64);
-            book.setPosition(-150, -292);
+            book.setPosition(-265, -295);
             drawPanel(book.addComponent(Graphics), 106, 60, new Color(80, 64, 44, 230), 12, new Color(180, 150, 110), 2);
             addLabel(book, '📖', 26, TEXT, { width: 100 }).node.setPosition(0, 10);
             addLabel(book, `日记 ${diaryEntries.length}`, 16, TEXT, { width: 100 }).node.setPosition(0, -18);
@@ -1055,7 +1055,7 @@ export class GameRoot extends Component {
         const graves = state.graveyard ?? [];
         if (graves.length > 0) {
             const yard = makeNode('Graveyard', map, 120, 70);
-            yard.setPosition(-270, -245);
+            yard.setPosition(-265, -215);
             drawPanel(yard.addComponent(Graphics), 116, 64, new Color(60, 66, 60, 230), 12, new Color(150, 160, 150), 2);
             addLabel(yard, '🪦'.repeat(Math.min(3, graves.length)), 26, TEXT, { width: 110 }).node.setPosition(0, 10);
             addLabel(yard, `墓地 ${graves.length}`, 16, TEXT, { width: 110 }).node.setPosition(0, -20);
@@ -1070,7 +1070,7 @@ export class GameRoot extends Component {
         // 流浪商人的皮卡
         if (traderPresent(state, now)) {
             const truck = makeNode('Trader', map, 110, 90);
-            truck.setPosition(255, -245);
+            truck.setPosition(140, -290);
             const tg = truck.addComponent(Graphics);
             drawPanel(tg, 104, 70, new Color(70, 90, 110, 235), 14, ACCENT, 3);
             addLabel(truck, '🚚', 36, TEXT, { width: 60 }).node.setPosition(0, 8);
@@ -2800,8 +2800,11 @@ export class GameRoot extends Component {
             const ex = state.expeditions.find((e) => e.location === loc.id);
             const restock = restockSecondsLeft(state, loc.id, now);
             const fallenGear = state.droppedGear?.[loc.id] ? '💀' : '';
-            const sub = fallenGear + (rumor ? '？？？' : ex ? '小队在路上' : restock > 0 ? `🔄 ${formatTime(realSeconds(config, restock * 1000))}` : status === 'cleared' ? '✅ 可以再去' : '⚔️ 未探索');
-            const node = this.mapMarker(map, loc.map!, rumor ? '❓' : loc.icon ?? '📍', rumor ? '???' : locationName(config, state, loc), color, 28, sub);
+            // 难度：按现在最强的小队估计的胜率，标在颜色圈和名字下面那行（不再另放角标，免得压住名字）
+            const danger = rumor ? null : DANGER_LEVELS[this.odds(camp, loc.id).level];
+            const state0 = ex ? '在路上' : restock > 0 ? `🔄${formatTime(realSeconds(config, restock * 1000))}` : status === 'cleared' ? '✅' : '';
+            const sub = rumor ? fallenGear || undefined : `${fallenGear}${state0 ? `${state0} · ` : ''}${danger!.name}`;
+            const node = this.mapMarker(map, loc.map!, rumor ? '❓' : loc.icon ?? '📍', rumor ? '???' : locationName(config, state, loc), color, 28, sub, danger ? hexColor(danger.color) : undefined);
             const g = node.getComponent(Graphics)!;
             if (this.selectedLocation === loc.id) {
                 g.lineWidth = 4;
@@ -2810,17 +2813,11 @@ export class GameRoot extends Component {
                 g.stroke();
             }
             if (guidedLoc === loc.id) addLabel(node, '👉', 30, TEXT, { width: 40 }).node.setPosition(-48, 0);
-            // 难度：按现在最强的小队估计的胜率，标颜色圈和角标
-            if (!rumor) {
-                const danger = DANGER_LEVELS[this.odds(camp, loc.id).level];
+            if (danger) {
                 g.lineWidth = 4;
                 g.strokeColor = hexColor(danger.color);
                 g.circle(0, 0, 31);
                 g.stroke();
-                const tag = makeNode('Danger', node, 64, 22);
-                tag.setPosition(30, 26);
-                drawPanel(tag.addComponent(Graphics), 64, 22, new Color(15, 17, 15, 220), 11, hexColor(danger.color), 2);
-                addLabel(tag, danger.name, 14, hexColor(danger.color), { width: 60, height: 20 });
             }
             node.on(Node.EventType.TOUCH_END, () => {
                 punch(node);
@@ -2908,7 +2905,7 @@ export class GameRoot extends Component {
               : null;
         const actionBar = makeNode('PickedBar', map, MAP_WIDTH - 40, 56);
         actionBar.setPosition(0, -TOWN_HEIGHT / 2 + 40);
-        drawPanel(actionBar.addComponent(Graphics), MAP_WIDTH - 40, 56, new Color(20, 22, 20, 225), 14, picked ? ACCENT : DIM, 2);
+        drawPanel(actionBar.addComponent(Graphics), MAP_WIDTH - 40, 56, new Color(20, 22, 20, 255), 14, picked ? ACCENT : DIM, 2);
         addLabel(actionBar, picked ? `${picked}   👇 点这里去出发` : '点地图上的地点或分区名牌，选一个要去的地方', 20, picked ? ACCENT : DIM, { width: MAP_WIDTH - 60 });
         actionBar.on(Node.EventType.TOUCH_END, () => {
             if (this.dragDistance > DRAG_THRESHOLD || !picked) return;
@@ -2952,7 +2949,7 @@ export class GameRoot extends Component {
         return o;
     }
 
-    private mapMarker(parent: Node, at: { x: number; y: number }, icon: string, name: string, fill: Color, r: number, sub?: string): Node {
+    private mapMarker(parent: Node, at: { x: number; y: number }, icon: string, name: string, fill: Color, r: number, sub?: string, subColor: Color = ACCENT): Node {
         const node = makeNode('Marker', parent, r * 2 + 20, r * 2 + 50);
         node.setPosition(at.x, at.y);
         const g = node.addComponent(Graphics);
@@ -2968,7 +2965,12 @@ export class GameRoot extends Component {
         plate.setPosition(0, -r - 14);
         drawPanel(plate.addComponent(Graphics), 150, 24, new Color(15, 17, 15, 200), 12);
         addLabel(plate, name, 16, TEXT, { width: 146, height: 22 });
-        if (sub) addLabel(node, sub, 15, ACCENT, { width: 150, height: 20 }).node.setPosition(0, -r - 36);
+        if (sub) {
+            const tag = makeNode('Sub', node, 120, 20);
+            tag.setPosition(0, -r - 37);
+            drawPanel(tag.addComponent(Graphics), 120, 20, new Color(15, 17, 15, 200), 10);
+            addLabel(tag, sub, 15, subColor, { width: 116, height: 18 });
+        }
         return node;
     }
 

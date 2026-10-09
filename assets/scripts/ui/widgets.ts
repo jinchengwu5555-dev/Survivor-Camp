@@ -108,11 +108,29 @@ export function fitLabel(label: Label, text: string, width: number, size: number
     else styleLabel(label, (px * width) / w, true);
 }
 
-/** 改单行文字的内容（顺便重新按宽度算字号） */
-export function setLabelText(label: Label, text: string, width: number, size: number): void {
-    if (label.string === text) return;
-    label.string = text;
-    fitLabel(label, text, width - 4, size);
+/**
+ * 改单行文字的内容（顺便重新按宽度算字号），返回新的 Label，调用方要换成返回值。
+ * 直接改 string 在部分机型 + 自定义字体下不会重新渲染（只剩一个字或者空白），
+ * 所以内容变了就原地重建一个 Label 节点。
+ */
+export function setLabelText(label: Label, text: string, width: number, size: number): Label {
+    if (label.string === text || (!text && label.string === ' ')) return label;
+    const old = label.node;
+    const parent = old.parent;
+    if (!parent) {
+        label.string = text || ' ';
+        fitLabel(label, text, width - 4, size);
+        return label;
+    }
+    const align = label.horizontalAlign === Label.HorizontalAlign.LEFT ? 'left' : label.horizontalAlign === Label.HorizontalAlign.RIGHT ? 'right' : 'center';
+    const tf = old.getComponent(UITransform)!;
+    const c = label.color;
+    const next = addLabel(parent, text || ' ', size, new Color(c.r, c.g, c.b, c.a), { width, height: tf.height, align });
+    next.node.setPosition(old.position.x, old.position.y);
+    next.node.setSiblingIndex(old.getSiblingIndex());
+    next.node.active = old.active;
+    old.destroy();
+    return next;
 }
 
 /**
@@ -156,11 +174,17 @@ export function addLabel(parent: Node, text: string, size: number, color: Color,
     if (opts.wrap) {
         label.overflow = Label.Overflow.RESIZE_HEIGHT;
         label.enableWrapText = true;
+    } else if (opts.align === 'left' || opts.align === 'right') {
+        // 靠左 / 靠右的单行字：CLAMP 在部分机型上会把字排到框外面（资源栏跑出屏幕），
+        // 改成和 GameRoot.text() 一样的 RESIZE_HEIGHT（字号已经按宽度算好，不会真的换行）
+        label.overflow = Label.Overflow.RESIZE_HEIGHT;
+        label.enableWrapText = true;
     } else {
-        // 字号已经按宽度算好了；CLAMP 保持框的大小，对齐方式才有效
+        // 字号已经按宽度算好了；CLAMP 保持框的大小
         label.overflow = Label.Overflow.CLAMP;
         label.enableWrapText = false;
     }
+    label.updateRenderData(true);
     return label;
 }
 
@@ -190,7 +214,7 @@ const STYLE_COLORS: Record<ButtonStyle, Color> = {
 /** 可以反复改文字和样式的按钮（战斗画面每帧更新冷却时间用） */
 export class UIButton {
     readonly node: Node;
-    readonly label: Label;
+    label: Label;
     private readonly g: Graphics;
     private style: ButtonStyle | null = null;
     /** 冷却进度 0～1，画成按钮上的暗色遮罩 */
@@ -216,10 +240,12 @@ export class UIButton {
     }
 
     set(text: string, style: ButtonStyle = 'normal', progress = 0): void {
-        if (this.label.string !== text) {
-            this.label.string = text || ' ';
-            fitLabel(this.label, text, this.width - 16, this.size);
-            this.label.updateRenderData(true);
+        // 文字变了就重建 Label（直接改 string 在部分机型上只渲染出一个字或者空白）
+        if (this.label.string !== (text || ' ')) {
+            const c = this.label.color;
+            const color = new Color(c.r, c.g, c.b, c.a);
+            this.label.node.destroy();
+            this.label = addLabel(this.node, text || ' ', this.size, color, { width: this.width - 12, height: this.height });
         }
         if (style === this.style && Math.abs(progress - this.progress) < 0.02) return;
         this.style = style;
