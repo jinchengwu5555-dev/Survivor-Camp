@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.12 界面文字修复';
+const GAME_VERSION = 'v3.13 守夜看得清：人排开、尸群陆续来';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;

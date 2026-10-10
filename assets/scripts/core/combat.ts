@@ -6,7 +6,7 @@
 
 import { campGates, recordWallDamage, wallWear } from './wall';
 import { addFamiliar, parseFamiliarTag, settleFamiliar } from './familiar';
-import { Battle, BattleSetup, UnitSetup } from './battle/Battle';
+import { Battle, BattleSetup, UnitSetup, waveTimes } from './battle/Battle';
 import { CampBuilding, campCenter, CampLayout, gateNormal, Rect } from './battle/geometry';
 import { battleCamp } from './campzones';
 import { BattleRegistry } from './battle/registry';
@@ -303,7 +303,9 @@ function swarmEnemies(config: GameConfig, enemies: UnitSetup[]): UnitSetup[] {
             ...e,
             hpMult: (e.hpMult ?? 1) * sw.hpMult,
             atkMult: (e.atkMult ?? 1) * sw.atkMult,
-            spawnAt: (e.spawnAt ?? 0) + k * 0.3,
+            speedMult: sw.speedMult,
+            // 一群里的几只陆续出来，连成一串，而不是一团同时扑上来
+            spawnAt: (e.spawnAt ?? 0) + k * (sw.stagger ?? 0.3),
         }));
     });
 }
@@ -373,6 +375,8 @@ export function raidSetup(
         autoCastActive: true,
         mustSurvive: [CORE_UNIT],
         camp,
+        // 波次按尸潮配置里的出场时间算（尸群陆续出来的那几秒不算新的一波）
+        waves: waveTimes({ enemies: base } as BattleSetup),
     };
 }
 

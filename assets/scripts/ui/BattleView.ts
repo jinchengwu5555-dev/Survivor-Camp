@@ -249,8 +249,8 @@ export class BattleView {
 
     private radiusOf(u: BattleUnit): number {
         // 人和丧尸画大一点（看得清），建筑画小一点（BUILDING_DRAW）
-        const base = u.side === 'ally' ? 0.62 : this.isSpecial(u) ? 0.62 : 0.44;
-        const min = u.side === 'ally' ? 12 : 8;
+        const base = u.side === 'ally' ? 0.55 : this.isSpecial(u) ? 0.62 : 0.4;
+        const min = u.side === 'ally' ? 13 : 8;
         return Math.max(min, base * this.scale * Math.min(1.6, u.def.appearance.scale));
     }
 
@@ -322,8 +322,9 @@ export class BattleView {
             g.circle(s.x, s.y, r);
             g.fill();
             if (u.side === 'ally') {
-                g.lineWidth = u.uid === this.selected ? 4 : 2;
-                g.strokeColor = u.uid === this.selected ? SELECT_COLOR : new Color(20, 20, 20, 220);
+                // 白色描边：尸群里也一眼能找到自己人
+                g.lineWidth = u.uid === this.selected ? 4 : 3;
+                g.strokeColor = u.uid === this.selected ? SELECT_COLOR : new Color(250, 250, 240, 240);
                 g.circle(s.x, s.y, r + (u.uid === this.selected ? 4 : 0));
                 g.stroke();
             }
@@ -766,13 +767,23 @@ export class BattleView {
                 btn = new UIButton(this.controls, w, 52, () => {
                     this.selected = this.selected === u.uid ? null : u.uid;
                 }, 19);
+                // 左边画一个和场上一样颜色的圆点，认得出哪个点是谁（文字统一用白色，看得清）
+                const dot = makeNode('Dot', btn.node, 20, 20);
+                dot.setPosition(-w / 2 + 14, 0);
+                const dg = dot.addComponent(Graphics);
+                dg.fillColor = this.colorOf(u);
+                dg.circle(0, 0, 8);
+                dg.fill();
+                dg.lineWidth = 2;
+                dg.strokeColor = new Color(250, 250, 240);
+                dg.circle(0, 0, 8);
+                dg.stroke();
                 this.peopleButtons.set(u.uid, btn);
             }
             btn.node.setPosition(-WIDTH / 2 + w / 2 + (i % per) * (w + 10), 48 - Math.floor(i / per) * 60);
             const hp = Math.round((u.hp / u.stats.maxHp) * 100);
             const gate = u.post !== undefined ? GATE_NAMES[u.post] : '';
-            btn.set(`● ${this.nameOf(u)} ${gate} ${hp}%`, this.finished ? 'disabled' : this.selected === u.uid ? 'highlight' : 'normal');
-            btn.label.color = this.colorOf(u);
+            btn.set(`   ${this.nameOf(u)} ${gate} ${hp}%`, this.finished ? 'disabled' : this.selected === u.uid ? 'highlight' : 'normal');
         });
     }
 

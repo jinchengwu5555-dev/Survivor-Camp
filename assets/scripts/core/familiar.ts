@@ -41,7 +41,9 @@ export function addFamiliar(config: GameConfig, state: GameState, setup: BattleS
     const pool = restlessGraves(config, state, at);
     if (!cfg || pool.length === 0 || nextRandom(state) >= cfg.chance) return undefined;
     const g = pool[Math.floor(nextRandom(state) * pool.length)];
-    const unit: UnitSetup = { unit: cfg.unit, level: enemyLevel, spawnAt: cfg.spawnAt, hpMult: cfg.hpMult, atkMult: cfg.atkMult, tag: familiarTag(g) };
+    // 营地战斗：跟着尸群从同一个方向来（不写位置会排到默认的出生点，离门太远）
+    const near = setup.enemies.find((e) => e.x !== undefined && e.y !== undefined);
+    const unit: UnitSetup = { unit: cfg.unit, level: enemyLevel, spawnAt: cfg.spawnAt, hpMult: cfg.hpMult, atkMult: cfg.atkMult, tag: familiarTag(g), x: near?.x, y: near?.y };
     setup.enemies = [...setup.enemies, unit];
     g.sightings = (g.sightings ?? 0) + 1;
     addStat(state, 'familiar_seen');

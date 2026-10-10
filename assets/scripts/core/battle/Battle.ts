@@ -42,6 +42,8 @@ export interface UnitSetup {
     /** 攻击 / 生命倍率（营地里的天赋） */
     atkMult?: number;
     hpMult?: number;
+    /** 移动速度倍率（营地尸群里的小丧尸走慢一点，不会一下子全挤到门口） */
+    speedMult?: number;
     /** 拿着远程武器：射程至少这么远 */
     range?: number;
     /** 覆盖攻击力（栅栏本身不打人，上面的陷阱按这个算伤害） */
@@ -66,6 +68,8 @@ export interface BattleSetup {
     camp?: CampLayout;
     /** 探索战斗的场景（只用来画）：在哪个地点打（图标、地点 id） */
     scene?: { icon: string; location?: string };
+    /** 每一波开始的秒数（只用来显示波次）；不写就按敌人出场时间自动分 */
+    waves?: number[];
     /** 玩家的操作记录：重放战报时按时间点原样执行（手动守夜的战报靠它完整重放） */
     inputs?: BattleInput[];
 }
@@ -99,6 +103,8 @@ const POST_FALLBACK = 2.5;
 const INSIDE_AGGRO = 1;
 /** 尸群里两只丧尸至少隔这么远（营地战斗） */
 const CROWD_SPACING = 0.45;
+/** 守门的人之间至少隔这么远（不然几个人追同一只丧尸会叠成一个点） */
+const ALLY_SPACING = 0.95;
 
 export class Battle implements BattleContext {
     time = 0;
@@ -427,6 +433,31 @@ export class Battle implements BattleContext {
             u.x = p.x;
             u.y = p.y;
         });
+        // 自己人也互相让开一点，沿着墙站成一排，推完还在围墙里
+        const people = this.units.filter((u) => u.alive && u.side === 'ally' && u.def.faction !== 'structure');
+        for (let i = 0; i < people.length; i++) {
+            const a = people[i];
+            for (let j = i + 1; j < people.length; j++) {
+                const b = people[j];
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const d2 = dx * dx + dy * dy;
+                if (d2 >= ALLY_SPACING * ALLY_SPACING) continue;
+                const d = Math.sqrt(d2);
+                const nx = d > 1e-6 ? dx / d : Math.cos(a.uid * 2.4);
+                const ny = d > 1e-6 ? dy / d : Math.sin(a.uid * 2.4);
+                const push = (ALLY_SPACING - d) / 2;
+                a.x -= nx * push;
+                a.y -= ny * push;
+                b.x += nx * push;
+                b.y += ny * push;
+            }
+        }
+        for (const u of people) {
+            const p = clampInside(camp, u);
+            u.x = p.x;
+            u.y = p.y;
+        }
     }
 
     /** 没有目标时回到岗位 */
@@ -518,6 +549,7 @@ export class Battle implements BattleContext {
             if (p.setup.hpMult) unit.stats.maxHp = unit.hp = Math.round(unit.stats.maxHp * p.setup.hpMult);
             if (p.setup.hpRatio !== undefined) unit.hp = Math.max(1, Math.round(unit.stats.maxHp * Math.min(1, p.setup.hpRatio)));
             if (p.setup.atkMult) unit.stats.atk = unit.stats.atk * p.setup.atkMult;
+            if (p.setup.speedMult) unit.stats.moveSpeed = unit.stats.moveSpeed * p.setup.speedMult;
             if (p.setup.range) unit.stats.attackRange = Math.max(unit.stats.attackRange, p.setup.range);
             if (p.setup.atk !== undefined) unit.stats.atk = p.setup.atk;
             unit.tag = p.setup.tag;
@@ -560,6 +592,7 @@ export class Battle implements BattleContext {
 
 /** 敌人分几波出场：每一波的出场时间（秒，从小到大）；1.5 秒以内陆续出来的算同一波 */
 export function waveTimes(setup: BattleSetup): number[] {
+    if (setup.waves?.length) return setup.waves;
     const times = [...new Set(setup.enemies.map((e) => e.spawnAt ?? 0))].sort((a, b) => a - b);
     const waves: number[] = [];
     for (const t of times) if (!waves.length || t - waves[waves.length - 1] > 1.5) waves.push(t);
