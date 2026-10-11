@@ -179,6 +179,8 @@ export interface BattleUnit {
     gate?: number;
     /** 守门的人：分到第几个门 */
     post?: number;
+    /** 身体半径（格）：营地战斗里人、丧尸互相挤开、绕开建筑都按这个算，画出来也是这么大 */
+    radius: number;
 }
 
 export type BattleResult = 'ongoing' | 'win' | 'lose';
@@ -221,4 +223,6 @@ export interface BattleContext extends RngHolder {
     shieldBroken(target: BattleUnit): void;
     /** 为 true 时手动技能按自动技能处理 */
     readonly autoCastActive: boolean;
+    /** 攻击距离要加上的身体大小（营地战斗：从身体边上算起）；没有就是 0 */
+    reach?(unit: BattleUnit, target: BattleUnit): number;
 }

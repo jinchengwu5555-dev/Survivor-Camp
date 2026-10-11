@@ -10,7 +10,7 @@
 
 import { Color, EventTouch, Graphics, Label, Node, UITransform, Vec3 } from 'cc';
 import { Battle, BattleSetup, waveTimes } from '../core/battle/Battle';
-import { campBounds, campCenter, gateNormal, gateOpen, Point } from '../core/battle/geometry';
+import { BUILDING_BODY, campBounds, campCenter, gateNormal, gateOpen, Point } from '../core/battle/geometry';
 import { BattleUnit } from '../core/battle/types';
 import { battleRegistry, CORE_UNIT, GATE_NAMES } from '../core/combat';
 import { parseFamiliarTag } from '../core/familiar';
@@ -29,7 +29,6 @@ const FIELD_Y = 70;
 /** 守夜时视野的半径（格）：围墙半边 6 格，尸群从更远的地方走进画面 */
 const CAMP_VIEW_MARGIN = 5;
 /** 营地里的建筑在战斗画面上画成地图上大小的几成（太大会显得人和丧尸很小） */
-const BUILDING_DRAW = 0.6;
 /** 同时最多几个飘字，避免尸群一多卡顿 */
 const MAX_FLOATS = 12;
 const FIELD_BG = hexColor('#141a1c');
@@ -150,8 +149,8 @@ export class BattleView {
             // 营地里的建筑：和营地地图上同样的位置，中间写图标和名字
             for (const b of camp.buildings ?? []) {
                 const sp = this.toScreen(b);
-                addLabel(this.fx, `${b.icon}`, Math.max(16, Math.min(30, b.h * this.scale * BUILDING_DRAW * 0.45)), new Color(200, 210, 215, 150), { width: 80, height: 34 }).node.setPosition(sp.x, sp.y + 6);
-                addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale * BUILDING_DRAW), height: 20 }).node.setPosition(sp.x, sp.y - 18);
+                addLabel(this.fx, `${b.icon}`, Math.max(16, Math.min(30, b.h * this.scale * BUILDING_BODY * 0.45)), new Color(200, 210, 215, 150), { width: 80, height: 34 }).node.setPosition(sp.x, sp.y + 6);
+                addLabel(this.fx, b.name, 14, new Color(170, 180, 185, 140), { width: Math.max(60, b.w * this.scale * BUILDING_BODY), height: 20 }).node.setPosition(sp.x, sp.y - 18);
             }
             camp.gates.forEach((g, i) => {
                 if (!gateOpen(camp, i)) {
@@ -248,7 +247,8 @@ export class BattleView {
     }
 
     private radiusOf(u: BattleUnit): number {
-        // 人和丧尸画大一点（看得清），建筑画小一点（BUILDING_DRAW）
+        // 营地战斗：画出来的大小就是碰撞的大小（u.radius），看到挤在一起就是真的挤住了
+        if (this.battle.setup.camp) return Math.max(5, u.radius * this.scale);
         const base = u.side === 'ally' ? 0.55 : this.isSpecial(u) ? 0.62 : 0.4;
         const min = u.side === 'ally' ? 13 : 8;
         return Math.max(min, base * this.scale * Math.min(1.6, u.def.appearance.scale));
@@ -415,11 +415,11 @@ export class BattleView {
         g.fillColor = GROUND;
         g.rect(lo.x, lo.y, hi.x - lo.x, hi.y - lo.y);
         g.fill();
-        // 营地里的建筑（只是画出来，不挡路）
+        // 营地里的建筑（挡路，画出来的大小就是碰撞框）
         for (const b of camp.buildings ?? []) {
             const c = this.toScreen(b);
-            const w = b.w * this.scale * BUILDING_DRAW;
-            const h = b.h * this.scale * BUILDING_DRAW;
+            const w = b.w * this.scale * BUILDING_BODY;
+            const h = b.h * this.scale * BUILDING_BODY;
             g.fillColor = hexColor('#26323a');
             g.roundRect(c.x - w / 2, c.y - h / 2, w, h, 6);
             g.fill();

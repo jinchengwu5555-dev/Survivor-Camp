@@ -304,6 +304,7 @@ function swarmEnemies(config: GameConfig, enemies: UnitSetup[]): UnitSetup[] {
             hpMult: (e.hpMult ?? 1) * sw.hpMult,
             atkMult: (e.atkMult ?? 1) * sw.atkMult,
             speedMult: sw.speedMult,
+            radius: sw.radius,
             // 一群里的几只陆续出来，连成一串，而不是一团同时扑上来
             spawnAt: (e.spawnAt ?? 0) + k * (sw.stagger ?? 0.3),
         }));

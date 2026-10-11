@@ -23,7 +23,7 @@ export interface CampLayout {
     gates: Point[];
     /** 围墙的范围（格）；不写就是 half 的正方形 */
     rect?: Rect;
-    /** 营地里的建筑（只用来画，不挡路） */
+    /** 营地里的建筑（挡路：人和丧尸都要绕开，碰撞框是 w × h 再乘 BUILDING_BODY） */
     buildings?: CampBuilding[];
     /** 这些位置还没开门，是实心的墙（gates 的下标） */
     closed?: number[];
@@ -112,6 +112,36 @@ export interface CampBuilding {
     h: number;
     icon: string;
     name: string;
+}
+
+/** 建筑的碰撞框（也是画出来的大小）占地图格子的多少 */
+export const BUILDING_BODY = 0.6;
+
+export function buildingRect(b: CampBuilding): Rect {
+    const w = (b.w * BUILDING_BODY) / 2;
+    const h = (b.h * BUILDING_BODY) / 2;
+    return { x1: b.x - w, x2: b.x + w, y1: b.y - h, y2: b.y + h };
+}
+
+/**
+ * 半径 radius 的圆和矩形重叠了，就把圆推到最近的那条边外面；没重叠返回 null。
+ * slide 是顺着边多挪一点（正负决定方向），正面撞上建筑的也能绕过去，不会卡死。
+ */
+export function pushOutOfRect(p: Point, r: Rect, radius: number, slide = 0): Point | null {
+    const x1 = r.x1 - radius;
+    const x2 = r.x2 + radius;
+    const y1 = r.y1 - radius;
+    const y2 = r.y2 + radius;
+    if (p.x <= x1 || p.x >= x2 || p.y <= y1 || p.y >= y2) return null;
+    const left = p.x - x1;
+    const right = x2 - p.x;
+    const down = p.y - y1;
+    const up = y2 - p.y;
+    const m = Math.min(left, right, down, up);
+    if (m === left) return { x: x1, y: p.y + slide };
+    if (m === right) return { x: x2, y: p.y + slide };
+    if (m === down) return { x: p.x + slide, y: y1 };
+    return { x: p.x + slide, y: y2 };
 }
 
 export function campBounds(camp: CampLayout): Rect {

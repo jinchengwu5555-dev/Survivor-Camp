@@ -70,14 +70,14 @@ export interface BalanceDef {
      * 俯视守夜的营地：半边长 half 的方形围墙，四面各一个门；丧尸从离墙 spawnDistance 格的地方来。
      * 每个门的生命 = 栅栏总生命 × gateHpShare，营地核心 = × coreHpShare（核心被拆就算输）。
      * swarm：这些丧尸一只变成 count 只小的（生命 × hpMult、攻击 × atkMult、移速 × speedMult），
-     * 一群里每只隔 stagger 秒出来，尸群看起来有几十只，但不会一团同时扑上来。
+     * radius 是小丧尸的身体半径（格，碰撞和画出来的大小）；一群里每只隔 stagger 秒出来，尸群看起来有几十只，但不会一团同时扑上来。
      */
     camp?: {
         half: number;
         spawnDistance: number;
         gateHpShare: number;
         coreHpShare: number;
-        swarm?: { units: string[]; count: number; hpMult: number; atkMult: number; speedMult?: number; stagger?: number };
+        swarm?: { units: string[]; count: number; hpMult: number; atkMult: number; speedMult?: number; stagger?: number; radius?: number };
         /** 栅栏升到几级开第几个门（0 北、1 东、2 南、3 西）；不写就是四个门都有 */
         gateUnlocks?: { level: number; gate: number }[];
     };

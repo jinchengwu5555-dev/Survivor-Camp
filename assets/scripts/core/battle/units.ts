@@ -41,5 +41,7 @@ export function createBattleUnit(
             return { def: skill, cooldown: skill.initialCooldown ?? 0, fired: false };
         }),
         statuses: [],
+        // 默认身体半径，出场时 Battle 按阵营 / 体型 / UnitSetup.radius 重新算
+        radius: 0.5 * Math.min(1.6, def.appearance.scale),
     };
 }

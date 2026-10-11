@@ -121,7 +121,7 @@ function applyEffect(ctx: BattleContext, caster: BattleUnit, target: BattleUnit,
 function inRange(ctx: BattleContext, unit: BattleUnit, skill: SkillDef): boolean {
     const target = ctx.getUnit(unit.targetUid);
     if (!target?.alive) return false;
-    return distance(target, unit) <= (skill.range ?? unit.stats.attackRange);
+    return distance(target, unit) <= (skill.range ?? unit.stats.attackRange) + (ctx.reach?.(unit, target) ?? 0);
 }
 
 /** 自动技能的释放条件：治疗技能要有人受伤；其他技能要在交战距离内 */

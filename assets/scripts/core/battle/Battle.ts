@@ -10,7 +10,7 @@
 // 战斗逻辑以固定步长（STEP 秒）推进，结果只由种子决定，同一个种子可以完整重放。
 
 import { DamagePipeline } from './damage';
-import { campBounds, CampLayout, clampInside, detour, distance, gateNormal, gateOpen, insideCamp, Point, pushOutside, stepToward } from './geometry';
+import { buildingRect, campBounds, CampLayout, clampInside, detour, distance, gateNormal, gateOpen, insideCamp, Point, pushOutOfRect, pushOutside, stepToward } from './geometry';
 import { BattleRegistry } from './registry';
 import { castActive, enemiesOf, fireBattleStart, fireOnAttack, fireOnDeath, fireShieldBroken, nearest, updateSkills } from './skills';
 import { canAct, canMove, effectiveAtk, effectiveAttackInterval, effectiveMoveSpeed, updateStatuses } from './status';
@@ -42,6 +42,8 @@ export interface UnitSetup {
     /** 攻击 / 生命倍率（营地里的天赋） */
     atkMult?: number;
     hpMult?: number;
+    /** 身体半径（格）；不写按阵营和体型算（见 bodyRadius） */
+    radius?: number;
     /** 移动速度倍率（营地尸群里的小丧尸走慢一点，不会一下子全挤到门口） */
     speedMult?: number;
     /** 拿着远程武器：射程至少这么远 */
@@ -101,10 +103,11 @@ const POST_LEASH = 2.5;
 const POST_FALLBACK = 2.5;
 /** 冲进营地的丧尸：这么近的人会先被咬，远一点的不管，直奔营地核心 */
 const INSIDE_AGGRO = 1;
-/** 尸群里两只丧尸至少隔这么远（营地战斗） */
-const CROWD_SPACING = 0.45;
-/** 守门的人之间至少隔这么远（不然几个人追同一只丧尸会叠成一个点） */
-const ALLY_SPACING = 0.95;
+/** 身体半径（格）：人、普通丧尸；尸群里的小丧尸在 combat.ts 里另给（balance.camp.swarm.radius） */
+const ALLY_RADIUS = 0.6;
+const ENEMY_RADIUS = 0.5;
+/** 自己人和丧尸挤在一起时，丧尸被推开的份额（人站得更稳） */
+const ENEMY_PUSH_SHARE = 0.7;
 
 export class Battle implements BattleContext {
     time = 0;
@@ -311,7 +314,7 @@ export class Battle implements BattleContext {
             return;
         }
         const dist = distance(u, target);
-        const range = u.stats.attackRange;
+        const range = u.stats.attackRange + this.reach(u, target);
         if (this.shouldFallBack(u, target)) {
             // 自己守的门破了：先退到门后，别堵在破口上和墙外的尸群硬拼
             if (canMove(u)) this.returnToPost(u);
@@ -399,65 +402,54 @@ export class Battle implements BattleContext {
     }
 
     /**
-     * 营地战斗：尸群互相挤开，不会全叠在门口一个点上，而是沿着围墙排开一大片。
-     * 只推丧尸（不推人和建筑）；推完墙外的丧尸还在墙外。
+     * 营地战斗的碰撞：人和丧尸都有身体（radius），互相挤开，不会叠在一起，也不能穿过建筑。
+     * 自己人推完还在围墙里，墙外的丧尸推完还在墙外（门破了的地方除外）。
      */
     private separateCrowd(): void {
         const camp = this.setup.camp;
         if (!camp) return;
-        const crowd = this.units.filter((u) => u.alive && u.side === 'enemy' && u.def.faction !== 'structure');
-        const min = CROWD_SPACING;
-        const outside = crowd.map((u) => !insideCamp(camp, u) && !u.ignoreStructures);
-        for (let i = 0; i < crowd.length; i++) {
-            const a = crowd[i];
-            for (let j = i + 1; j < crowd.length; j++) {
-                const b = crowd[j];
+        const bodies = this.units.filter((u) => u.alive && u.def.faction !== 'structure');
+        const outside = bodies.map((u) => u.side === 'enemy' && !insideCamp(camp, u) && !u.ignoreStructures);
+        for (let i = 0; i < bodies.length; i++) {
+            const a = bodies[i];
+            for (let j = i + 1; j < bodies.length; j++) {
+                const b = bodies[j];
+                const min = a.radius + b.radius;
                 const dx = b.x - a.x;
                 const dy = b.y - a.y;
+                if (Math.abs(dx) >= min || Math.abs(dy) >= min) continue;
                 const d2 = dx * dx + dy * dy;
                 if (d2 >= min * min) continue;
                 const d = Math.sqrt(d2);
                 // 完全重合时按 uid 定一个方向，保证结果可以重放
                 const nx = d > 1e-6 ? dx / d : Math.cos(a.uid * 2.4);
                 const ny = d > 1e-6 ? dy / d : Math.sin(a.uid * 2.4);
-                const push = (min - d) / 2;
-                a.x -= nx * push;
-                a.y -= ny * push;
-                b.x += nx * push;
-                b.y += ny * push;
+                const overlap = min - d;
+                const shareB = a.side === b.side ? 0.5 : b.side === 'enemy' ? ENEMY_PUSH_SHARE : 1 - ENEMY_PUSH_SHARE;
+                a.x -= nx * overlap * (1 - shareB);
+                a.y -= ny * overlap * (1 - shareB);
+                b.x += nx * overlap * shareB;
+                b.y += ny * overlap * shareB;
             }
         }
-        crowd.forEach((u, i) => {
-            if (!outside[i] || this.nearOpenGate(u)) return;
-            const p = pushOutside(camp, u);
+        const rects = (camp.buildings ?? []).map(buildingRect);
+        bodies.forEach((u, i) => {
+            let p: Point = u;
+            if (u.side === 'ally') p = clampInside(camp, p);
+            else if (outside[i] && !this.nearOpenGate(p)) p = pushOutside(camp, p);
+            for (const r of rects) p = pushOutOfRect(p, r, u.radius, u.uid % 2 ? 0.03 : -0.03) ?? p;
             u.x = p.x;
             u.y = p.y;
         });
-        // 自己人也互相让开一点，沿着墙站成一排，推完还在围墙里
-        const people = this.units.filter((u) => u.alive && u.side === 'ally' && u.def.faction !== 'structure');
-        for (let i = 0; i < people.length; i++) {
-            const a = people[i];
-            for (let j = i + 1; j < people.length; j++) {
-                const b = people[j];
-                const dx = b.x - a.x;
-                const dy = b.y - a.y;
-                const d2 = dx * dx + dy * dy;
-                if (d2 >= ALLY_SPACING * ALLY_SPACING) continue;
-                const d = Math.sqrt(d2);
-                const nx = d > 1e-6 ? dx / d : Math.cos(a.uid * 2.4);
-                const ny = d > 1e-6 ? dy / d : Math.sin(a.uid * 2.4);
-                const push = (ALLY_SPACING - d) / 2;
-                a.x -= nx * push;
-                a.y -= ny * push;
-                b.x += nx * push;
-                b.y += ny * push;
-            }
-        }
-        for (const u of people) {
-            const p = clampInside(camp, u);
-            u.x = p.x;
-            u.y = p.y;
-        }
+    }
+
+    /**
+     * 营地战斗里人和丧尸有身体：攻击距离从身体边上算起（两个身体贴着就能打到）。
+     * 门、营地核心这些建筑按中心算（它们不参与挤开）。横版战斗没有身体，返回 0。
+     */
+    reach(u: BattleUnit, target: BattleUnit): number {
+        if (!this.setup.camp) return 0;
+        return u.radius + (target.def.faction === 'structure' ? 0 : target.radius);
     }
 
     /** 没有目标时回到岗位 */
@@ -490,7 +482,7 @@ export class Battle implements BattleContext {
      */
     private pickTarget(u: BattleUnit): BattleUnit | undefined {
         const current = this.getUnit(u.targetUid);
-        if (current?.alive && distance(current, u) <= u.stats.attackRange) return current;
+        if (current?.alive && distance(current, u) <= u.stats.attackRange + this.reach(u, current)) return current;
         const next = this.chooseTarget(u);
         u.targetUid = next?.uid ?? null;
         return next;
@@ -521,7 +513,7 @@ export class Battle implements BattleContext {
             if (unit?.alive) return unit;
         }
         const near = nearest(u, people.filter((e) => e.def.faction !== 'structure'));
-        if (near && distance(near, u) <= INSIDE_AGGRO) return near;
+        if (near && distance(near, u) <= INSIDE_AGGRO + this.reach(u, near)) return near;
         const core = nearest(u, people.filter((e) => e.def.faction === 'structure'));
         return core ?? nearest(u, people.length ? people : enemies);
     }
@@ -537,6 +529,7 @@ export class Battle implements BattleContext {
             const unit = createBattleUnit(this.registry, this.nextUid++, p.setup.unit, p.side, p.setup.level ?? 1, p.x, p.y);
             unit.gate = p.setup.gate;
             unit.post = p.setup.post;
+            unit.radius = p.setup.radius ?? bodyRadius(unit);
             const wall = unit.def.burrow ? this.nearestStructure(p.side === 'ally' ? 'enemy' : 'ally', unit) : undefined;
             if (wall) {
                 // 从地下钻出来：从出生点朝栅栏的方向，落在栅栏后面
@@ -591,6 +584,11 @@ export class Battle implements BattleContext {
 }
 
 /** 敌人分几波出场：每一波的出场时间（秒，从小到大）；1.5 秒以内陆续出来的算同一波 */
+/** 默认的身体半径：人 0.6 格、丧尸 0.5 格，再按体型（appearance.scale）放大缩小 */
+export function bodyRadius(u: BattleUnit): number {
+    return (u.side === 'ally' ? ALLY_RADIUS : ENEMY_RADIUS) * Math.min(1.6, u.def.appearance.scale);
+}
+
 export function waveTimes(setup: BattleSetup): number[] {
     if (setup.waves?.length) return setup.waves;
     const times = [...new Set(setup.enemies.map((e) => e.spawnAt ?? 0))].sort((a, b) => a - b);
