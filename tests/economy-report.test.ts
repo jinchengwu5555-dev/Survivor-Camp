@@ -15,7 +15,7 @@ import { availableLocations, clearedFlag, expeditionBlocker, raidEnemyBonus, sug
 import { suggestSurveyors } from '../assets/scripts/core/districts';
 import { locationName } from '../assets/scripts/core/names';
 import { buildVehicleBlocker } from '../assets/scripts/core/vehicles';
-import { economyRates, hqLevel, morale, workerSlots } from '../assets/scripts/core/economy';
+import { economyRates, foodConsumptionPerMinute, hqLevel, morale, productionPerMinute, waterConsumptionPerMinute, workerSlots } from '../assets/scripts/core/economy';
 import { upgradeBlocker } from '../assets/scripts/core/buildings';
 import { currentDay } from '../assets/scripts/core/state';
 import { seasonAt } from '../assets/scripts/core/seasons';
@@ -127,11 +127,29 @@ function session(game: CampGame, now: number): void {
     if (options.length) game.upgrade(options[0].id, now);
 }
 
+/** 食物和水的流水账：产出、吃掉 / 喝掉、腐烂（按每秒心跳前的速率 × 这一秒走过的游戏分钟累计） */
+const ledger = { foodMade: 0, foodEaten: 0, foodSpoiled: 0, waterMade: 0, waterDrunk: 0 };
+
+function recordLedger(game: CampGame, before: number): void {
+    const minutes = (game.now - before) / MIN;
+    if (minutes <= 0) return;
+    const { config, state } = game;
+    const rates = economyRates(config, state, before);
+    const made = productionPerMinute(config, state);
+    ledger.foodMade += made.food * seasonAt(config, state, before).season.foodProduction * minutes;
+    ledger.foodEaten += foodConsumptionPerMinute(config, state) * minutes;
+    ledger.foodSpoiled += rates.spoil * minutes;
+    ledger.waterMade += made.water * minutes;
+    ledger.waterDrunk += waterConsumptionPerMinute(config, state, before) * minutes;
+}
+
 /** 一次上线：在线 SESSION_MINUTES 分钟，每秒心跳一次，每分钟操作一次 */
 const SESSION_MINUTES = 5;
 function onlineSession(game: CampGame, start: number): void {
     for (let sec = 0; sec <= SESSION_MINUTES * 60; sec++) {
+        const before = game.now;
         game.online(start + sec * 1000);
+        recordLedger(game, before);
         if (game.state.gameOver) return;
         if (sec % 60 === 0) session(game, game.now);
     }
@@ -143,13 +161,18 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const lines = ['真实天  游戏天  季节  指挥部  其余建筑平均  食物   木材   零件  药品  士气  人数  守夜胜/负  尸潮加成(喘息)  死亡  成就'];
     const r = (n: number, w = 5) => String(Math.round(n)).padStart(w);
     let starvedSessions = 0;
+    let thirstySessions = 0;
     let sessions = 0;
+    // 食物和水的账：每行是这几天（真实天）的日均
+    const food = ['真实天  人数   食物存量  产出/天  吃掉/天  腐烂/天  其他/天  够吃几天 |  水存量  产出/天  喝掉/天  其他/天  够喝几天'];
+    let last = { ...ledger, food: state.resources.food, water: state.resources.water ?? 0, day: 0 };
     for (let day = 0; day < REAL_DAYS; day++) {
         for (const h of SESSION_HOURS) {
             onlineSession(game, T0 + (day * 24 + h) * HOUR);
             if (state.gameOver) break;
             sessions++;
             if (state.resources.food < 1) starvedSessions++;
+            if ((state.resources.water ?? 0) < 1) thirstySessions++;
         }
         if (state.gameOver) {
             lines.push(`营地在第 ${state.gameOver.day} 天（真实第 ${day + 1} 天）覆灭：${state.gameOver.cause}`);
@@ -157,13 +180,33 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
         }
         if (day >= 14 && (day + 1) % 3 !== 0) continue;
         const now = game.now;
+        {
+            const days = day + 1 - last.day;
+            const per = (n: number) => n / days;
+            const water = state.resources.water ?? 0;
+            const eat = per(ledger.foodEaten - last.foodEaten);
+            const drink = per(ledger.waterDrunk - last.waterDrunk);
+            const foodOther = per(state.resources.food - last.food) - per(ledger.foodMade - last.foodMade) + eat + per(ledger.foodSpoiled - last.foodSpoiled);
+            const waterOther = per(water - last.water) - per(ledger.waterMade - last.waterMade) + drink;
+            food.push(
+                `${r(day + 1, 4)}  ${r(state.survivors.length, 4)}  ${r(state.resources.food, 8)}  ${r(per(ledger.foodMade - last.foodMade), 7)}  ${r(eat, 7)}  ${r(per(ledger.foodSpoiled - last.foodSpoiled), 7)}  ${r(foodOther, 7)}  ${r(eat > 0 ? state.resources.food / eat : 0, 8)} | ${r(water, 7)}  ${r(per(ledger.waterMade - last.waterMade), 7)}  ${r(drink, 7)}  ${r(waterOther, 7)}  ${r(drink > 0 ? water / drink : 0, 8)}`,
+            );
+            last = { ...ledger, food: state.resources.food, water, day: day + 1 };
+        }
         const others = config.buildings.filter((b) => b.id !== 'hq');
         const avg = others.reduce((sum, b) => sum + state.buildings[b.id].level, 0) / others.length;
         lines.push(
             `${r(day + 1, 4)}  ${r(currentDay(config, state, now), 6)}   ${seasonAt(config, state, now).season.icon}   ${r(hqLevel(state), 5)}  ${avg.toFixed(1).padStart(10)}   ${r(state.resources.food)}  ${r(state.resources.wood)}  ${r(state.resources.parts)}  ${r(state.resources.medicine, 4)}  ${r(morale(state), 4)}  ${r(state.survivors.length, 4)}   ${r(state.stats.raids_won ?? 0, 4)}/${state.stats.raids_lost ?? 0}   ${r(raidEnemyBonus(config, state, now), 6)}(${state.raidRelief})   ${r(state.stats.deaths ?? 0, 4)}  ${r(state.achievements.length, 4)}`,
         );
     }
-    lines.push('', `上线时食物为 0 的次数：${starvedSessions}/${sessions}   领到离线收益 ${state.stats.offline_rewards ?? 0} 次`);
+    lines.push('', `上线时食物为 0 的次数：${starvedSessions}/${sessions}   水为 0 的次数：${thirstySessions}/${sessions}   领到离线收益 ${state.stats.offline_rewards ?? 0} 次`);
+    const perPersonDay = config.balance.dayLengthMinutes;
+    lines.push(
+        '',
+        `—— 食物和水（每行是这几天的日均，“天”是真实天；一个人每游戏天吃 ${(config.balance.foodPerSurvivorPerMinute * perPersonDay).toFixed(1)} 食物、喝 ${(config.balance.waterPerSurvivorPerMinute * perPersonDay).toFixed(1)} 水）——`,
+        '“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天吃掉的（真实天）',
+        ...food,
+    );
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
     lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));
