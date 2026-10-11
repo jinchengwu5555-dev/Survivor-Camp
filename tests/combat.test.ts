@@ -192,7 +192,10 @@ describe('尸潮夜袭', () => {
         expect(report.result).toBe('lose');
         const replay = new Battle(battleRegistry(game.config), report.setup);
         replay.runToEnd();
-        expect(replay.units.find((u) => u.tag === 'camp_core')!.alive).toBe(false);
+        // 输的原因：营地核心被拆，或者守夜的人全倒下了（门破了以后尸群冲进来先咬人）
+        const coreDown = !replay.units.find((u) => u.tag === 'camp_core')!.alive;
+        const peopleDown = !replay.units.some((u) => u.side === 'ally' && u.alive && u.def.faction !== 'structure');
+        expect(coreDown || peopleDown).toBe(true);
         expect(replay.units.some((u) => u.gate !== undefined && !u.alive)).toBe(true);
     });
 
