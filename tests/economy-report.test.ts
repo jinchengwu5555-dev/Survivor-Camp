@@ -203,7 +203,7 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const perPersonDay = config.balance.dayLengthMinutes;
     lines.push(
         '',
-        `—— 食物和水（每行是这几天的日均，“天”是真实天；一个人每游戏天吃 ${(config.balance.foodPerSurvivorPerMinute * perPersonDay).toFixed(1)} 食物、喝 ${(config.balance.waterPerSurvivorPerMinute * perPersonDay).toFixed(1)} 水）——`,
+        `—— 食物和水（每行是这几天的日均，“天”是真实天；一个人每游戏天吃 ${(config.balance.foodPerSurvivorPerMinute * perPersonDay).toFixed(1)} 食物、喝 ${((config.balance.waterPerSurvivorPerMinute ?? 0) * perPersonDay).toFixed(1)} 水）——`,
         '“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天吃掉的（真实天）',
         ...food,
     );
