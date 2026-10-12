@@ -2,7 +2,7 @@
     "foodPerSurvivorPerMinute": 0.45,
     "waterPerSurvivorPerMinute": 0.29,
     "clock": { "onlineTimeScale": 8, "onlineGapSeconds": 15 },
-    "offline": { "capHours": 8, "minMinutes": 5, "gameMinutesPerRealMinute": 0.25, "resources": ["food", "water", "wood", "parts"] },
+    "offline": { "capHours": 8, "minMinutes": 5, "gameMinutesPerRealMinute": 0.25, "resources": ["food", "water", "wood", "parts"], "mult": { "food": 0.5, "water": 0.5 } },
     "specialtyBonus": 1.5,
     "moodRecoveryPerMinute": 0.2,
     "moodRecoveryMax": 70,

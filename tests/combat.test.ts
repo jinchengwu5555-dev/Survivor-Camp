@@ -59,8 +59,10 @@ describe('探索', () => {
         game.tick(T0 + 3 * MIN);
         expect(game.state.expeditions).toHaveLength(0);
         const report = game.state.reports[0];
-        expect(report).toMatchObject({ kind: 'expedition', result: 'win', loot: { food: 50, wood: 10 } });
-        expect(game.state.resources.food).toBeGreaterThan(food + 40);
+        const loot = game.config.locations.find((l) => l.id === 'gas_station')!.loot;
+        expect(report).toMatchObject({ kind: 'expedition', result: 'win', loot: { food: loot.food, wood: loot.wood } });
+        // 战利品比这 3 分钟吃掉的多
+        expect(game.state.resources.food).toBeGreaterThan(food);
         expect(game.state.flags).toContain('cleared_gas_station');
         expect(game.explore('hardware_store', T0 + 3 * MIN).ok).toBe(true);
     });

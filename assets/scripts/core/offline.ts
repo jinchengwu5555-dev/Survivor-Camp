@@ -14,7 +14,8 @@ export function offlineRewardPreview(config: GameConfig, state: GameState, offli
     const rates = productionPerMinute(config, state);
     const bag: ResourceBag = {};
     for (const id of o.resources) {
-        const amount = Math.floor(rates[id] * gameMinutes);
+        // 吃喝类打折（mult）：离线回来领的粮和水不能比在线干活还多
+        const amount = Math.floor(rates[id] * gameMinutes * (o.mult?.[id] ?? 1));
         if (amount > 0) bag[id] = amount;
     }
     return bag;

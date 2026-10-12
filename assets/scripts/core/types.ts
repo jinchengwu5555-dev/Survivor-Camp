@@ -28,9 +28,9 @@ export interface BalanceDef {
     clock: { onlineTimeScale: number; onlineGapSeconds: number };
     /**
      * 离线挂机收益：离线 1 分钟 = gameMinutesPerRealMinute 分钟的产量，只发 resources 里的资源，
-     * 最多算 capHours 小时，不足 minMinutes 分钟不发（见 core/offline.ts）
+     * 最多算 capHours 小时，不足 minMinutes 分钟不发；mult 是各资源的折扣（食物、水打对折）（见 core/offline.ts）
      */
-    offline: { capHours: number; minMinutes: number; gameMinutesPerRealMinute: number; resources: ResourceId[] };
+    offline: { capHours: number; minMinutes: number; gameMinutesPerRealMinute: number; resources: ResourceId[]; mult?: Partial<Record<ResourceId, number>> };
     /** 专长对口时的产量倍率 */
     specialtyBonus: number;
     /** 吃饱时心情每分钟恢复多少（最高到 moodRecoveryMax） */

@@ -1,6 +1,6 @@
 [
-    { "id": "ration_s", "name": "一袋口粮", "icon": "🥫", "type": "resource", "reward": { "food": 60 }, "description": "压缩饼干和几罐豆子。打开得到食物。" },
-    { "id": "ration_l", "size": [2, 2], "weight": 6, "name": "一箱口粮", "icon": "📦", "type": "resource", "reward": { "food": 220 }, "description": "整箱的军用口粮，够全营地吃好几顿。" },
+    { "id": "ration_s", "name": "一袋口粮", "icon": "🥫", "type": "resource", "reward": { "food": 30 }, "description": "压缩饼干和几罐豆子。打开得到食物。" },
+    { "id": "ration_l", "size": [2, 2], "weight": 6, "name": "一箱口粮", "icon": "📦", "type": "resource", "reward": { "food": 110 }, "description": "整箱的军用口粮，够全营地吃好几顿。" },
     { "id": "lumber_s", "size": [2, 1], "weight": 4, "name": "一捆木板", "icon": "🪵", "type": "resource", "reward": { "wood": 60 }, "description": "拆下来的旧木板，钉子都拔干净了。" },
     { "id": "lumber_l", "size": [3, 2], "weight": 10, "name": "一车木材", "icon": "🛻", "type": "resource", "reward": { "wood": 220 }, "description": "满满一皮卡的木材。" },
     { "id": "parts_s", "name": "一盒零件", "icon": "🔩", "type": "resource", "reward": { "parts": 20 }, "description": "螺丝、垫片、弹簧，德里克看了会笑。" },
