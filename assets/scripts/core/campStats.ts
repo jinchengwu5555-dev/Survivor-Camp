@@ -48,10 +48,12 @@ export function campStats(config: GameConfig, state: GameState, now: number): St
                 const def = config.resources.find((r) => r.id === id);
                 const cap = storageCap(config, state, id);
                 const net = rates[id] * perDay;
+                // 仓库满了还在多产：多出来的存不下，提醒把人调去别处
+                const wasting = Number.isFinite(cap) && net > 0 && state.resources[id] >= cap * 0.98;
                 return {
                     label: `${def?.icon ?? ''}${def?.name ?? id}`,
-                    value: `${Math.floor(state.resources[id])}${Number.isFinite(cap) ? ` / ${cap}` : ''}   ${signed(net)}/天`,
-                    warn: net < 0,
+                    value: `${Math.floor(state.resources[id])}${Number.isFinite(cap) ? ` / ${cap}` : ''}   ${signed(net)}/天${wasting ? '（仓库满了，多产的会浪费）' : ''}`,
+                    warn: net < 0 || wasting,
                 };
             }).concat([
                 {

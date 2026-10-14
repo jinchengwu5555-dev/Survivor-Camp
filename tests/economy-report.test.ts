@@ -15,7 +15,7 @@ import { availableLocations, clearedFlag, expeditionBlocker, raidEnemyBonus, sug
 import { suggestSurveyors } from '../assets/scripts/core/districts';
 import { locationName } from '../assets/scripts/core/names';
 import { buildVehicleBlocker } from '../assets/scripts/core/vehicles';
-import { economyRates, foodConsumptionPerMinute, hqLevel, morale, productionPerMinute, waterConsumptionPerMinute, workerSlots } from '../assets/scripts/core/economy';
+import { economyRates, foodConsumptionPerMinute, hqLevel, morale, productionPerMinute, storageCap, waterConsumptionPerMinute, workerSlots } from '../assets/scripts/core/economy';
 import { upgradeBlocker } from '../assets/scripts/core/buildings';
 import { currentDay } from '../assets/scripts/core/state';
 import { seasonAt } from '../assets/scripts/core/seasons';
@@ -82,14 +82,31 @@ function session(game: CampGame, now: number): void {
     // 下一级指挥部要多少食物：没攒够就把厨房排满，攒够了只保证够吃
     const hqDef = config.buildings.find((x) => x.id === 'hq')!;
     const foodGoal = Math.max(100, hqDef.levels[hqLevel(state)]?.cost.food ?? 0);
+    // 产出和消耗尽量持平：仓库过半就只要不亏（净值 ≥ 0），还空着就留一点余量
+    const enough = (id: 'food' | 'water', margin: number) => {
+        const net = economyRates(config, state, now).net[id];
+        return state.resources[id] >= storageCap(config, state, id) * 0.5 ? net >= 0 : net > margin;
+    };
+    // 仓库存了两成半以上时，最后一个人加不加，看加了以后离“持平”更近还是更远（一个厨师的产量很大，多加一个就会多产两三成）
+    const closer = (id: 'food' | 'water', who: string, building: string) => {
+        const before = economyRates(config, state, now).net[id];
+        game.assign(who, building, now);
+        if (state.resources[id] < storageCap(config, state, id) * 0.25) return true;
+        const after = economyRates(config, state, now).net[id];
+        if (before < 0 && after > -before) {
+            game.assign(who, null, now);
+            return false;
+        }
+        return true;
+    };
     for (const s of idleFor('kitchen').slice(0, workerSlots(config, state, 'kitchen'))) {
-        if (economyRates(config, state, now).net.food > 0.5 && state.resources.food >= foodGoal) break;
-        game.assign(s.id, 'kitchen', now);
+        if (enough('food', 0.5) && state.resources.food >= foodGoal) break;
+        if (!closer('food', s.id, 'kitchen')) break;
     }
     // 水站：够喝就行
     for (const s of idleFor('well').slice(0, workerSlots(config, state, 'well'))) {
-        if (economyRates(config, state, now).net.water > 0.3) break;
-        game.assign(s.id, 'well', now);
+        if (enough('water', 0.3)) break;
+        if (!closer('water', s.id, 'well')) break;
     }
     for (const b of PRODUCERS.filter((x) => x !== 'kitchen' && x !== 'well')) {
         for (const s of idleFor(b).slice(0, workerSlots(config, state, b))) game.assign(s.id, b, now);
@@ -245,10 +262,22 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
         '“开销”= 建筑维护 + 做饭用水；“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天（吃掉 + 开销）（真实天）',
         ...food,
     );
+    // 产出 ÷ 消耗（吃喝 + 腐烂 + 建筑开销）：第 10 天以后的平均值应该很接近 1，多了就是在浪费（仓库存不下）
+    const later = daily.filter((x) => Number(x.day) >= 10);
+    const sum = (k: string) => later.reduce((n, x) => n + Number(x[k]), 0);
+    const foodRatio = sum('foodMade') / (sum('foodEaten') + sum('foodSpoiled') + sum('foodUpkeep'));
+    const waterRatio = sum('waterMade') / (sum('waterDrunk') + sum('waterUpkeep'));
+    lines.push(`第 10～${REAL_DAYS} 天 产出 ÷ 消耗：食物 ${foodRatio.toFixed(2)}，水 ${waterRatio.toFixed(2)}（目标 0.95～1.10）`);
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
     lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));
     const out = (globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env.ECONOMY_JSON;
     if (out) (fs as unknown as { writeFileSync: (path: string, data: string) => void }).writeFileSync(out, JSON.stringify({ perPersonPerGameDay: { food: config.balance.foodPerSurvivorPerMinute * config.balance.dayLengthMinutes, water: (config.balance.waterPerSurvivorPerMinute ?? 0) * config.balance.dayLengthMinutes }, daily }, null, 1));
     expect(lines.length).toBeGreaterThan(1);
+    if (!state.gameOver) {
+        expect(foodRatio).toBeGreaterThan(0.95);
+        expect(foodRatio).toBeLessThan(1.1);
+        expect(waterRatio).toBeGreaterThan(0.95);
+        expect(waterRatio).toBeLessThan(1.1);
+    }
 });

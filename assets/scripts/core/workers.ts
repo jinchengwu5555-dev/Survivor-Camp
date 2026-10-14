@@ -2,9 +2,12 @@
 
 import { assignSurvivor } from './buildings';
 import { isOnExpedition } from './combat';
-import { economyRates, getBuildingDef, workerSlots } from './economy';
+import { economyRates, getBuildingDef, storageCap, workerSlots } from './economy';
 import { survivorInfo } from './roster';
 import { ActionResult, GameConfig, GameState, SurvivorState } from './types';
+
+/** 仓库存到几成算“快满了” */
+const NEAR_FULL = 0.9;
 
 /** 闲着、能干活的人 */
 export function idleSurvivors(state: GameState): SurvivorState[] {
@@ -41,6 +44,7 @@ export function removeWorker(config: GameConfig, state: GameState, buildingId: s
 /**
  * 一键安排：把闲着的人派出去干活。
  * 食物在减少（或者只多一点点）就先去厨房，然后是废料场（木材、零件），再是医务室，最后再补厨房。
+ * 产出和消耗要尽量持平：仓库快满、而且已经够吃够喝时，不再往厨房、水站加人（多产的存不下，白白浪费）。
  */
 export function autoAssign(config: GameConfig, state: GameState, now: number): ActionResult {
     let count = 0;
@@ -48,6 +52,7 @@ export function autoAssign(config: GameConfig, state: GameState, now: number): A
         const net = economyRates(config, state, now).net;
         const foodLow = net.food < 0.3;
         const waterLow = net.water < 0.2;
+        const enough = (id: 'food' | 'water') => net[id] >= 0 && state.resources[id] >= storageCap(config, state, id) * NEAR_FULL;
         const order = foodLow ? ['kitchen', 'scrapyard', 'infirmary'] : ['scrapyard', 'kitchen', 'infirmary'];
         // 水不够喝：先派人去水站
         if (waterLow) order.unshift('well');
@@ -55,6 +60,10 @@ export function autoAssign(config: GameConfig, state: GameState, now: number): A
         // 专长对口的建筑有空位就优先去
         const own = config.buildings.find((b) => matches(config, state, s, b.id));
         if (own) order.unshift(own.id);
+        const skip = new Set<string>();
+        if (enough('food')) skip.add('kitchen');
+        if (enough('water')) skip.add('well');
+        for (let i = order.length - 1; i >= 0; i--) if (skip.has(order[i])) order.splice(i, 1);
         if (order.some((b) => assignSurvivor(config, state, s.id, b).ok)) count++;
     }
     return count > 0 ? { ok: true, message: `安排了 ${count} 个人` } : { ok: false, reason: idleSurvivors(state).length ? '岗位都满了' : '没有闲着的人' };

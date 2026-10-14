@@ -3,7 +3,8 @@ import { CampGame } from '../assets/scripts/core/CampGame';
 import { activePickups, pickupKind, pickupReward } from '../assets/scripts/core/pickups';
 import { dailyClaimable, dailyProgress, refreshDaily } from '../assets/scripts/core/daily';
 import { idleSurvivors, workersIn } from '../assets/scripts/core/workers';
-import { economyRates, workerSlots } from '../assets/scripts/core/economy';
+import { economyRates, storageCap, workerSlots } from '../assets/scripts/core/economy';
+import { campStats } from '../assets/scripts/core/campStats';
 import { DAY, dayStart, loadConfig, MIN, T0 } from './helpers';
 
 function newGame() {
@@ -110,6 +111,30 @@ describe('安排工作', () => {
         expect(idleSurvivors(game.state)).toHaveLength(Math.max(0, game.state.survivors.length - slots));
         expect(economyRates(game.config, game.state, T0).net.food).toBeGreaterThan(0);
         expect(game.autoAssign(T0).ok).toBe(false);
+    });
+
+    it('一键安排：仓库快满、又够吃够喝时，不往厨房和水站加人（多产的存不下）', () => {
+        const game = newGame();
+        const { config, state } = game;
+        // 先让食物、水都有盈余，再把仓库塞满
+        // 厨房升到 3 级（4 个岗位，还有空位）、水站升到 8 级，派 2 个厨师、1 个水工：吃喝都有盈余
+        state.buildings.kitchen.level = 3;
+        game.assign('martha', 'kitchen', T0);
+        game.assign('ethan', 'kitchen', T0);
+        game.assign('derek', 'well', T0);
+        state.buildings.well.level = 8;
+        expect(economyRates(config, state, T0).net.food).toBeGreaterThan(0);
+        expect(economyRates(config, state, T0).net.water).toBeGreaterThan(0);
+        state.resources.food = storageCap(config, state, 'food');
+        state.resources.water = storageCap(config, state, 'water');
+        const kitchen = workersIn(state, 'kitchen').length;
+        const well = workersIn(state, 'well').length;
+        game.autoAssign(T0);
+        expect(workersIn(state, 'kitchen')).toHaveLength(kitchen);
+        expect(workersIn(state, 'well')).toHaveLength(well);
+        // 数值面板提醒：满了还在多产
+        const food = campStats(config, state, T0).flatMap((g) => g.rows).find((r) => r.label.includes('食物'))!;
+        expect(food.value).toContain('仓库满了');
     });
 
     it('开始升级会记统计（每日目标用）', () => {
