@@ -62,16 +62,17 @@ describe('在线时钟', () => {
 
     it('把手机时间往回拨不会让游戏时间倒退，也拿不到重复的离线收益', () => {
         const game = newGame();
-        game.assign('martha', 'kitchen', T0);
-        game.state.resources.food = 0;
+        // 离线收益只发木材、零件，用零件来看有没有重复发
+        game.assign('derek', 'scrapyard', T0);
+        game.state.resources.parts = 0;
         game.online(T0 + 2 * HOUR);
-        const food = game.state.resources.food;
+        const parts = game.state.resources.parts;
         game.online(T0); // 往回拨
         expect(game.now).toBe(T0);
         game.online(T0 + 2 * HOUR); // 再拨回来
-        expect(game.state.resources.food).toBe(food);
+        expect(game.state.resources.parts).toBe(parts);
         game.online(T0 + 3 * HOUR); // 超过之前的最大时间，只算多出来的 1 小时
-        expect(game.state.resources.food).toBeGreaterThan(food);
+        expect(game.state.resources.parts).toBeGreaterThan(parts);
     });
 
     it('倒计时按在线的真实秒数显示', () => {
@@ -80,15 +81,18 @@ describe('在线时钟', () => {
 });
 
 describe('离线挂机收益', () => {
-    it('按工人的产量发一小笔，只发配置里的资源', () => {
+    it('按工人的产量发一小笔，只发配置里的资源（不发吃喝：离线营地暂停，不吃不喝）', () => {
         const game = newGame();
         game.assign('martha', 'kitchen', T0);
-        game.state.resources.food = 0;
+        game.assign('derek', 'scrapyard', T0);
         const bag = offlineRewardPreview(game.config, game.state, 4 * HOUR);
-        expect(bag.food).toBeGreaterThan(0);
+        expect(bag.parts).toBeGreaterThan(0);
+        expect(bag.food).toBeUndefined();
+        expect(bag.water).toBeUndefined();
         for (const id of Object.keys(bag)) expect(game.config.balance.offline.resources).toContain(id);
         const { offlineReward } = game.online(T0 + 4 * HOUR);
-        expect(offlineReward?.food).toBe(bag.food);
+        expect(offlineReward?.parts).toBeGreaterThan(0);
+        expect(offlineReward?.food).toBeUndefined();
         expect(game.state.stats.offline_rewards).toBe(1);
         expect(game.state.log[game.state.log.length - 1].text).toContain('离线');
     });
