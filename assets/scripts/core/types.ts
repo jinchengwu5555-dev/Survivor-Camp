@@ -239,6 +239,8 @@ export interface BuildingScaling {
     timeGrowth: number;
     productionGrowth?: number;
     storageGrowth?: number;
+    /** 个别资源的仓库成长倍率（覆盖 storageGrowth；指挥部的食物、水是 1：吃喝的仓库交给地窖、水站） */
+    storageGrowthBy?: Partial<Record<ResourceId, number>>;
     safetyGrowth?: number;
     bedsPerLevel?: number;
     /** 每升几级多一个工人岗位 */
