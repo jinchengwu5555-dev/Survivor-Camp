@@ -21,6 +21,7 @@ import { currentDay } from '../assets/scripts/core/state';
 import { seasonAt } from '../assets/scripts/core/seasons';
 import { RESOURCE_IDS } from '../assets/scripts/core/types';
 import { activePickups } from '../assets/scripts/core/pickups';
+import * as fs from 'fs';
 import { loadConfig, MIN, T0 } from './helpers';
 
 const showReport = (import.meta as unknown as { env: { MODE: string } }).env.MODE === 'economy';
@@ -166,6 +167,8 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     // 食物和水的账：每行是这几天（真实天）的日均
     const food = ['真实天  人数   食物存量  产出/天  吃掉/天  腐烂/天  其他/天  够吃几天 |  水存量  产出/天  喝掉/天  其他/天  够喝几天'];
     let last = { ...ledger, food: state.resources.food, water: state.resources.water ?? 0, day: 0 };
+    const daily: Record<string, number | string>[] = [];
+    let dayLast = { ...ledger, food: state.resources.food, water: state.resources.water ?? 0 };
     for (let day = 0; day < REAL_DAYS; day++) {
         for (const h of SESSION_HOURS) {
             onlineSession(game, T0 + (day * 24 + h) * HOUR);
@@ -177,6 +180,35 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
         if (state.gameOver) {
             lines.push(`营地在第 ${state.gameOver.day} 天（真实第 ${day + 1} 天）覆灭：${state.gameOver.cause}`);
             break;
+        }
+        {
+            // 每天一条明细（ECONOMY_JSON=路径 时写成 JSON，方便画图）
+            const water = state.resources.water ?? 0;
+            const d = (k: keyof typeof ledger) => ledger[k] - dayLast[k];
+            daily.push({
+                day: day + 1,
+                gameDay: currentDay(config, state, game.now),
+                season: seasonAt(config, state, game.now).season.icon,
+                hq: hqLevel(state),
+                people: state.survivors.length,
+                morale: Math.round(morale(state)),
+                food: Math.round(state.resources.food),
+                water: Math.round(water),
+                wood: Math.round(state.resources.wood),
+                parts: Math.round(state.resources.parts),
+                medicine: Math.round(state.resources.medicine),
+                foodMade: Math.round(d('foodMade')),
+                foodEaten: Math.round(d('foodEaten')),
+                foodSpoiled: Math.round(d('foodSpoiled')),
+                foodOther: Math.round(state.resources.food - dayLast.food - d('foodMade') + d('foodEaten') + d('foodSpoiled')),
+                waterMade: Math.round(d('waterMade')),
+                waterDrunk: Math.round(d('waterDrunk')),
+                waterOther: Math.round(water - dayLast.water - d('waterMade') + d('waterDrunk')),
+                raidsWon: state.stats.raids_won ?? 0,
+                raidsLost: state.stats.raids_lost ?? 0,
+                deaths: state.stats.deaths ?? 0,
+            });
+            dayLast = { ...ledger, food: state.resources.food, water };
         }
         if (day >= 14 && (day + 1) % 3 !== 0) continue;
         const now = game.now;
@@ -210,5 +242,7 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
     lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));
+    const out = (globalThis as unknown as { process?: { env: Record<string, string | undefined> } }).process?.env.ECONOMY_JSON;
+    if (out) (fs as unknown as { writeFileSync: (path: string, data: string) => void }).writeFileSync(out, JSON.stringify({ perPersonPerGameDay: { food: config.balance.foodPerSurvivorPerMinute * config.balance.dayLengthMinutes, water: (config.balance.waterPerSurvivorPerMinute ?? 0) * config.balance.dayLengthMinutes }, daily }, null, 1));
     expect(lines.length).toBeGreaterThan(1);
 });
