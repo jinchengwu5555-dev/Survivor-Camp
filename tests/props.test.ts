@@ -19,15 +19,18 @@ describe('背包道具', () => {
         for (const [id, n] of Object.entries(game.config.balance.startingProps ?? {})) expect(propCount(game.state, id)).toBe(n);
     });
 
-    it('资源箱：打开得到资源，随指挥部等级成长', () => {
+    it('资源箱：打开得到资源；零件、木材随指挥部等级成长，口粮不涨', () => {
         const game = newGame();
         game.state.resources.food = 0;
         const def = propDef(game.config, 'ration_s')!;
         const small = propReward(game.config, game.state, def).food!;
         expect(game.useProp('ration_s', T0).ok).toBe(true);
         expect(game.state.resources.food).toBe(small);
+        const parts = propDef(game.config, 'parts_s')!;
+        const partsBefore = propReward(game.config, game.state, parts).parts!;
         game.state.buildings.hq.level = 5;
-        expect(propReward(game.config, game.state, def).food!).toBeGreaterThan(small);
+        expect(propReward(game.config, game.state, def).food!).toBe(small);
+        expect(propReward(game.config, game.state, parts).parts!).toBeGreaterThan(partsBefore);
     });
 
     it('加速道具：没有升级时不能用，有升级时减少剩余时间', () => {

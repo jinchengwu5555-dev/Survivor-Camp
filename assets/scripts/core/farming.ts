@@ -6,10 +6,10 @@
 // 畜栏（pen）：每级能养几只牲口。牲口来自打猎时活捉、商人、事件（animal 道具）。
 //   每天换日时喂一次（从仓库扣食物）：吃饱了才下蛋 / 产奶、才会生崽；连续饿 starveDays 天就会饿死一只。
 //   产出攒在畜栏里等人去收；也可以宰了吃肉；每天可以照看一次，全员心情 +petMood。
-// 食物产出和打猎一样随指挥部等级成长（foodGrowth）。
+// 食物产出和打猎一样走 foodGrowth（吃喝不随指挥部等级放大，见 economy.ts 的 lootGrowthOf）。
 // 界面模式由玩家亲手种、收；测试和模拟（liveRaids = false）由 autoFarm 自动打理。
 
-import { addResource, currentLevelDef, hqLevel } from './economy';
+import { addResource, currentLevelDef, lootGrowthOf } from './economy';
 import { isOnExpedition } from './combat';
 import { changeMoodAll } from './mood';
 import { addProp, propCount, propDef } from './props';
@@ -34,7 +34,7 @@ export function cropOfSeed(config: GameConfig, seedId: string): CropDef | undefi
 
 /** 食物产出的成长倍率（和打猎一样跟着指挥部走） */
 export function foodGrowth(config: GameConfig, state: GameState): number {
-    return Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
+    return lootGrowthOf(config, state, 'food', 0.5);
 }
 
 export function plotCount(config: GameConfig, state: GameState): number {

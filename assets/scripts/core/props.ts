@@ -4,7 +4,7 @@
 
 import { completeUpgrades } from './buildings';
 import { finishExpeditionNow, formatBag } from './combat';
-import { grantResources, hqLevel } from './economy';
+import { grantResources, growFound } from './economy';
 import { addAnimals, animalBlocker, animalDef, cropOfSeed, plant, plantBlocker } from './farming';
 import { fireFlare, flareBlocker } from './familiar';
 import { changeMoodAll } from './mood';
@@ -56,13 +56,7 @@ export function formatProps(config: GameConfig, props: Record<string, number>): 
  * 前期很解渴，后期只是锦上添花，不会冲淡无尽尸潮的压力。
  */
 export function propReward(config: GameConfig, state: GameState, def: PropDef): ResourceBag {
-    const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
-    const out: ResourceBag = {};
-    for (const id of RESOURCE_IDS) {
-        const base = def.reward?.[id];
-        if (base) out[id] = id === 'cans' ? base : Math.round(base * growth);
-    }
-    return out;
+    return growFound(config, state, def.reward ?? {}, 0.5);
 }
 
 /** 稀有品（出大红）卖掉能换多少：随指挥部成长，商人在营地时更贵 */

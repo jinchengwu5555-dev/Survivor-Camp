@@ -23,7 +23,7 @@ describe('季节与过冬（R03）', () => {
         expect([1, 3, 4, 7, 9, 10, 13].map(at)).toEqual(['summer', 'summer', 'autumn', 'winter', 'winter', 'spring', 'summer']);
     });
 
-    it('冬天：食物产量减半，每人每分钟烧 0.08 木材', () => {
+    it('冬天：食物、水减产，每人每分钟烧 0.08 木材', () => {
         const game = newGame();
         game.assign('martha', 'kitchen', T0);
         game.state.survivors.forEach((s) => (s.mood = 50));
@@ -31,8 +31,10 @@ describe('季节与过冬（R03）', () => {
         const winter = economyRates(game.config, game.state, dayStart(7));
         expect(winter.heating).toBeCloseTo(5 * 0.08);
         expect(summer.heating).toBe(0);
-        const production = (r: typeof summer) => r.net.food + 5 * game.config.balance.foodPerSurvivorPerMinute + r.spoil;
-        expect(production(winter)).toBeCloseTo(production(summer) * 0.5);
+        const production = (r: typeof summer) => r.net.food + 5 * game.config.balance.foodPerSurvivorPerMinute + r.spoil + r.upkeep.food;
+        const season = (id: string) => game.config.seasons.find((s) => s.id === id)!;
+        expect(production(winter)).toBeCloseTo((production(summer) * season('winter').foodProduction) / season('summer').foodProduction);
+        expect(season('winter').waterProduction ?? 1).toBeLessThan(1);
     });
 
     it('冬天没柴取暖，大家会挨冻', () => {
@@ -266,13 +268,16 @@ describe('无限流经济', () => {
         expect(report.loot.parts).toBe(Math.round(raid.reward.parts! * Math.pow(rewardGrowth, level)));
     });
 
-    it('探索随指挥部成长：敌人更强，战利品按指数增长', () => {
+    it('探索随指挥部成长：敌人更强，战利品按指数增长（吃喝不涨）', () => {
         const game = newGame();
         const { config, state } = game;
         const loc = config.locations.find((l) => l.id === 'gas_station')!;
         expect(expeditionLoot(config, state, loc)).toEqual(loc.loot);
         state.buildings.hq.level = 5;
         expect(expeditionEnemyBonus(config, state)).toBe(2);
-        expect(expeditionLoot(config, state, loc).food).toBe(Math.round(loc.loot.food! * Math.pow(1.25, 4)));
+        const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, 4);
+        expect(expeditionLoot(config, state, loc).wood).toBe(Math.round(loc.loot.wood! * growth));
+        // 食物、水不随指挥部放大：消耗只跟人数走，供给不能按指数涨
+        expect(expeditionLoot(config, state, loc).food).toBe(loc.loot.food);
     });
 });

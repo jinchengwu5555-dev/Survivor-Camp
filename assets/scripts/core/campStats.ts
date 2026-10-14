@@ -22,7 +22,8 @@ export function campStats(config: GameConfig, state: GameState, now: number): St
     const injured = state.survivors.filter((s) => s.injured).length;
     const out = state.expeditions.reduce((n, e) => n + e.squad.length, 0) + (state.scouts ?? []).length;
     const idle = state.survivors.filter((s) => !s.assignment && !s.injured).length;
-    const rates = economyRates(config, state, now).net;
+    const econ = economyRates(config, state, now);
+    const rates = econ.net;
     const perDay = config.balance.dayLengthMinutes;
     const sleepAvg = state.survivors.length ? state.survivors.reduce((n, s) => n + (s.sleep ?? 100), 0) / state.survivors.length : 0;
     const tired = state.survivors.filter((s) => (s.sleep ?? 100) < (config.balance.nightWatch?.tiredBelow ?? 0)).length;
@@ -52,7 +53,13 @@ export function campStats(config: GameConfig, state: GameState, now: number): St
                     value: `${Math.floor(state.resources[id])}${Number.isFinite(cap) ? ` / ${cap}` : ''}   ${signed(net)}/天`,
                     warn: net < 0,
                 };
-            }),
+            }).concat([
+                {
+                    label: '🏗️建筑开销',
+                    value: `食物 -${Math.round(econ.upkeep.food * perDay)}/天  水 -${Math.round(econ.upkeep.water * perDay)}/天（维护 + 做饭用水，已算进上面）`,
+                    warn: false,
+                },
+            ]),
         },
         {
             title: '😊 状态',

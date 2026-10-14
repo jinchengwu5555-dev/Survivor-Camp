@@ -12,7 +12,7 @@ import { battleCamp } from './campzones';
 import { BattleRegistry } from './battle/registry';
 import { BattleResult } from './battle/types';
 import { statsAtLevel } from './battle/units';
-import { addResource, canAfford, currentLevelDef, grantResources, hqLevel, pay, safety, survivorBattleLevel } from './economy';
+import { addResource, canAfford, currentLevelDef, grantResources, growFound, hqLevel, pay, safety, survivorBattleLevel } from './economy';
 import { conditionMet, discoverSite, queueEvent } from './events';
 import { nextRandom } from './rng';
 import { addLog, addStat, currentDay, hasFlag, healSurvivorState, setFlag } from './state';
@@ -225,7 +225,7 @@ export function expeditionEnemyBonus(config: GameConfig, state: GameState): numb
 export function expeditionLoot(config: GameConfig, state: GameState, loc: LocationDef): ResourceBag {
     // 打下过的地方再去，好东西已经被搜走了
     const repeat = (state.stats[`clear_${loc.id}`] ?? 0) > 0 ? config.balance.repeatLootFactor ?? 1 : 1;
-    return scaleBag(loc.loot, Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1) * repeat);
+    return growFound(config, state, loc.loot, 1, repeat);
 }
 
 /** 无尽尸潮：只按天数算的等级加成 */

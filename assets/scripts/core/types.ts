@@ -28,9 +28,9 @@ export interface BalanceDef {
     clock: { onlineTimeScale: number; onlineGapSeconds: number };
     /**
      * 离线挂机收益：离线 1 分钟 = gameMinutesPerRealMinute 分钟的产量，只发 resources 里的资源，
-     * 最多算 capHours 小时，不足 minMinutes 分钟不发；mult 是各资源的折扣（食物、水打对折）（见 core/offline.ts）
+     * 最多算 capHours 小时，不足 minMinutes 分钟不发；mult 是各资源的折扣（食物、水打对折），cover 是最多发这段时间消耗量的几成（见 core/offline.ts）
      */
-    offline: { capHours: number; minMinutes: number; gameMinutesPerRealMinute: number; resources: ResourceId[]; mult?: Partial<Record<ResourceId, number>> };
+    offline: { capHours: number; minMinutes: number; gameMinutesPerRealMinute: number; resources: ResourceId[]; mult?: Partial<Record<ResourceId, number>>; cover?: Partial<Record<ResourceId, number>> };
     /** 专长对口时的产量倍率 */
     specialtyBonus: number;
     /** 吃饱时心情每分钟恢复多少（最高到 moodRecoveryMax） */
@@ -65,6 +65,11 @@ export interface BalanceDef {
     /** 第 1 集结束后，第一次尸潮多少分钟后就来（新手尽早体验守夜） */
     firstRaidMinutes: number;
     /** 守夜时花木材修补栅栏：每次回 hpRatio 的栅栏生命，花费 = 回的生命 × woodPerHp（至少 minWood），每场最多 maxUses 次 */
+    /**
+     * 营地的日常开销：每级建筑每分钟耗多少（perLevel，exclude 里的建筑不算），
+     * 厨房每做 1 份食物要用多少水（cookingWaterPerFood）。营地越大开销越大，消耗不再只跟人数走。
+     */
+    upkeep?: { perLevel: Partial<Record<ResourceId, number>>; exclude?: string[]; cookingWaterPerFood?: number };
     raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
     /**
      * 俯视守夜的营地：半边长 half 的方形围墙，四面各一个门；丧尸从离墙 spawnDistance 格的地方来。
@@ -128,7 +133,12 @@ export interface BalanceDef {
      */
     raidScaling: { startDay: number; daysPerLevel: number; rewardGrowth: number; reliefPerLoss: number; reliefRecoverPerWin: number };
     /** 探索随指挥部成长：指挥部每高一级，敌人 +enemyLevelPerHq 级（向下取整），战利品 ×lootGrowth */
-    expeditionScaling: { enemyLevelPerHq: number; lootGrowth: number };
+    expeditionScaling: {
+        enemyLevelPerHq: number;
+        lootGrowth: number;
+        /** 这些资源找到的数量不随指挥部等级放大（吃喝：消耗只跟人数走，供给按指数涨的话后期永远吃不完） */
+        flatResources?: ResourceId[];
+    };
     /** 战斗中倒下后死亡的概率（否则只是重伤） */
     deathChanceOnFall: number;
     /** 医务室每一级让死亡概率降低多少（比例），最多降 70% */
@@ -436,6 +446,8 @@ export interface SeasonDef {
     days: number;
     /** 食物产量倍率 */
     foodProduction: number;
+    /** 水产量倍率（冬天水站结冰）；不写就是 1 */
+    waterProduction?: number;
     /** 每个幸存者每分钟烧掉多少木材取暖 */
     heatingWoodPerSurvivorPerMinute: number;
     /** 食物腐烂速度倍率（冬天冷，坏得慢） */

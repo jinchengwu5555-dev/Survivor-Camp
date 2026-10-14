@@ -7,7 +7,7 @@
 //   钓鱼看耐心：农夫 +20%，不看武器
 // 有的猎物（走失的鸡、野兔、山羊……）在畜栏有空位时有机会活捉回去养（capture）。
 
-import { addResource, hqLevel } from './economy';
+import { addResource, lootGrowthOf } from './economy';
 import { gearOf } from './gear';
 import { surveyCandidates } from './districts';
 import { addAnimals, animalBlocker, animalDef } from './farming';
@@ -102,7 +102,8 @@ export function resolveHunts(config: GameConfig, state: GameState, now: number):
     if (due.length === 0) return;
     state.hunts = (state.hunts ?? []).filter((h) => h.returnsAt > now);
     const cfg = config.hunting ?? { minutes: 6, triesPerHunter: 2, baseChance: 0.4, seasonChance: {} as Record<string, number> };
-    const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
+    // 打到的都是食物：不随指挥部放大（见 lootGrowthOf）
+    const growth = lootGrowthOf(config, state, 'food', 0.5);
     for (const h of due) {
         const d = groundDef(config, h.district);
         const hunters = h.squad.filter((id) => state.survivors.some((s) => s.id === id));

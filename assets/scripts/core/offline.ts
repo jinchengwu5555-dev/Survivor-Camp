@@ -1,7 +1,7 @@
 // 离线挂机收益：离线时营地“停在原地”，不吃饭、不守夜、不死人，只按当前工人的产量发一小笔物资。
 
 import { GameConfig, GameState, ResourceBag } from './types';
-import { grantResources, productionPerMinute } from './economy';
+import { foodConsumptionPerMinute, grantResources, productionPerMinute, waterConsumptionPerMinute } from './economy';
 import { addLog, addStat } from './state';
 import { formatBag } from './combat';
 
@@ -14,8 +14,14 @@ export function offlineRewardPreview(config: GameConfig, state: GameState, offli
     const rates = productionPerMinute(config, state);
     const bag: ResourceBag = {};
     for (const id of o.resources) {
-        // 吃喝类打折（mult）：离线回来领的粮和水不能比在线干活还多
-        const amount = Math.floor(rates[id] * gameMinutes * (o.mult?.[id] ?? 1));
+        // 吃喝类打折（mult），而且最多只够这段时间消耗的一部分（cover）：离线回来领的粮和水不能比在线干活还多
+        let amount = rates[id] * gameMinutes * (o.mult?.[id] ?? 1);
+        const cover = o.cover?.[id];
+        if (cover !== undefined) {
+            const use = id === 'food' ? foodConsumptionPerMinute(config, state) : id === 'water' ? waterConsumptionPerMinute(config, state) : 0;
+            amount = Math.min(amount, use * gameMinutes * cover);
+        }
+        amount = Math.floor(amount);
         if (amount > 0) bag[id] = amount;
     }
     return bag;

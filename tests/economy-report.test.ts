@@ -129,7 +129,7 @@ function session(game: CampGame, now: number): void {
 }
 
 /** 食物和水的流水账：产出、吃掉 / 喝掉、腐烂（按每秒心跳前的速率 × 这一秒走过的游戏分钟累计） */
-const ledger = { foodMade: 0, foodEaten: 0, foodSpoiled: 0, waterMade: 0, waterDrunk: 0 };
+const ledger = { foodMade: 0, foodEaten: 0, foodSpoiled: 0, foodUpkeep: 0, waterMade: 0, waterDrunk: 0, waterUpkeep: 0 };
 
 function recordLedger(game: CampGame, before: number): void {
     const minutes = (game.now - before) / MIN;
@@ -140,7 +140,9 @@ function recordLedger(game: CampGame, before: number): void {
     ledger.foodMade += made.food * seasonAt(config, state, before).season.foodProduction * minutes;
     ledger.foodEaten += foodConsumptionPerMinute(config, state) * minutes;
     ledger.foodSpoiled += rates.spoil * minutes;
-    ledger.waterMade += made.water * minutes;
+    ledger.waterMade += made.water * (seasonAt(config, state, before).season.waterProduction ?? 1) * minutes;
+    ledger.foodUpkeep += rates.upkeep.food * minutes;
+    ledger.waterUpkeep += rates.upkeep.water * minutes;
     ledger.waterDrunk += waterConsumptionPerMinute(config, state, before) * minutes;
 }
 
@@ -165,7 +167,7 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     let thirstySessions = 0;
     let sessions = 0;
     // 食物和水的账：每行是这几天（真实天）的日均
-    const food = ['真实天  人数   食物存量  产出/天  吃掉/天  腐烂/天  其他/天  够吃几天 |  水存量  产出/天  喝掉/天  其他/天  够喝几天'];
+    const food = ['真实天  人数   食物存量  产出/天  吃掉/天  腐烂/天  开销/天  其他/天  够吃几天 |  水存量  产出/天  喝掉/天  开销/天  其他/天  够喝几天'];
     let last = { ...ledger, food: state.resources.food, water: state.resources.water ?? 0, day: 0 };
     const daily: Record<string, number | string>[] = [];
     let dayLast = { ...ledger, food: state.resources.food, water: state.resources.water ?? 0 };
@@ -200,10 +202,12 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
                 foodMade: Math.round(d('foodMade')),
                 foodEaten: Math.round(d('foodEaten')),
                 foodSpoiled: Math.round(d('foodSpoiled')),
-                foodOther: Math.round(state.resources.food - dayLast.food - d('foodMade') + d('foodEaten') + d('foodSpoiled')),
+                foodUpkeep: Math.round(d('foodUpkeep')),
+                foodOther: Math.round(state.resources.food - dayLast.food - d('foodMade') + d('foodEaten') + d('foodSpoiled') + d('foodUpkeep')),
                 waterMade: Math.round(d('waterMade')),
                 waterDrunk: Math.round(d('waterDrunk')),
-                waterOther: Math.round(water - dayLast.water - d('waterMade') + d('waterDrunk')),
+                waterUpkeep: Math.round(d('waterUpkeep')),
+                waterOther: Math.round(water - dayLast.water - d('waterMade') + d('waterDrunk') + d('waterUpkeep')),
                 raidsWon: state.stats.raids_won ?? 0,
                 raidsLost: state.stats.raids_lost ?? 0,
                 deaths: state.stats.deaths ?? 0,
@@ -218,10 +222,12 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
             const water = state.resources.water ?? 0;
             const eat = per(ledger.foodEaten - last.foodEaten);
             const drink = per(ledger.waterDrunk - last.waterDrunk);
-            const foodOther = per(state.resources.food - last.food) - per(ledger.foodMade - last.foodMade) + eat + per(ledger.foodSpoiled - last.foodSpoiled);
-            const waterOther = per(water - last.water) - per(ledger.waterMade - last.waterMade) + drink;
+            const foodUp = per(ledger.foodUpkeep - last.foodUpkeep);
+            const waterUp = per(ledger.waterUpkeep - last.waterUpkeep);
+            const foodOther = per(state.resources.food - last.food) - per(ledger.foodMade - last.foodMade) + eat + per(ledger.foodSpoiled - last.foodSpoiled) + foodUp;
+            const waterOther = per(water - last.water) - per(ledger.waterMade - last.waterMade) + drink + waterUp;
             food.push(
-                `${r(day + 1, 4)}  ${r(state.survivors.length, 4)}  ${r(state.resources.food, 8)}  ${r(per(ledger.foodMade - last.foodMade), 7)}  ${r(eat, 7)}  ${r(per(ledger.foodSpoiled - last.foodSpoiled), 7)}  ${r(foodOther, 7)}  ${r(eat > 0 ? state.resources.food / eat : 0, 8)} | ${r(water, 7)}  ${r(per(ledger.waterMade - last.waterMade), 7)}  ${r(drink, 7)}  ${r(waterOther, 7)}  ${r(drink > 0 ? water / drink : 0, 8)}`,
+                `${r(day + 1, 4)}  ${r(state.survivors.length, 4)}  ${r(state.resources.food, 8)}  ${r(per(ledger.foodMade - last.foodMade), 7)}  ${r(eat, 7)}  ${r(per(ledger.foodSpoiled - last.foodSpoiled), 7)}  ${r(foodUp, 7)}  ${r(foodOther, 7)}  ${r(eat + foodUp > 0 ? state.resources.food / (eat + foodUp) : 0, 8)} | ${r(water, 7)}  ${r(per(ledger.waterMade - last.waterMade), 7)}  ${r(drink, 7)}  ${r(waterUp, 7)}  ${r(waterOther, 7)}  ${r(drink + waterUp > 0 ? water / (drink + waterUp) : 0, 8)}`,
             );
             last = { ...ledger, food: state.resources.food, water, day: day + 1 };
         }
@@ -236,7 +242,7 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     lines.push(
         '',
         `—— 食物和水（每行是这几天的日均，“天”是真实天；一个人每游戏天吃 ${(config.balance.foodPerSurvivorPerMinute * perPersonDay).toFixed(1)} 食物、喝 ${((config.balance.waterPerSurvivorPerMinute ?? 0) * perPersonDay).toFixed(1)} 水）——`,
-        '“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天吃掉的（真实天）',
+        '“开销”= 建筑维护 + 做饭用水；“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天（吃掉 + 开销）（真实天）',
         ...food,
     );
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));

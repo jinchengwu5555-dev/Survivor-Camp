@@ -101,6 +101,8 @@ describe('营地数值总览', () => {
         const groups = campStats(game.config, game.state, T0);
         const labels = groups.flatMap((g) => g.rows.map((r) => r.label));
         for (const want of ['人口 / 床位', '平均精力', '今晚守夜', '今晚尸潮概率', '安全值', '小镇已探索']) expect(labels).toContain(want);
-        expect(groups.find((g) => g.title.includes('物资'))!.rows).toHaveLength(game.config.resources.length);
+        // 每种资源一行，再加一行建筑开销
+        expect(groups.find((g) => g.title.includes('物资'))!.rows).toHaveLength(game.config.resources.length + 1);
+        expect(labels).toContain('🏗️建筑开销');
     });
 });

@@ -3,10 +3,10 @@
 
 import { formatBag } from './combat';
 import { formatProps, rollDrops } from './props';
-import { grantResources, hqLevel } from './economy';
+import { grantResources, growFound } from './economy';
 import { nextRandom, pickWeighted } from './rng';
 import { addLog, addStat } from './state';
-import { ActionResult, GameConfig, GameState, PickupKindDef, PickupState, RESOURCE_IDS, ResourceBag } from './types';
+import { ActionResult, GameConfig, GameState, PickupKindDef, PickupState, ResourceBag } from './types';
 
 export function pickupKind(config: GameConfig, id: string): PickupKindDef | undefined {
     return config.pickups.kinds.find((k) => k.id === id);
@@ -19,13 +19,7 @@ export function activePickups(state: GameState, now: number): PickupState[] {
 
 /** 实际奖励：基础奖励 × 探索战利品的成长倍率 */
 export function pickupReward(config: GameConfig, state: GameState, kind: PickupKindDef): ResourceBag {
-    const mult = Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1);
-    const out: ResourceBag = {};
-    for (const id of RESOURCE_IDS) {
-        const base = kind.reward[id];
-        if (base) out[id] = id === 'cans' ? base : Math.round(base * mult);
-    }
-    return out;
+    return growFound(config, state, kind.reward);
 }
 
 function nextInterval(config: GameConfig, state: GameState): number {

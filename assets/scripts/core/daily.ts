@@ -4,10 +4,10 @@
 import { formatBag } from './combat';
 import { formatProps, rollDrops } from './props';
 import { conditionMet } from './events';
-import { grantResources, hqLevel } from './economy';
+import { grantResources, growFound } from './economy';
 import { nextRandom } from './rng';
 import { addLog, addStat, currentDay, getStat } from './state';
-import { ActionResult, DailyState, DailyTaskDef, GameConfig, GameState, RESOURCE_IDS, ResourceBag } from './types';
+import { ActionResult, DailyState, DailyTaskDef, GameConfig, GameState, ResourceBag } from './types';
 
 export function dailyTaskDef(config: GameConfig, id: string): DailyTaskDef | undefined {
     return config.daily.tasks.find((t) => t.id === id);
@@ -68,13 +68,7 @@ export function claimDaily(config: GameConfig, state: GameState, taskId: string,
 
 /** 全部领完后的宝箱奖励（随指挥部等级成长，罐头不成长） */
 export function dailyChest(config: GameConfig, state: GameState): ResourceBag {
-    const mult = Math.pow(config.balance.expeditionScaling.lootGrowth, hqLevel(state) - 1);
-    const out: ResourceBag = {};
-    for (const id of RESOURCE_IDS) {
-        const base = config.daily.chest[id];
-        if (base) out[id] = id === 'cans' ? base : Math.round(base * mult);
-    }
-    return out;
+    return growFound(config, state, config.daily.chest);
 }
 
 export function claimDailyChest(config: GameConfig, state: GameState, now: number): ActionResult {

@@ -5,7 +5,7 @@
 
 import { intelMods } from './intel';
 import { isOnExpedition } from './combat';
-import { grantResources, hqLevel } from './economy';
+import { grantResources, growFound } from './economy';
 import { addProp, rollDrops } from './props';
 import { nextRandom } from './rng';
 import { injureSurvivor, survivorInfo, survivorName } from './roster';
@@ -113,10 +113,7 @@ function nextRevealPoint(config: GameConfig, state: GameState, d: DistrictDef, n
 }
 
 function surveyLoot(config: GameConfig, state: GameState, d: DistrictDef): ResourceBag {
-    const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
-    const out: ResourceBag = {};
-    for (const id of RESOURCE_IDS) if (d.loot[id]) out[id] = id === 'cans' ? d.loot[id] : Math.round(d.loot[id]! * growth);
-    return out;
+    return growFound(config, state, d.loot, 0.5);
 }
 
 export function resolveSurveys(config: GameConfig, state: GameState, now: number): void {

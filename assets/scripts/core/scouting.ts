@@ -3,7 +3,7 @@
 // 按游戏时间刷新（只在在线时出现），没人去就会消失。
 
 import { formatBag } from './combat';
-import { grantResources, hqLevel } from './economy';
+import { grantResources, growFound } from './economy';
 import { conditionMet, queueEvent } from './events';
 import { formatProps, rollDrops } from './props';
 import { nextRandom, pickWeighted } from './rng';
@@ -11,7 +11,7 @@ import { injureSurvivor, survivorName } from './roster';
 import { addLog, addStat } from './state';
 import { revealers } from './townMap';
 import { scoutMultiplier } from './talents';
-import { ActionResult, GameConfig, GameState, RESOURCE_IDS, ResourceBag, ScoutKindDef, ScoutSpotState } from './types';
+import { ActionResult, GameConfig, GameState, ResourceBag, ScoutKindDef, ScoutSpotState } from './types';
 
 const MAP_HALF = 320;
 
@@ -86,13 +86,7 @@ export function sendScout(config: GameConfig, state: GameState, spotId: number, 
 
 /** 侦察带回的资源：随指挥部等级成长（按探索战利品倍率的一半指数，罐头不成长） */
 export function scoutReward(config: GameConfig, state: GameState, kind: ScoutKindDef): ResourceBag {
-    const growth = Math.pow(config.balance.expeditionScaling.lootGrowth, (hqLevel(state) - 1) / 2);
-    const out: ResourceBag = {};
-    for (const id of RESOURCE_IDS) {
-        const base = kind.reward[id];
-        if (base) out[id] = id === 'cans' ? base : Math.round(base * growth);
-    }
-    return out;
+    return growFound(config, state, kind.reward, 0.5);
 }
 
 /** 到时间的侦察员回来：发奖励、掉道具、触发事件，有一定概率受点伤 */

@@ -30,6 +30,26 @@ export function hqLevel(state: GameState): number {
     return state.buildings['hq']?.level ?? 0;
 }
 
+/**
+ * 找到的东西（探索、捡东西、侦察、宝箱、打猎、菜园）随指挥部等级放大的倍率：lootGrowth^((指挥部等级 - 1) × exponent)。
+ * 罐头和 expeditionScaling.flatResources 里的吃喝不放大——消耗只跟人数走，供给按指数涨的话后期永远吃不完。
+ */
+export function lootGrowthOf(config: GameConfig, state: GameState, id: ResourceId, exponent = 1): number {
+    const s = config.balance.expeditionScaling;
+    if (id === 'cans' || (s.flatResources ?? []).includes(id)) return 1;
+    return Math.pow(s.lootGrowth, (hqLevel(state) - 1) * exponent);
+}
+
+/** 按 lootGrowthOf 放大一包资源 */
+export function growFound(config: GameConfig, state: GameState, bag: ResourceBag, exponent = 1, extra = 1): ResourceBag {
+    const out: ResourceBag = {};
+    for (const id of RESOURCE_IDS) {
+        const base = bag[id];
+        if (base) out[id] = Math.round(base * lootGrowthOf(config, state, id, exponent) * (id === 'cans' ? 1 : extra));
+    }
+    return out;
+}
+
 function sumOverBuildings(config: GameConfig, state: GameState, pick: (lv: BuildingLevelDef) => number | undefined): number {
     let total = 0;
     for (const def of config.buildings) {
@@ -150,8 +170,10 @@ export function grantResources(config: GameConfig, state: GameState, bag: Resour
 }
 
 export interface EconomyRates {
-    /** 每分钟的净变化（已扣除吃饭、腐烂、取暖） */
+    /** 每分钟的净变化（已扣除吃饭、腐烂、取暖、建筑开销） */
     net: Record<ResourceId, number>;
+    /** 每分钟的建筑开销（维护 + 做饭用水，见 balance.upkeep） */
+    upkeep: Record<ResourceId, number>;
     /** 每分钟腐烂掉的食物 */
     spoil: number;
     /** 每分钟烧掉的取暖木材 */
@@ -167,14 +189,31 @@ export function spoilReduction(config: GameConfig, state: GameState): number {
 export function economyRates(config: GameConfig, state: GameState, now: number): EconomyRates {
     const { season } = seasonAt(config, state, now);
     const net = productionPerMinute(config, state);
+    const cooked = net.food;
     net.food *= season.foodProduction;
+    net.water *= season.waterProduction ?? 1;
+    const upkeep = upkeepPerMinute(config, state, cooked);
     const spoil =
         state.resources.food * config.balance.foodSpoilPerMinute * season.spoilMultiplier * siteSpoil(config, state) * (1 - spoilReduction(config, state));
     const heating = state.survivors.length * season.heatingWoodPerSurvivorPerMinute;
     net.food -= foodConsumptionPerMinute(config, state) + spoil;
     net.water -= waterConsumptionPerMinute(config, state, now);
     net.wood -= heating;
-    return { net, spoil, heating };
+    for (const id of RESOURCE_IDS) net[id] -= upkeep[id];
+    return { net, spoil, heating, upkeep };
+}
+
+/** 建筑开销：每级建筑的维护（balance.upkeep.perLevel）+ 厨房做饭用的水（按食物产量） */
+export function upkeepPerMinute(config: GameConfig, state: GameState, foodMade = productionPerMinute(config, state).food): Record<ResourceId, number> {
+    const out = emptyBag();
+    const u = config.balance.upkeep;
+    if (!u) return out;
+    const exclude = u.exclude ?? [];
+    let levels = 0;
+    for (const def of config.buildings) if (!exclude.includes(def.id)) levels += state.buildings[def.id]?.level ?? 0;
+    for (const id of RESOURCE_IDS) out[id] += (u.perLevel[id] ?? 0) * levels;
+    out.water += foodMade * (u.cookingWaterPerFood ?? 0);
+    return out;
 }
 
 /** 净变化为负时，资源多久耗尽；返回在 minutes 里有多少分钟处于“耗尽”状态 */
