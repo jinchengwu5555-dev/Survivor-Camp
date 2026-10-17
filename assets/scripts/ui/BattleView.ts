@@ -889,7 +889,8 @@ export class BattleView {
     private refreshControls(): void {
         const b = this.battle;
         const left = Math.max(0, Math.ceil(b.setup.timeLimit - b.time));
-        const goal = b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
+        // 守夜要把丧尸全打完：显示还剩几只；探索战斗显示剩余时间
+        const goal = b.setup.camp ? `🧟 还剩 ${b.enemiesLeft()} 只` : b.setup.timeoutResult === 'win' ? `再坚持 ${left} 秒` : `剩余 ${left} 秒`;
         const wave = this.waves.length > 1 ? `第 ${Math.max(1, this.currentWave())}/${this.waves.length} 波   ` : '';
         const core = b.units.find((u) => u.tag === CORE_UNIT);
         const coreText = core ? `营地 ${Math.max(0, Math.round((core.hp / core.stats.maxHp) * 100))}%` : '';

@@ -431,7 +431,7 @@ export interface RaidDef {
     /** 满足条件的尸潮里，取列表中最后一个（越往后越难） */
     conditions?: Condition;
     enemies: UnitSetup[];
-    /** 撑过多少秒就算守住 */
+    /** 参考时长（秒）：守夜要把丧尸全部打完才算守住，时间上限是它的 4 倍（只是防僵住的保险） */
     timeLimit: number;
     /** 尸群从几个方向来（1～4，默认 1）；哪几个方向每晚随机 */
     sides?: number;

@@ -103,7 +103,7 @@ describe('工坊合成（R25）', () => {
 });
 
 describe('血月夜（R26）和营地的狗（R10）', () => {
-    it('每第 4 次尸潮是血月夜：尸群翻倍，守住后奖励翻倍', () => {
+    it('每第 4 次尸潮是血月夜：尸群多三分之一，守住后奖励翻倍', () => {
         const game = newGame();
         game.state.flags.push('raids_started');
         game.state.buildings.wall.level = 3;
@@ -111,7 +111,7 @@ describe('血月夜（R26）和营地的狗（R10）', () => {
         const raid = currentRaid(game.config, game.state, T0)!;
         const reports = [1, 2, 3, 4].map(() => runRaid(game.config, game.state, raid, T0));
         expect(reports.map((r) => r.title)).toEqual(['小股尸群', '小股尸群', '小股尸群', '血月·小股尸群']);
-        expect(reports[3].setup.enemies.length).toBeGreaterThan(reports[0].setup.enemies.length * 1.4);
+        expect(reports[3].setup.enemies.length).toBeGreaterThan(reports[0].setup.enemies.length * 1.25);
         expect(reports[3].result).toBe('win');
         expect(reports[3].loot.parts).toBe(raid.reward.parts! * 2);
         expect(game.state.stats.blood_moons_won).toBe(1);

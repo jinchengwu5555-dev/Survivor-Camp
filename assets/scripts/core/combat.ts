@@ -262,7 +262,7 @@ export function expeditionSetup(
 export interface RaidOptions {
     /** 营地养了狗：狗一起上阵 */
     dog?: boolean;
-    /** 血月夜：尸群多一半 */
+    /** 血月夜：尸群多三分之一 */
     bloodMoon?: boolean;
     /** 无尽尸潮的等级加成 */
     enemyBonus?: number;
@@ -274,7 +274,8 @@ export interface RaidOptions {
 
 /** 血月夜的敌人：原来的尸群里每隔一只再来一只（多 50%），晚 2 秒出场 */
 export function bloodMoonEnemies(enemies: UnitSetup[]): UnitSetup[] {
-    const extra = enemies.filter((_, i) => i % 2 === 0).map((e) => ({ ...e, spawnAt: (e.spawnAt ?? 0) + 2 }));
+    // 守夜要全部打完，血月多来三分之一（以前是一半）
+    const extra = enemies.filter((_, i) => i % 3 === 0).map((e) => ({ ...e, spawnAt: (e.spawnAt ?? 0) + 2 }));
     return [...enemies, ...extra];
 }
 
@@ -310,6 +311,9 @@ function swarmEnemies(config: GameConfig, enemies: UnitSetup[]): UnitSetup[] {
         }));
     });
 }
+
+/** 守夜的时间上限 = 尸潮配置的 timeLimit × 这个倍数（只是保险，正常都是先打完） */
+const RAID_TIME_CAP = 4;
 
 /**
  * 守夜战斗的参数（俯视营地）：四面围墙各一个门，中间是营地核心；
@@ -370,8 +374,10 @@ export function raidSetup(
     return {
         allies: [...gates, core, ...people],
         enemies,
-        timeLimit: raid.timeLimit,
-        timeoutResult: 'win',
+        // 守夜要把丧尸全部打完才算赢（核心被拆或人全倒下算输）；时间上限只是防止僵住的保险，
+        // 到点还没打完按失守算（尸群还围着营地）
+        timeLimit: raid.timeLimit * RAID_TIME_CAP,
+        timeoutResult: 'lose',
         seed,
         autoCastActive: true,
         mustSurvive: [CORE_UNIT],

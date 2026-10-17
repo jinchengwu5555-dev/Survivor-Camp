@@ -57,7 +57,7 @@ export interface BattleSetup {
     enemies: UnitSetup[];
     /** 时间上限（秒） */
     timeLimit: number;
-    /** 时间到了算赢还是输：探索战斗一般算输，守夜（撑过尸潮）算赢 */
+    /** 时间到了算赢还是输：探索战斗算输；守夜要打完所有丧尸，到时间上限也算输 */
     timeoutResult: 'win' | 'lose';
     seed: number;
     /** 手动技能也自动释放（营地里自动结算的战斗没人点按钮） */
@@ -320,8 +320,9 @@ export class Battle implements BattleContext {
             if (canMove(u)) this.returnToPost(u);
             return;
         }
-        if (dist > range) {
-            if (canMove(u)) this.moveToward(u, target, range);
+        if (dist > range + 1e-6) {
+            // 走到射程里面一点再停（正好停在射程边上会因为浮点误差永远差一点点，两边干站着）
+            if (canMove(u)) this.moveToward(u, target, range * 0.9);
             return;
         }
         if (u.def.vault && !u.ignoreStructures && target.def.faction === 'structure') {
@@ -565,6 +566,11 @@ export class Battle implements BattleContext {
 
     private aliveUnits(): BattleUnit[] {
         return this.units.filter((u) => u.alive);
+    }
+
+    /** 还剩多少敌人（活着的 + 还没出场的） */
+    enemiesLeft(): number {
+        return this.units.filter((u) => u.alive && u.side === 'enemy').length + this.pending.filter((p) => p.side === 'enemy').length;
     }
 
     private checkResult(): void {
