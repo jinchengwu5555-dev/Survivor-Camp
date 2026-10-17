@@ -282,6 +282,7 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     const foodRatio = sum('foodMade') / (sum('foodEaten') + sum('foodSpoiled') + sum('foodUpkeep') + sum('foodLost'));
     const waterRatio = sum('waterMade') / (sum('waterDrunk') + sum('waterUpkeep') + sum('waterLost'));
     lines.push(`第 10～${REAL_DAYS} 天 产出 ÷ 消耗：食物 ${foodRatio.toFixed(2)}，水 ${waterRatio.toFixed(2)}（目标 0.85～1.10；低于 1 的部分由探索战利品、捡东西补上）`);
+    lines.push(`招到 ${state.stats.recruited ?? 0} 人（流浪者 ${state.stats.wanderers_joined ?? 0}），死亡 ${state.stats.deaths ?? 0} 人，最后营地 ${state.survivors.length} 人`);
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
     lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));

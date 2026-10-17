@@ -1,7 +1,7 @@
 // 事件与抉择系统：条件判断、随机抽取、效果结算。
 
-import { admitCandidate, candidateInfo } from './recruits';
-import { takeVisitor } from './visitors';
+import { admitCandidate, candidateInfo, recruitScale } from './recruits';
+import { takeVisitor, visitorCount } from './visitors';
 import { addAnimals, removeAnimal } from './farming';
 import { Condition, Effect, EventChoiceDef, GameConfig, GameEventDef, GameState, RESOURCE_IDS } from './types';
 import { addResource, bedCount, canAfford, foodConsumptionPerMinute, hqLevel, pay } from './economy';
@@ -53,7 +53,10 @@ export function maybeTriggerRandomEvent(config: GameConfig, state: GameState, no
     if (now < state.nextRandomEventAt) return;
     state.nextRandomEventAt = now + config.balance.eventIntervalMinutes * 60_000;
     if (state.eventQueue.length > 0) return;
-    const picked = pickWeighted(state, eligibleRandomEvents(config, state, now));
+    // 有人上门的事件（addWanderer）按招人的松紧打折：没床位就不来，过了前期少来
+    const scale = recruitScale(config, state, now);
+    const pool = eligibleRandomEvents(config, state, now).map((e) => (visitorCount(e) > 0 ? { ...e, weight: e.weight * scale } : e));
+    const picked = pickWeighted(state, pool);
     if (picked) queueEvent(state, picked.id);
 }
 

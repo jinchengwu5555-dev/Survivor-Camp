@@ -15,8 +15,21 @@ import { nextRandom, pickOne } from './rng';
 import { generateWanderer, injureSurvivor, survivorInfo, survivorName } from './roster';
 import { isOnExpedition } from './combat';
 import { dropGear } from './gear';
-import { addLog, addStat, hasFlag, newSurvivorState, setFlag } from './state';
+import { addLog, addStat, currentDay, hasFlag, newSurvivorState, setFlag } from './state';
 import { ActionResult, CandidateState, GameConfig, GameState, QuirkDef, RESOURCE_IDS, SurvivorState } from './types';
+
+/**
+ * 招人的松紧：前 recruit.earlyDays 天照常（多招几个，床位满了也会有人来、在门口等）。
+ * 之后人数维持在床位附近：空床位（扣掉门口等着的人）还有 catchUp 张以上照常来人（死了人能补上），
+ * 只剩一两张时机会 × lateScale，床位占满就不再有人来。
+ */
+export function recruitScale(config: GameConfig, state: GameState, now: number): number {
+    const r = config.balance.recruit;
+    if (!r || currentDay(config, state, now) <= r.earlyDays) return 1;
+    const free = bedCount(config, state) - state.survivors.length - (state.candidates ?? []).length;
+    if (free <= 0) return 0;
+    return free >= r.catchUp ? 1 : r.lateScale;
+}
 
 export function quirkDef(config: GameConfig, id: string): QuirkDef | undefined {
     return config.recruits?.quirks.find((q) => q.id === id);

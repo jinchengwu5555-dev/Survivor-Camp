@@ -24,7 +24,7 @@ import { combatMultiplier } from './talents';
 import { passNight, rollRaid, watchersText } from './watch';
 import { changeMoodAll } from './mood';
 import { takeDroppedGear } from './gear';
-import { firstRecruits, nightQuirks, offerCandidates } from './recruits';
+import { firstRecruits, nightQuirks, offerCandidates, recruitScale } from './recruits';
 import { locationName } from './names';
 import { carryHome, makePieces, newHaul } from './packing';
 import { haulSections, pickVehicle, useVehicle, vehicleDef } from './vehicles';
@@ -568,7 +568,7 @@ function resolveExpedition(config: GameConfig, state: GameState, ex: ExpeditionS
     const place = locationName(config, state, loc);
     const metBefore = (state.candidates ?? []).length;
     if (!hasFlag(state, 'first_recruits')) firstRecruits(config, state, place, at);
-    else if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance) offerCandidates(config, state, 1, place, at);
+    else if (result === 'win' && loc.recruitChance && nextRandom(state) < loc.recruitChance * recruitScale(config, state, at)) offerCandidates(config, state, 1, place, at);
     const met = (state.candidates ?? []).length - metBefore;
     if (met > 0) rescued = `路上遇到了 ${met} 个幸存者，等你决定留不留。`;
 
@@ -713,8 +713,9 @@ export function finishRaid(config: GameConfig, state: GameState, pending: Pendin
     recordWallDamage(config, state, remaining, result === 'lose' || walls.some((u) => !u.alive));
     const defenderIds = pending.setup.allies.map((u) => u.tag).filter((t): t is string => !!t && survivorIds.has(t));
     recordSharedBattle(state, defenderIds);
-    // 在营地里倒下的人多半能被同伴拖回来：牺牲概率按 raidDeathScale 打折
-    const raidScale = config.balance.raidDeathScale ?? 1;
+    // 守住了：营地里倒下的人多半能被同伴拖回来，牺牲概率按 raidDeathScale 打折；
+    // 失守了：没人顾得上拖，按完整的牺牲概率算
+    const raidScale = result === 'win' ? config.balance.raidDeathScale ?? 1 : 1;
     const { dead, injured } = resolveFallen(config, state, fallenSurvivors, at, '在守夜中牺牲了', true, undefined, (hasMedic(config, state, defenderIds) ? 0.5 : 1) * raidScale);
     // 栅栏被冲破：尸群冲进营地，有人被咬死
     if (result === 'lose') {
@@ -767,7 +768,8 @@ export function finishStragglers(config: GameConfig, state: GameState, pending: 
     recordWallDamage(config, state, remaining, walls.some((u) => !u.alive));
     if (!noticed && (config.balance.wallRepair?.maxWear ?? 0) > 0) state.wallWear = Math.min(config.balance.wallRepair!.maxWear, wallWear(state) + cfg.wallDamage);
     const survivorIds = new Set(state.survivors.map((s) => s.id));
-    const { injured } = resolveFallen(config, state, fallen.filter((t) => survivorIds.has(t)), at, '', false);
+    // 打退了：倒下的人只受伤；没打退：和守夜失守一样，倒下的人可能牺牲
+    const { injured, dead } = resolveFallen(config, state, fallen.filter((t) => survivorIds.has(t)), at, '在门口被丧尸咬死了', result === 'lose');
     let loot: ResourceBag = {};
     if (result === 'win') {
         addStat(state, 'stragglers_cleared');
@@ -775,9 +777,9 @@ export function finishStragglers(config: GameConfig, state: GameState, pending: 
     }
     const title = pending.title;
     const head = result === 'win' ? (noticed ? '把晃到营地外的丧尸清理掉了' : '丧尸摸到了门口，大家手忙脚乱地把它们打退了') : '丧尸在门口闹了一阵，大家没能打退它们，只好关紧门等它们散去';
-    const summary = `【${title}】${head}。${formatBag(config, loot) ? `捡到 ${formatBag(config, loot)}。` : ''}${!noticed ? '门被抓挠得不轻。' : ''}${casualtyText(config, state, injured, [])}`;
+    const summary = `【${title}】${head}。${formatBag(config, loot) ? `捡到 ${formatBag(config, loot)}。` : ''}${!noticed ? '门被抓挠得不轻。' : ''}${casualtyText(config, state, injured, dead)}`;
     const setup: BattleSetup = { ...pending.setup, inputs: [...battle.inputs] };
-    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost: {}, injured, dead: [], summary });
+    return addReport(state, { kind: 'raid', title, at, result, setup, loot, lost: {}, injured, dead, summary });
 }
 
 /** 自动打完一场白天的小仗（测试、模拟） */

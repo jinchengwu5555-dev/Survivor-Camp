@@ -70,6 +70,8 @@ export interface BalanceDef {
      * 厨房每做 1 份食物要用多少水（cookingWaterPerFood）。营地越大开销越大，消耗不再只跟人数走。
      */
     upkeep?: { perLevel: Partial<Record<ResourceId, number>>; exclude?: string[]; cookingWaterPerFood?: number };
+    /** 招人的松紧：前 earlyDays 天照常；之后空床位 ≥ catchUp 照常，少于它 × lateScale，没空床位就不来人（recruits.ts 的 recruitScale） */
+    recruit?: { earlyDays: number; lateScale: number; catchUp: number };
     raidRepair: { hpRatio: number; woodPerHp: number; minWood: number; maxUses: number };
     /**
      * 俯视守夜的营地：半边长 half 的方形围墙，四面各一个门；丧尸从离墙 spawnDistance 格的地方来。
