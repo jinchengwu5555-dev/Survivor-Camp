@@ -101,6 +101,8 @@ const POST_INSET = 0.4;
 const POST_SPACING = 0.7;
 const POST_LEASH = 2.5;
 const POST_FALLBACK = 2.5;
+/** 门外这么近的丧尸算“这个门在挨打”；自己的门没有、别的门有，守门的人就去支援 */
+const THREAT_RADIUS = 5;
 /** 冲进营地的丧尸：这么近的人会先被咬，远一点的不管，直奔营地核心 */
 const INSIDE_AGGRO = 1;
 /** 身体半径（格）：人、普通丧尸；尸群里的小丧尸在 combat.ts 里另给（balance.camp.swarm.radius） */
@@ -125,6 +127,8 @@ export class Battle implements BattleContext {
     private gateUnits: (BattleUnit | undefined)[] = [];
     private openGateCache: Point[] = [];
     private postMates = new Map<number, BattleUnit[]>();
+    /** 每个守门的人这一步实际在守哪个门（支援别的门时和 post 不一样） */
+    private readonly duty = new Map<number, number>();
     private started = false;
     private accumulator = 0;
     private readonly pending: { setup: UnitSetup; side: Side; x: number; y: number }[] = [];
@@ -245,24 +249,42 @@ export class Battle implements BattleContext {
         if (!camp) return;
         this.gateUnits = camp.gates.map((_, i) => this.gateUnit(i));
         this.openGateCache = camp.gates.filter((_, i) => gateOpen(camp, i) && !this.gateUnits[i]?.alive);
+        // 每个门外面有多少丧尸（门附近、还在墙外的）
+        const threat = camp.gates.map((g, i) => {
+            if (!gateOpen(camp, i)) return 0;
+            let n = 0;
+            for (const e of this.units) if (e.alive && e.side === 'enemy' && !insideCamp(camp, e) && distance(e, g) <= THREAT_RADIUS) n++;
+            return n;
+        });
+        const busiest = threat.reduce((best, n, i) => (n > threat[best] ? i : best), 0);
+        this.duty.clear();
         this.postMates.clear();
         for (const u of this.units) {
             if (!u.alive || u.side !== 'ally' || u.post === undefined || u.def.faction === 'structure') continue;
-            const list = this.postMates.get(u.post) ?? [];
+            // 自己的门外没有丧尸、别的门在挨打：先去帮忙；自己的门来了丧尸就回来（分配的门不变）
+            const duty = threat[u.post] === 0 && threat[busiest] > 0 ? busiest : u.post;
+            this.duty.set(u.uid, duty);
+            const list = this.postMates.get(duty) ?? [];
             list.push(u);
-            this.postMates.set(u.post, list);
+            this.postMates.set(duty, list);
         }
+    }
+
+    /** 守门的人现在守哪个门：一般是分给他的门，那边没事时去支援挨打最狠的门 */
+    dutyGate(u: BattleUnit): number | undefined {
+        return this.duty.get(u.uid) ?? u.post;
     }
 
     /** 守门的人站在哪：门里面一点，同一个门的人沿着墙并排站 */
     postPoint(u: BattleUnit): Point | null {
         const camp = this.setup.camp;
-        if (!camp || u.post === undefined) return null;
-        const gate = camp.gates[u.post];
+        const post = this.dutyGate(u);
+        if (!camp || post === undefined) return null;
+        const gate = camp.gates[post];
         const n = gateNormal(camp, gate);
         // 门被打破了：退到门后面一点，别堵在破口上被尸群淹没
-        const inset = this.gateUnits[u.post]?.alive === false ? POST_FALLBACK : POST_INSET;
-        const mates = this.postMates.get(u.post) ?? [u];
+        const inset = this.gateUnits[post]?.alive === false ? POST_FALLBACK : POST_INSET;
+        const mates = this.postMates.get(post) ?? [u];
         const k = Math.max(0, mates.indexOf(u));
         const r = campBounds(camp);
         const max = (n.x !== 0 ? r.y2 - r.y1 : r.x2 - r.x1) / 2 - 0.5;
@@ -379,7 +401,8 @@ export class Battle implements BattleContext {
                 // 墙外的敌人：只在岗位附近打，不跑远；自己的门已经破了就守在门后，不去堵破口
                 const post = this.postPoint(u);
                 if (post && !insideCamp(camp, target)) {
-                    const broken = u.post !== undefined && this.gateUnits[u.post]?.alive === false;
+                    const duty = this.dutyGate(u);
+                    const broken = duty !== undefined && this.gateUnits[duty]?.alive === false;
                     if (broken) next = stepToward(u, post, effectiveMoveSpeed(u) * STEP);
                     else if (distance(next, post) > POST_LEASH) next = stepToward(post, next, POST_LEASH);
                 }
@@ -396,8 +419,9 @@ export class Battle implements BattleContext {
 
     private shouldFallBack(u: BattleUnit, target: BattleUnit): boolean {
         const camp = this.setup.camp;
-        if (!camp || u.side !== 'ally' || u.post === undefined || insideCamp(camp, target)) return false;
-        if (this.gateUnits[u.post]?.alive !== false) return false;
+        const duty = this.dutyGate(u);
+        if (!camp || u.side !== 'ally' || duty === undefined || insideCamp(camp, target)) return false;
+        if (this.gateUnits[duty]?.alive !== false) return false;
         const post = this.postPoint(u);
         return !!post && distance(u, post) > 0.3;
     }

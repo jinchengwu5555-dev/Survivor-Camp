@@ -146,7 +146,18 @@ function session(game: CampGame, now: number): void {
 }
 
 /** 食物和水的流水账：产出、吃掉 / 喝掉、腐烂（按每秒心跳前的速率 × 这一秒走过的游戏分钟累计） */
-const ledger = { foodMade: 0, foodEaten: 0, foodSpoiled: 0, foodUpkeep: 0, waterMade: 0, waterDrunk: 0, waterUpkeep: 0 };
+const ledger = { foodMade: 0, foodEaten: 0, foodSpoiled: 0, foodUpkeep: 0, foodLost: 0, waterMade: 0, waterDrunk: 0, waterUpkeep: 0, waterLost: 0 };
+/** 守夜失败被抢走的（战报的 lost），每份战报只算一次 */
+const countedReports = new Set<number>();
+
+function recordLosses(game: CampGame): void {
+    for (const r of game.state.reports) {
+        if (countedReports.has(r.id)) continue;
+        countedReports.add(r.id);
+        ledger.foodLost += r.lost?.food ?? 0;
+        ledger.waterLost += r.lost?.water ?? 0;
+    }
+}
 
 function recordLedger(game: CampGame, before: number): void {
     const minutes = (game.now - before) / MIN;
@@ -170,6 +181,7 @@ function onlineSession(game: CampGame, start: number): void {
         const before = game.now;
         game.online(start + sec * 1000);
         recordLedger(game, before);
+        recordLosses(game);
         if (game.state.gameOver) return;
         if (sec % 60 === 0) session(game, game.now);
     }
@@ -220,11 +232,13 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
                 foodEaten: Math.round(d('foodEaten')),
                 foodSpoiled: Math.round(d('foodSpoiled')),
                 foodUpkeep: Math.round(d('foodUpkeep')),
-                foodOther: Math.round(state.resources.food - dayLast.food - d('foodMade') + d('foodEaten') + d('foodSpoiled') + d('foodUpkeep')),
+                foodLost: Math.round(d('foodLost')),
+                foodOther: Math.round(state.resources.food - dayLast.food - d('foodMade') + d('foodEaten') + d('foodSpoiled') + d('foodUpkeep') + d('foodLost')),
                 waterMade: Math.round(d('waterMade')),
                 waterDrunk: Math.round(d('waterDrunk')),
                 waterUpkeep: Math.round(d('waterUpkeep')),
-                waterOther: Math.round(water - dayLast.water - d('waterMade') + d('waterDrunk') + d('waterUpkeep')),
+                waterLost: Math.round(d('waterLost')),
+                waterOther: Math.round(water - dayLast.water - d('waterMade') + d('waterDrunk') + d('waterUpkeep') + d('waterLost')),
                 raidsWon: state.stats.raids_won ?? 0,
                 raidsLost: state.stats.raids_lost ?? 0,
                 deaths: state.stats.deaths ?? 0,
@@ -262,12 +276,12 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
         '“开销”= 建筑维护 + 做饭用水；“其他”= 探索战利品、离线收益、事件、捡东西，减去升级花掉的；“够吃几天”= 存量 ÷ 每天（吃掉 + 开销）（真实天）',
         ...food,
     );
-    // 产出 ÷ 消耗（吃喝 + 腐烂 + 建筑开销）：第 10 天以后的平均值应该很接近 1，多了就是在浪费（仓库存不下）
+    // 产出 ÷ 消耗（吃喝 + 腐烂 + 建筑开销 + 守夜失败被抢走的）：第 10 天以后的平均值应该很接近 1，多了就是在浪费（仓库存不下）
     const later = daily.filter((x) => Number(x.day) >= 10);
     const sum = (k: string) => later.reduce((n, x) => n + Number(x[k]), 0);
-    const foodRatio = sum('foodMade') / (sum('foodEaten') + sum('foodSpoiled') + sum('foodUpkeep'));
-    const waterRatio = sum('waterMade') / (sum('waterDrunk') + sum('waterUpkeep'));
-    lines.push(`第 10～${REAL_DAYS} 天 产出 ÷ 消耗：食物 ${foodRatio.toFixed(2)}，水 ${waterRatio.toFixed(2)}（目标 0.95～1.10）`);
+    const foodRatio = sum('foodMade') / (sum('foodEaten') + sum('foodSpoiled') + sum('foodUpkeep') + sum('foodLost'));
+    const waterRatio = sum('waterMade') / (sum('waterDrunk') + sum('waterUpkeep') + sum('waterLost'));
+    lines.push(`第 10～${REAL_DAYS} 天 产出 ÷ 消耗：食物 ${foodRatio.toFixed(2)}，水 ${waterRatio.toFixed(2)}（目标 0.85～1.10；低于 1 的部分由探索战利品、捡东西补上）`);
     const deaths = Object.entries(state.stats).filter(([k]) => k.startsWith('death_'));
     lines.push(`探索 胜 ${state.stats.expeditions_won ?? 0} / 负 ${state.stats.expeditions_lost ?? 0}   死因：${deaths.map(([k, n]) => `${k.slice(6)} ×${n}`).join('，') || '无'}`);
     console.log(lines.join('\n'));
@@ -275,9 +289,9 @@ it.runIf(showReport)('经济节奏报告', { timeout: 600_000 }, () => {
     if (out) (fs as unknown as { writeFileSync: (path: string, data: string) => void }).writeFileSync(out, JSON.stringify({ perPersonPerGameDay: { food: config.balance.foodPerSurvivorPerMinute * config.balance.dayLengthMinutes, water: (config.balance.waterPerSurvivorPerMinute ?? 0) * config.balance.dayLengthMinutes }, daily }, null, 1));
     expect(lines.length).toBeGreaterThan(1);
     if (!state.gameOver) {
-        expect(foodRatio).toBeGreaterThan(0.95);
+        expect(foodRatio).toBeGreaterThan(0.85);
         expect(foodRatio).toBeLessThan(1.1);
-        expect(waterRatio).toBeGreaterThan(0.95);
+        expect(waterRatio).toBeGreaterThan(0.85);
         expect(waterRatio).toBeLessThan(1.1);
     }
 });

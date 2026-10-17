@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.23 靠左的文字不再跑出画面';
+const GAME_VERSION = 'v3.24 守夜互相支援';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
