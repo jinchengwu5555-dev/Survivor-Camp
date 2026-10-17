@@ -127,12 +127,19 @@ export function buildingRect(b: CampBuilding): Rect {
  * 半径 radius 的圆和矩形重叠了，就把圆推到最近的那条边外面；没重叠返回 null。
  * slide 是顺着边多挪一点（正负决定方向），正面撞上建筑的也能绕过去，不会卡死。
  */
-export function pushOutOfRect(p: Point, r: Rect, radius: number, slide = 0): Point | null {
+export function pushOutOfRect(p: Point, r: Rect, radius: number, slide = 0, from?: Point): Point | null {
     const x1 = r.x1 - radius;
     const x2 = r.x2 + radius;
     const y1 = r.y1 - radius;
     const y2 = r.y2 + radius;
     if (p.x <= x1 || p.x >= x2 || p.y <= y1 || p.y >= y2) return null;
+    // 从哪边进来就从哪边推出去（被挤得太深时，按“最近的边”会从另一头冒出来，像穿墙）
+    if (from && (from.x <= x1 || from.x >= x2 || from.y <= y1 || from.y >= y2)) {
+        const outX = from.x <= x1 ? x1 - from.x : from.x >= x2 ? from.x - x2 : 0;
+        const outY = from.y <= y1 ? y1 - from.y : from.y >= y2 ? from.y - y2 : 0;
+        if (outX >= outY) return from.x <= x1 ? { x: x1, y: p.y + slide } : { x: x2, y: p.y + slide };
+        return from.y <= y1 ? { x: p.x + slide, y: y1 } : { x: p.x + slide, y: y2 };
+    }
     const left = p.x - x1;
     const right = x2 - p.x;
     const down = p.y - y1;
@@ -172,8 +179,10 @@ export function gateNormal(camp: CampLayout, gate: Point): Point {
 }
 
 /** 严格在墙里面的点推到最近的墙外（墙外的丧尸贴着墙走，不会穿墙进来） */
-export function pushOutside(camp: CampLayout, p: Point): Point {
-    const r = campBounds(camp);
+export function pushOutside(camp: CampLayout, p: Point, margin = 0): Point {
+    const b = campBounds(camp);
+    // margin = 身体半径：整个身子都在墙外，不会半个身子嵌在墙里
+    const r = { x1: b.x1 - margin, x2: b.x2 + margin, y1: b.y1 - margin, y2: b.y2 + margin };
     if (p.x <= r.x1 || p.x >= r.x2 || p.y <= r.y1 || p.y >= r.y2) return p;
     const options = [
         { d: p.x - r.x1, q: { x: r.x1 - 0.01, y: p.y } },
@@ -185,7 +194,8 @@ export function pushOutside(camp: CampLayout, p: Point): Point {
 }
 
 /** 把墙里的点限制在围墙以内 */
-export function clampInside(camp: CampLayout, p: Point): Point {
+export function clampInside(camp: CampLayout, p: Point, margin = 0): Point {
     const r = campBounds(camp);
-    return { x: Math.max(r.x1, Math.min(r.x2, p.x)), y: Math.max(r.y1, Math.min(r.y2, p.y)) };
+    // margin = 身体半径：整个身子都在墙里，不会半个身子露到墙外
+    return { x: Math.max(r.x1 + margin, Math.min(r.x2 - margin, p.x)), y: Math.max(r.y1 + margin, Math.min(r.y2 - margin, p.y)) };
 }

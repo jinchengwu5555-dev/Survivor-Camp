@@ -97,7 +97,7 @@ const VAULT_LANDING = 1.2;
 /** 门被打破后，离门中心这么近的地方可以穿过围墙 */
 const GATE_GAP = 1.0;
 /** 守门的人站在门里面多深、并排时隔多远、为了打墙外的敌人最多离开岗位多远 */
-const POST_INSET = 0.4;
+const POST_INSET = 0.7;
 const POST_SPACING = 0.7;
 const POST_LEASH = 2.5;
 const POST_FALLBACK = 2.5;
@@ -129,6 +129,7 @@ export class Battle implements BattleContext {
     private postMates = new Map<number, BattleUnit[]>();
     /** 每个守门的人这一步实际在守哪个门（支援别的门时和 post 不一样） */
     private readonly duty = new Map<number, number>();
+    private readonly stepStart = new Map<number, Point>();
     private started = false;
     private accumulator = 0;
     private readonly pending: { setup: UnitSetup; side: Side; x: number; y: number }[] = [];
@@ -309,6 +310,11 @@ export class Battle implements BattleContext {
         }
 
         this.refreshCamp();
+        // 记下这一步开始时每个人在哪（被挤进建筑时从进来的那边推出去）
+        if (this.setup.camp) {
+            this.stepStart.clear();
+            for (const u of this.units) if (u.alive) this.stepStart.set(u.uid, { x: u.x, y: u.y });
+        }
         for (const u of this.aliveUnits()) updateStatuses(this, u, STEP);
         for (const u of this.aliveUnits()) {
             if (!u.alive) continue;
@@ -397,7 +403,7 @@ export class Battle implements BattleContext {
         let next = stepToward(u, dest, Math.min(effectiveMoveSpeed(u) * STEP, Math.max(0, d - stop)));
         if (camp) {
             if (u.side === 'ally') {
-                next = clampInside(camp, next);
+                next = clampInside(camp, next, u.radius);
                 // 墙外的敌人：只在岗位附近打，不跑远；自己的门已经破了就守在门后，不去堵破口
                 const post = this.postPoint(u);
                 if (post && !insideCamp(camp, target)) {
@@ -407,7 +413,7 @@ export class Battle implements BattleContext {
                     else if (distance(next, post) > POST_LEASH) next = stepToward(post, next, POST_LEASH);
                 }
             } else if (!insideCamp(camp, u) && !this.nearOpenGate(next)) {
-                next = pushOutside(camp, next);
+                next = pushOutside(camp, next, u.radius);
             }
         } else {
             const line = this.setup.allyHoldLine;
@@ -460,9 +466,10 @@ export class Battle implements BattleContext {
         const rects = (camp.buildings ?? []).map(buildingRect);
         bodies.forEach((u, i) => {
             let p: Point = u;
-            if (u.side === 'ally') p = clampInside(camp, p);
-            else if (outside[i] && !this.nearOpenGate(p)) p = pushOutside(camp, p);
-            for (const r of rects) p = pushOutOfRect(p, r, u.radius, u.uid % 2 ? 0.03 : -0.03) ?? p;
+            if (u.side === 'ally') p = clampInside(camp, p, u.radius);
+            else if (outside[i] && !this.nearOpenGate(p)) p = pushOutside(camp, p, u.radius);
+            const from = this.stepStart.get(u.uid);
+            for (const r of rects) p = pushOutOfRect(p, r, u.radius, u.uid % 2 ? 0.03 : -0.03, from) ?? p;
             u.x = p.x;
             u.y = p.y;
         });
