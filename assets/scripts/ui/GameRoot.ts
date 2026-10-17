@@ -95,7 +95,7 @@ import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.20 产出和消耗持平';
+const GAME_VERSION = 'v3.21 打击感：火焰、弹道、碎片、顿帧';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;

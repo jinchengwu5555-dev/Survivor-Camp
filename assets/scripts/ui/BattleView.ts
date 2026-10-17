@@ -42,7 +42,7 @@ const ZOMBIE_COLOR = hexColor('#9a5ad0');
 const SPECIAL_COLOR = hexColor('#e04a9a');
 const RAIDER_COLOR = hexColor('#d05a4a');
 const BEAST_COLOR = hexColor('#9a7a5a');
-const FLASH_COLOR = new Color(255, 160, 160);
+const FLASH_COLOR = new Color(255, 236, 240);
 const SELECT_COLOR = hexColor('#ffe08a');
 /** 幸存者的颜色：一人一色，方便认出谁在哪个门 */
 const PEOPLE_COLORS = ['#5ac46a', '#e09a3a', '#e0d04a', '#4ac0d0', '#d8d8d8', '#5a8ae0', '#c07ad8', '#a0d05a'].map(hexColor);
@@ -64,6 +64,40 @@ interface Shot {
     to: Point;
     ttl: number;
     ally: boolean;
+}
+
+/**
+ * 打击感的粒子（只是画面效果，不影响战斗结果，所以用 Math.random 没关系，战报照样能重放）。
+ * 坐标是战场屏幕像素。dot = 火花 / 火焰团，streak = 拖尾的碎片 / 弹道，ring = 扩散的冲击波。
+ */
+interface Particle {
+    kind: 'dot' | 'streak' | 'ring';
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    ttl: number;
+    life: number;
+    size: number;
+    color: Color;
+    /** dot：从 color 渐变到 to（火焰从黄到红） */
+    to?: Color;
+}
+
+/** 粒子数量上限（尸群一多就丢掉最老的） */
+const MAX_PARTICLES = 360;
+/** 弹道飞多久、被打退后多久弹回来（秒） */
+const TRACER_TIME = 0.14;
+const KNOCK_TIME = 0.12;
+const FLAME_HOT = new Color(255, 225, 120);
+const FLAME_COOL = new Color(230, 80, 40);
+const SPARK = new Color(255, 245, 210);
+const TRACER = new Color(255, 250, 225);
+const BLOOD = new Color(200, 60, 80);
+
+/** k = 0 是 a，k = 1 是 b */
+function lerpColor(a: Color, b: Color, k: number): Color {
+    return new Color(a.r + (b.r - a.r) * k, a.g + (b.g - a.g) * k, a.b + (b.b - a.b) * k, 255);
 }
 
 export class BattleView {
@@ -98,6 +132,11 @@ export class BattleView {
     private readonly flashes = new Map<number, number>();
     private readonly shots: Shot[] = [];
     private readonly corpses: { p: Point; color: Color; r: number; ttl: number }[] = [];
+    private readonly particles: Particle[] = [];
+    /** 被打中时往后一顿（画面上的位移，像素） */
+    private readonly knock = new Map<number, { dx: number; dy: number; ttl: number }>();
+    /** 顿帧：大的打击（门破、打倒大怪）让战斗停一小下 */
+    private hitStop = 0;
     private shakeTime = 0;
     private shakePower = 0;
     private floats = 0;
@@ -212,8 +251,10 @@ export class BattleView {
         }
         for (const s of this.shots) s.ttl -= dt;
         for (const c of this.corpses) c.ttl -= dt;
+        this.updateParticles(dt);
         this.updateShake(dt);
-        if (!this.finished) {
+        if (this.hitStop > 0) this.hitStop -= dt;
+        else if (!this.finished) {
             this.battle.advance(dt * this.speed);
             if (this.battle.result !== 'ongoing') this.finish();
         }
@@ -300,22 +341,38 @@ export class BattleView {
             g.circle(s.x, s.y, c.r);
             g.fill();
         }
-        // 弹道线
+        // 弹道：一截很亮的细线从枪口飞向目标（不是整条连线）
         for (const shot of this.shots) {
             if (shot.ttl <= 0) continue;
             const a = this.toScreen(shot.from);
             const b = this.toScreen(shot.to);
-            g.strokeColor = shot.ally ? new Color(255, 240, 200, 220) : new Color(255, 120, 160, 200);
-            g.lineWidth = 2;
-            g.moveTo(a.x, a.y);
-            g.lineTo(b.x, b.y);
+            const k = 1 - shot.ttl / TRACER_TIME;
+            const head = Math.min(1, k * 1.6);
+            const tail = Math.max(0, head - 0.45);
+            const c = shot.ally ? TRACER : new Color(255, 140, 170);
+            g.strokeColor = new Color(c.r, c.g, c.b, Math.round(255 * (1 - k * 0.6)));
+            g.lineWidth = 1.6;
+            g.moveTo(a.x + (b.x - a.x) * tail, a.y + (b.y - a.y) * tail);
+            g.lineTo(a.x + (b.x - a.x) * head, a.y + (b.y - a.y) * head);
             g.stroke();
+            // 枪口火光
+            if (k < 0.4) {
+                g.fillColor = new Color(255, 230, 140, Math.round(230 * (1 - k / 0.4)));
+                g.circle(a.x + (b.x - a.x) * 0.06, a.y + (b.y - a.y) * 0.06, 3.2);
+                g.fill();
+            }
         }
         // 角色：先画敌人，再画自己人（自己人在上面）
         const units = this.battle.units.filter((u) => u.alive && u.def.faction !== 'structure');
         units.sort((a, b) => Number(a.side === 'ally') - Number(b.side === 'ally'));
         for (const u of units) {
             const s = this.toScreen(this.pos(u));
+            const kb = this.knock.get(u.uid);
+            if (kb) {
+                const f = kb.ttl / KNOCK_TIME;
+                s.x += kb.dx * f;
+                s.y += kb.dy * f;
+            }
             if (Math.abs(s.x) > half + 10 || Math.abs(s.y) > half + 10) continue;
             const r = this.radiusOf(u);
             g.fillColor = this.flashes.has(u.uid) ? FLASH_COLOR : this.colorOf(u);
@@ -336,6 +393,7 @@ export class BattleView {
             }
             if (u.hp < u.stats.maxHp && (u.side === 'ally' || this.isSpecial(u))) this.hpBar(g, s.x, s.y + r + 4, Math.max(18, r * 2.4), u);
         }
+        this.drawParticles(g);
     }
 
     /** 探索地点的建筑（世界坐标）：敌人一开始都在里面，左边墙上开门，小队从左边的路上走过来 */
@@ -563,6 +621,94 @@ export class BattleView {
 
     // ---------- 打击感 ----------
 
+    private addParticle(p: Particle): void {
+        this.particles.push(p);
+        if (this.particles.length > MAX_PARTICLES) this.particles.splice(0, this.particles.length - MAX_PARTICLES);
+    }
+
+    /** 近身打击：从攻击者朝目标喷出一小团火花（刀砍、棍砸、丧尸扑咬） */
+    private burst(from: Point, to: Point, hot: Color, cool: Color, count: number, speed: number, spread = 0.45): void {
+        const a = this.toScreen(from);
+        const b = this.toScreen(to);
+        const base = Math.atan2(b.y - a.y, b.x - a.x);
+        // 火花从两人之间靠近目标的地方冒出来
+        const ox = a.x + (b.x - a.x) * 0.7;
+        const oy = a.y + (b.y - a.y) * 0.7;
+        for (let i = 0; i < count; i++) {
+            const ang = base + (Math.random() * 2 - 1) * spread;
+            const v = speed * (0.5 + Math.random() * 0.7);
+            const life = 0.22 + Math.random() * 0.22;
+            this.addParticle({ kind: 'dot', x: ox, y: oy, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, ttl: life, life, size: 3 + Math.random() * 3.5, color: hot, to: cool });
+        }
+    }
+
+    /** 倒下：碎片往四周飞（拖着短尾巴的细线），再加一圈淡淡的冲击波 */
+    private debris(at: Point, color: Color, count: number, big = false): void {
+        const p = this.toScreen(at);
+        for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const v = (big ? 260 : 170) * (0.6 + Math.random() * 0.6);
+            const life = 0.25 + Math.random() * 0.2;
+            this.addParticle({ kind: 'streak', x: p.x, y: p.y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, ttl: life, life, size: 1.5, color: i % 3 === 0 ? color : SPARK });
+        }
+        this.ring(at, big ? 46 : 18, big ? 0.4 : 0.22, big ? new Color(255, 120, 90) : new Color(255, 255, 255));
+    }
+
+    /** 扩散的冲击波圈 */
+    private ring(at: Point, radius: number, life: number, color: Color): void {
+        const p = this.toScreen(at);
+        this.addParticle({ kind: 'ring', x: p.x, y: p.y, vx: 0, vy: 0, ttl: life, life, size: radius, color });
+    }
+
+    private updateParticles(dt: number): void {
+        for (const p of this.particles) {
+            p.ttl -= dt;
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            // 火花和碎片很快减速
+            const drag = p.kind === 'streak' ? 0.86 : 0.9;
+            p.vx *= Math.pow(drag, dt * 60);
+            p.vy *= Math.pow(drag, dt * 60);
+        }
+        for (let i = this.particles.length - 1; i >= 0; i--) if (this.particles[i].ttl <= 0) this.particles.splice(i, 1);
+        for (const [uid, k] of this.knock) {
+            k.ttl -= dt;
+            if (k.ttl <= 0) this.knock.delete(uid);
+        }
+    }
+
+    private drawParticles(g: Graphics): void {
+        for (const p of this.particles) {
+            const k = Math.max(0, p.ttl / p.life);
+            if (p.kind === 'dot') {
+                const c = p.to ? lerpColor(p.to, p.color, k) : p.color;
+                g.fillColor = new Color(c.r, c.g, c.b, Math.round(255 * Math.min(1, k * 1.4)));
+                g.circle(p.x, p.y, p.size * (0.5 + k * 0.6));
+                g.fill();
+            } else if (p.kind === 'streak') {
+                g.strokeColor = new Color(p.color.r, p.color.g, p.color.b, Math.round(255 * k));
+                g.lineWidth = p.size;
+                g.moveTo(p.x, p.y);
+                g.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035);
+                g.stroke();
+            } else {
+                g.strokeColor = new Color(p.color.r, p.color.g, p.color.b, Math.round(200 * k));
+                g.lineWidth = 2 + 3 * k;
+                g.circle(p.x, p.y, p.size * (1.15 - k));
+                g.stroke();
+            }
+        }
+    }
+
+    /** 被打中往后一顿：沿着攻击方向推开几个像素，很快弹回来 */
+    private knockBack(target: BattleUnit, from: Point | undefined, px: number): void {
+        if (!from || target.def.faction === 'structure') return;
+        const a = this.toScreen(from);
+        const b = this.toScreen(this.pos(target));
+        const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        this.knock.set(target.uid, { dx: ((b.x - a.x) / d) * px, dy: ((b.y - a.y) / d) * px, ttl: KNOCK_TIME });
+    }
+
     private shake(time: number, power: number): void {
         this.shakeTime = Math.max(this.shakeTime, time);
         this.shakePower = Math.max(this.shakePower, power);
@@ -590,12 +736,40 @@ export class BattleView {
             if (e.type === 'attack') {
                 const src = this.battle.getUnit(e.source);
                 const tgt = this.battle.getUnit(e.target);
-                if (src && tgt && src.stats.attackRange > 1.5 && this.shots.length < 40) this.shots.push({ from: this.pos(src), to: this.pos(tgt), ttl: 0.12, ally: src.side === 'ally' });
+                if (!src || !tgt) continue;
+                if (src.stats.attackRange > 1.5) {
+                    // 远程：一梭子 2～3 发弹道（目标附近散一点），像机枪扫射
+                    const to = this.pos(tgt);
+                    const n = src.side === 'ally' ? 3 : 1;
+                    for (let i = 0; i < n && this.shots.length < 90; i++) {
+                        const jitter = i === 0 ? 0 : 0.35;
+                        this.shots.push({ from: this.pos(src), to: { x: to.x + (Math.random() * 2 - 1) * jitter, y: to.y + (Math.random() * 2 - 1) * jitter }, ttl: TRACER_TIME + i * 0.04, ally: src.side === 'ally' });
+                    }
+                } else if (src.side === 'ally') {
+                    // 近战：一大团橙黄色的火焰喷向目标（像视频里的喷火兵）
+                    this.burst(this.pos(src), this.pos(tgt), FLAME_HOT, FLAME_COOL, 12, 240, 0.35);
+                } else if (tgt.def.faction !== 'structure') {
+                    // 丧尸扑咬人：红色的小飞溅
+                    this.burst(this.pos(src), this.pos(tgt), new Color(255, 140, 150), BLOOD, 4, 160, 0.7);
+                } else {
+                    // 丧尸砸门：木屑
+                    this.burst(this.pos(src), this.pos(tgt), new Color(220, 190, 140), new Color(120, 90, 60), 3, 140, 0.9);
+                }
             } else if (e.type === 'damage') {
                 const target = this.battle.getUnit(e.target);
                 if (!target || e.amount < 1) continue;
                 sfx(e.crit ? 'crit' : 'hit');
                 this.flashes.set(target.uid, 0.12);
+                const src = e.source !== null && e.source !== undefined ? this.battle.getUnit(e.source) : undefined;
+                this.knockBack(target, src ? this.pos(src) : undefined, e.crit ? 7 : 4);
+                // 打在丧尸身上：几颗白色的小火星
+                if (target.side === 'enemy' && target.def.faction !== 'structure' && src) this.burst(this.pos(src), this.pos(target), SPARK, new Color(255, 200, 150), 3, 200, 1.1);
+                if (e.crit) this.burst(src ? this.pos(src) : this.pos(target), this.pos(target), SPARK, FLAME_HOT, 6, 320, 0.9);
+                // 大怪（尸群首领、胖子）挨打、或者打人：冲击波 + 轻微震屏
+                if (src && src.side === 'enemy' && src.def.appearance.scale >= 1.3 && target.def.faction !== 'structure') {
+                    this.ring(this.pos(target), 30, 0.3, new Color(255, 110, 90));
+                    this.shake(0.12, 4);
+                }
                 if (target.gate !== undefined && e.amount >= target.stats.maxHp * 0.04) this.shake(0.12, 3);
                 // 尸群一多飘字太乱：只飘自己人受的伤、暴击和建筑受的大伤害
                 if (target.side === 'ally' && target.def.faction !== 'structure') this.floatAt(`-${Math.round(e.amount)}`, target, COLORS.lose, 18);
@@ -622,10 +796,19 @@ export class BattleView {
                     this.banner(`💥 ${GATE_NAMES[unit.gate] ?? '门'}被打破了！`, COLORS.lose, 34);
                     sfx('alarm');
                     this.shake(0.4, 8);
+                    this.debris(this.pos(unit), new Color(200, 160, 110), 18, true);
+                    this.hitStop = Math.max(this.hitStop, 0.12);
                     continue;
                 }
                 if (unit.def.faction === 'structure') continue;
                 sfx(unit.side === 'ally' ? 'ally_down' : 'zombie_die');
+                // 碎片四溅：大怪倒下更猛，还会顿一下
+                const bigOne = unit.side === 'enemy' && (this.isSpecial(unit) || unit.def.appearance.scale >= 1.3);
+                this.debris(this.pos(unit), this.colorOf(unit), bigOne ? 16 : 9, bigOne);
+                if (bigOne) {
+                    this.shake(0.18, 5);
+                    this.hitStop = Math.max(this.hitStop, 0.06);
+                }
                 this.corpses.push({ p: this.pos(unit), color: this.colorOf(unit), r: this.radiusOf(unit), ttl: 0.6 });
                 if (this.corpses.length > 60) this.corpses.splice(0, this.corpses.length - 60);
                 if (unit.side === 'ally') {
