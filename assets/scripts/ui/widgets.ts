@@ -122,11 +122,12 @@ export function setLabelText(label: Label, text: string, width: number, size: nu
         fitLabel(label, text, width - 4, size);
         return label;
     }
-    const align = label.horizontalAlign === Label.HorizontalAlign.LEFT ? 'left' : label.horizontalAlign === Label.HorizontalAlign.RIGHT ? 'right' : 'center';
+    const box = boxes.get(old);
     const tf = old.getComponent(UITransform)!;
     const c = label.color;
-    const next = addLabel(parent, text || ' ', size, new Color(c.r, c.g, c.b, c.a), { width, height: tf.height, align });
-    next.node.setPosition(old.position.x, old.position.y);
+    const next = addLabel(parent, text || ' ', size, new Color(c.r, c.g, c.b, c.a), { width, height: tf.height, align: box?.align });
+    if (box) placeLabel(next, box.x, box.y);
+    else next.node.setPosition(old.position.x, old.position.y);
     next.node.setSiblingIndex(old.getSiblingIndex());
     next.node.active = old.active;
     old.destroy();
@@ -160,23 +161,31 @@ export function wrapText(text: string, width: number, size: number): string {
     return out.join('\n');
 }
 
-/** 在 parent 下放一个文字节点（锚点在中心） */
+/**
+ * 靠左 / 靠右的字怎么摆：Cocos 的 LEFT / RIGHT 对齐在部分机型、部分版本上会把字画到框外面去（资源栏、战报跑出画面），
+ * 所以游戏里**所有文字都用居中对齐**。靠左的字 = 把框缩到正好装下这行字、居中对齐，再把框贴到左边；靠右同理。
+ * boxes 记着每个这样的字“本来的框”多宽、贴哪边、框的中心在哪（placeLabel / setLabelText 用）。
+ */
+const boxes = new WeakMap<Node, { width: number; align: 'left' | 'right'; x: number; y: number }>();
+
+/** 一行字大概多宽（按字号估，宁可估宽一点），最宽不超过 max */
+function lineBox(text: string, px: number, max: number): number {
+    return Math.min(max, Math.ceil(textWidth(text, px) * 1.08) + 8);
+}
+
+/** 在 parent 下放一个文字节点（锚点在中心）。align 是靠左 / 靠右时位置要用 placeLabel 按“整个框的中心”来摆 */
 export function addLabel(parent: Node, text: string, size: number, color: Color, opts: LabelOptions = {}): Label {
-    const node = makeNode('Label', parent, opts.width ?? 600, opts.height ?? size + 10);
+    const width = opts.width ?? 600;
+    const node = makeNode('Label', parent, width, opts.height ?? size + 10);
     const label = node.addComponent(Label);
-    label.string = opts.wrap ? wrapText(text, (opts.width ?? 600) - 4, size) : text;
+    const side = opts.align === 'left' || opts.align === 'right' ? opts.align : null;
+    label.string = opts.wrap ? wrapText(text, width - 4, size) : text;
     if (opts.wrap) styleLabel(label, size);
-    else fitLabel(label, text, (opts.width ?? 600) - 4, size);
+    else fitLabel(label, text, width - 4, size);
     label.color = color;
-    label.horizontalAlign =
-        opts.align === 'left' ? Label.HorizontalAlign.LEFT : opts.align === 'right' ? Label.HorizontalAlign.RIGHT : Label.HorizontalAlign.CENTER;
+    label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     if (opts.wrap) {
-        label.overflow = Label.Overflow.RESIZE_HEIGHT;
-        label.enableWrapText = true;
-    } else if (opts.align === 'left' || opts.align === 'right') {
-        // 靠左 / 靠右的单行字：CLAMP 在部分机型上会把字排到框外面（资源栏跑出屏幕），
-        // 改成和 GameRoot.text() 一样的 RESIZE_HEIGHT（字号已经按宽度算好，不会真的换行）
         label.overflow = Label.Overflow.RESIZE_HEIGHT;
         label.enableWrapText = true;
     } else {
@@ -184,22 +193,46 @@ export function addLabel(parent: Node, text: string, size: number, color: Color,
         label.overflow = Label.Overflow.CLAMP;
         label.enableWrapText = false;
     }
-    // 靠左 / 靠右的字：锚点放在左边 / 右边（和 GameRoot.text() 一样）。
-    // 锚点在中间时，靠左对齐的字在部分机型上会整段画到框外面去（资源栏、战报跑出屏幕），
-    // 所以位置要用 placeLabel 按“框的中心”来摆。
-    if (opts.align === 'left' || opts.align === 'right') {
-        node.getComponent(UITransform)!.setAnchorPoint(opts.align === 'left' ? 0 : 1, 0.5);
+    if (side && !opts.wrap) {
+        node.getComponent(UITransform)!.width = lineBox(text, label.fontSize, width);
+        boxes.set(node, { width, align: side, x: 0, y: 0 });
         placeLabel(label, 0, 0);
     }
     label.updateRenderData(true);
     return label;
 }
 
-/** 按“框的中心在 (x, y)”摆一个文字节点（不管它的锚点在左边、中间还是右边） */
+/** 按“整个框的中心在 (x, y)”摆一个文字节点：靠左的字贴着框的左边，靠右的贴着右边，其余居中 */
 export function placeLabel(label: Label, x: number, y: number): Label {
-    const tf = label.node.getComponent(UITransform)!;
-    label.node.setPosition(x + (tf.anchorX - 0.5) * tf.width, y + (tf.anchorY - 0.5) * tf.height);
+    const box = boxes.get(label.node);
+    if (!box) {
+        label.node.setPosition(x, y);
+        return label;
+    }
+    box.x = x;
+    box.y = y;
+    const w = label.node.getComponent(UITransform)!.width;
+    const shift = (box.width - w) / 2;
+    label.node.setPosition(box.align === 'left' ? x - shift : x + shift, y);
     return label;
+}
+
+/**
+ * 一段靠左、自动换行的文字：自己按宽度断行，每一行是一个居中对齐、正好装下这行字的 Label，贴着左边一行行往下排。
+ * 返回装着这些行的节点（锚点在中心，大小 = width × 总高度）和总高度。
+ */
+export function addParagraph(parent: Node, text: string, size: number, color: Color, width: number): { node: Node; height: number } {
+    const px = pixelSize(size);
+    const lineHeight = px + 8;
+    const lines = wrapText(text, width - 4, size).split('\n');
+    const height = Math.max(lineHeight, lines.length * lineHeight);
+    const node = makeNode('Paragraph', parent, width, height);
+    lines.forEach((line, i) => {
+        if (!line) return;
+        const label = addLabel(node, line, size, color, { width, height: lineHeight, align: 'left' });
+        placeLabel(label, 0, height / 2 - lineHeight * (i + 0.5));
+    });
+    return { node, height };
 }
 
 /** 画一个圆角矩形面板（以节点中心为原点） */

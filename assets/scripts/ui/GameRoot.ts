@@ -7,7 +7,7 @@
 //   Overlay     守夜 / 战斗回放画面（BattleView），打开时隐藏 Content
 //   Fx          飘字特效（不会被重画清掉）
 
-import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Label, Mask, Node, resources, SubContextView, TTFFont, UIOpacity, UITransform } from 'cc';
+import { _decorator, BlockInputEvents, Color, Component, EventTouch, game, Game, Graphics, JsonAsset, Mask, Node, resources, SubContextView, TTFFont, UIOpacity } from 'cc';
 import { CampGame } from '../core/CampGame';
 import { buildingLabel, buildingLockReason, buildingStage, nextBuildingStage, upgradeBlocker } from '../core/buildings';
 import {
@@ -89,13 +89,13 @@ import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
-import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, placeLabel, punch, setUiFont, styleLabel, wrapText } from './widgets';
+import { addBadge, addLabel, addParagraph, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, placeLabel, punch, setUiFont } from './widgets';
 import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.26 失守会死人、招人收紧';
+const GAME_VERSION = 'v3.27 文字全部居中渲染，不再出格';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -1817,9 +1817,8 @@ export class GameRoot extends Component {
         // 先把正文排好，算出卡片高度
         const textWidth = WIDTH - 170;
         const body = makeNode('EventCard', this.content!, WIDTH, 10);
-        const bodyLabel = addLabel(body, event.text, 24, TEXT, { width: textWidth, wrap: true, align: 'left' });
-        bodyLabel.updateRenderData(true);
-        const textHeight = bodyLabel.node.getComponent(UITransform)!.height;
+        const para = addParagraph(body, event.text, 24, TEXT, textWidth);
+        const textHeight = para.height;
         const cardHeight = Math.max(260, textHeight + 110);
 
         body.setPosition(0, top - cardHeight / 2);
@@ -1848,12 +1847,8 @@ export class GameRoot extends Component {
         }
         addLabel(body, speaker.name, 22, ACCENT, { width: 150 }).node.setPosition(faceX, faceY - 72);
         if (speaker.title) addLabel(body, speaker.title, 18, DIM, { width: 150 }).node.setPosition(faceX, faceY - 98);
-        // 正文
-        // 左上角对齐：不管 Cocos 算出来的框多宽，文字都从头像右边开始
-        const bodyTf = bodyLabel.node.getComponent(UITransform)!;
-        bodyTf.setAnchorPoint(0, 1);
-        bodyTf.width = textWidth;
-        bodyLabel.node.setPosition(-WIDTH / 2 + 160, cardHeight / 2 - 70);
+        // 正文：从头像右边开始，左上角对齐
+        para.node.setPosition(-WIDTH / 2 + 160 + textWidth / 2, cardHeight / 2 - 70 - textHeight / 2);
 
         this.cursorY = top - cardHeight - 16;
         // 有人上门：先看看他们的表面信息（隐藏的毛病看不出来，只有一个印象）
@@ -3489,20 +3484,10 @@ export class GameRoot extends Component {
 
     /** 从当前光标位置往下写一段自动换行的文字，返回后光标移到文字下方 */
     private text(str: string, size: number, color: Color = TEXT, width = WIDTH, x = LEFT): void {
-        const node = makeNode('Text', this.target!);
-        const tf = node.getComponent(UITransform)!;
-        tf.setAnchorPoint(0, 1);
-        tf.width = width;
-        node.setPosition(x, this.cursorY);
-        const label = node.addComponent(Label);
-        label.string = wrapText(str, width - 4, size);
-        styleLabel(label, size);
-        label.color = color;
-        label.horizontalAlign = Label.HorizontalAlign.LEFT;
-        label.overflow = Label.Overflow.RESIZE_HEIGHT;
-        label.enableWrapText = true;
-        label.updateRenderData(true);
-        this.cursorY -= tf.height + 4;
+        // 每一行是一个居中对齐的 Label 贴着左边排（不用 Cocos 的靠左对齐，见 widgets.ts 的 addParagraph）
+        const para = addParagraph(this.target!, str, size, color, width);
+        para.node.setPosition(x + width / 2, this.cursorY - para.height / 2);
+        this.cursorY -= para.height + 4;
     }
 
     /** 一行带底色的提示条（新手引导、toast） */

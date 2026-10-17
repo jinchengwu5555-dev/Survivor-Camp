@@ -18,7 +18,7 @@ import { LiveRaid } from '../core/liveRaid';
 import { survivorName } from '../core/roster';
 import { BattleReport, GameConfig } from '../core/types';
 import { sfx } from '../platform/Audio';
-import { addLabel, COLORS, drawPanel, floatText, hexColor, makeNode, placeLabel, setLabelText, UIButton } from './widgets';
+import { addLabel, addParagraph, COLORS, drawPanel, floatText, hexColor, makeNode, setLabelText, UIButton } from './widgets';
 
 const WIDTH = 680;
 /** 战场：正方形，中心在屏幕上的位置 */
@@ -998,8 +998,9 @@ export class BattleView {
         const head = kind === 'raid' ? (win ? '🛡️ 守住了！' : '💀 尸群冲进了营地……') : win ? '🎒 探索成功！' : '🏃 小队撤退了';
         addLabel(panel, head, 44, win ? COLORS.win : COLORS.lose, { width: WIDTH - 40 }).node.setPosition(0, 150);
         const text = report?.summary ?? '这是演示战斗，不影响营地。';
-        const summary = addLabel(panel, text, 24, COLORS.text, { width: WIDTH - 60, wrap: true, align: 'left' });
-        placeLabel(summary, 0, 30);
+        const summary = addParagraph(panel, text, 24, COLORS.text, WIDTH - 80);
+        // 正文从标题下面开始，左上角对齐
+        summary.node.setPosition(0, 110 - summary.height / 2);
         const close = new UIButton(panel, WIDTH - 80, 64, () => this.opts.onClose(this.opts.live ? report : null), 26);
         close.node.setPosition(0, -160);
         close.set(this.opts.live ? '回到营地' : '关闭', 'highlight');
