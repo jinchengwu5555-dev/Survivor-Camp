@@ -184,7 +184,21 @@ export function addLabel(parent: Node, text: string, size: number, color: Color,
         label.overflow = Label.Overflow.CLAMP;
         label.enableWrapText = false;
     }
+    // 靠左 / 靠右的字：锚点放在左边 / 右边（和 GameRoot.text() 一样）。
+    // 锚点在中间时，靠左对齐的字在部分机型上会整段画到框外面去（资源栏、战报跑出屏幕），
+    // 所以位置要用 placeLabel 按“框的中心”来摆。
+    if (opts.align === 'left' || opts.align === 'right') {
+        node.getComponent(UITransform)!.setAnchorPoint(opts.align === 'left' ? 0 : 1, 0.5);
+        placeLabel(label, 0, 0);
+    }
     label.updateRenderData(true);
+    return label;
+}
+
+/** 按“框的中心在 (x, y)”摆一个文字节点（不管它的锚点在左边、中间还是右边） */
+export function placeLabel(label: Label, x: number, y: number): Label {
+    const tf = label.node.getComponent(UITransform)!;
+    label.node.setPosition(x + (tf.anchorX - 0.5) * tf.width, y + (tf.anchorY - 0.5) * tf.height);
     return label;
 }
 

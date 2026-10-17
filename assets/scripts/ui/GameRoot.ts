@@ -89,13 +89,13 @@ import { CocosStorage } from '../platform/CocosStorage';
 import { createLeaderboard } from '../platform/Leaderboard';
 import { createNetworkService } from '../platform/Network';
 import { BattleView } from './BattleView';
-import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, punch, setUiFont, styleLabel, wrapText } from './widgets';
+import { addBadge, addLabel, COLORS, drawPanel, floatText, formatTime, hexColor, makeNode, placeLabel, punch, setUiFont, styleLabel, wrapText } from './widgets';
 import { addSprite, fitSize, getSprite, SPRITE_DIRS } from './sprites';
 
 const { ccclass } = _decorator;
 
 /** 界面右上角显示的版本号：每次更新代码都改一下，方便确认游戏是不是最新的 */
-const GAME_VERSION = 'v3.22 守夜打完所有丧尸才结束';
+const GAME_VERSION = 'v3.23 靠左的文字不再跑出画面';
 
 const WIDTH = 680;
 const LEFT = -WIDTH / 2;
@@ -815,7 +815,7 @@ export class GameRoot extends Component {
         const site = currentSite(config, state);
         // 左边的文字只占到右边按钮前面，按钮不会压住文字
         const line = (text: string, size: number, color: Color, y: number, width = WIDTH) =>
-            addLabel(bar, text, size, color, { width, align: 'left' }).node.setPosition(-WIDTH / 2 + width / 2, y - centerY);
+            placeLabel(addLabel(bar, text, size, color, { width, align: 'left' }), -WIDTH / 2 + width / 2, y - centerY);
         line(`${GAME_VERSION}${camp.paused ? '   ⏸ 已暂停' : ''}${camp.speed > 1 ? `   ⏩×${camp.speed}` : ''}`, 14, camp.paused ? LOSE : DIM, 628, WIDTH - 260);
         // 右上角：设置（暂停、倍速、重新开始、玩法说明），放在背包左边，不贴着屏幕顶
         const gear = makeNode('Settings', bar, 56, 46);
@@ -1007,7 +1007,7 @@ export class GameRoot extends Component {
             bubble.setPosition(0, MAP_HEIGHT / 2 - 62 - h / 2);
             drawPanel(bubble.addComponent(Graphics), bw, h, new Color(250, 246, 232, this.chatExpanded ? 230 : 170), 12, new Color(120, 100, 70), 2);
             lines.forEach((text, i) => {
-                addLabel(bubble, text, 17, new Color(50, 40, 30), { width: bw - 20, align: 'left' }).node.setPosition(0, h / 2 - 19 - i * 26);
+                placeLabel(addLabel(bubble, text, 17, new Color(50, 40, 30), { width: bw - 20, align: 'left' }), 0, h / 2 - 19 - i * 26);
             });
             bubble.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
@@ -1594,8 +1594,8 @@ export class GameRoot extends Component {
                 const top = this.cursorY;
                 const node = makeNode('StatRow', this.content!, WIDTH, 32);
                 node.setPosition(0, top - 16);
-                addLabel(node, row.label, 20, DIM, { width: WIDTH / 2 - 10, align: 'left' }).node.setPosition(-WIDTH / 4, 0);
-                addLabel(node, row.value, 20, row.warn ? LOSE : TEXT, { width: WIDTH / 2 + 60, align: 'right' }).node.setPosition(WIDTH / 4 - 30, 0);
+                placeLabel(addLabel(node, row.label, 20, DIM, { width: WIDTH / 2 - 10, align: 'left' }), -WIDTH / 4, 0);
+                placeLabel(addLabel(node, row.value, 20, row.warn ? LOSE : TEXT, { width: WIDTH / 2 + 60, align: 'right' }), WIDTH / 4 - 30, 0);
                 this.cursorY = top - 34;
             }
         }
@@ -1827,7 +1827,7 @@ export class GameRoot extends Component {
         drawPanel(g, WIDTH, cardHeight, COLORS.panel, 16, ACCENT, 3);
         // 标题
         const title = addLabel(body, `【${event.title}】`, 30, ACCENT, { width: WIDTH - 40, align: 'left' });
-        title.node.setPosition(0, cardHeight / 2 - 34);
+        placeLabel(title, 0, cardHeight / 2 - 34);
         // 头像
         const faceX = -WIDTH / 2 + 80;
         const faceY = cardHeight / 2 - 130;
@@ -2388,13 +2388,13 @@ export class GameRoot extends Component {
             const textX = 40;
             const textW = cardW - 100;
             const bond = bondOf(config, state, s, now);
-            addLabel(node, `${isFounder(state, s) && s.id !== LEADER ? '⚜️' : ''}${info?.name ?? s.id}`, 24, s.id === LEADER ? ACCENT : hexColor(bond.color), { width: textW, align: 'left' }).node.setPosition(textX, 38);
-            addLabel(node, `${info?.title ?? ''} · ${SPECIALTY_NAMES[info?.specialty ?? ''] ?? ''}`, 16, DIM, { width: textW, align: 'left' }).node.setPosition(textX, 14);
-            addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }).node.setPosition(textX, -12);
+            placeLabel(addLabel(node, `${isFounder(state, s) && s.id !== LEADER ? '⚜️' : ''}${info?.name ?? s.id}`, 24, s.id === LEADER ? ACCENT : hexColor(bond.color), { width: textW, align: 'left' }), textX, 38);
+            placeLabel(addLabel(node, `${info?.title ?? ''} · ${SPECIALTY_NAMES[info?.specialty ?? ''] ?? ''}`, 16, DIM, { width: textW, align: 'left' }), textX, 14);
+            placeLabel(addLabel(node, this.survivorStatus(camp, s.id, now), 18, s.injured ? LOSE : ACCENT, { width: textW, align: 'left' }), textX, -12);
             const talents = talentsOf(config, state, s.id).map((t) => t.icon + t.name).join(' ');
             const gear = gearOf(config, state, s.id).map((g) => g.icon).join('');
-            addLabel(node, `${moodTier(s.mood).icon}${Math.round(s.mood)} ${sleepText(s.sleep)}${watchers.includes(s.id) ? ' 🌙' : ''} ${gear}`, 16, (s.sleep ?? 100) < 50 ? LOSE : TEXT, { width: textW, align: 'left' }).node.setPosition(textX, -38);
-            addLabel(node, talents, 15, DIM, { width: textW, align: 'left' }).node.setPosition(textX, -58);
+            placeLabel(addLabel(node, `${moodTier(s.mood).icon}${Math.round(s.mood)} ${sleepText(s.sleep)}${watchers.includes(s.id) ? ' 🌙' : ''} ${gear}`, 16, (s.sleep ?? 100) < 50 ? LOSE : TEXT, { width: textW, align: 'left' }), textX, -38);
+            placeLabel(addLabel(node, talents, 15, DIM, { width: textW, align: 'left' }), textX, -58);
             node.on(Node.EventType.TOUCH_END, () => {
                 if (this.dragDistance > DRAG_THRESHOLD) return;
                 punch(node);
@@ -2461,14 +2461,14 @@ export class GameRoot extends Component {
         this.drawPortrait(head, camp, id, -WIDTH / 2 + 80, 0, 58);
         const hx = 70;
         const hw = WIDTH - 180;
-        addLabel(head, `${info?.name ?? id}${info?.isHero ? ' ⭐' : ''}`, 34, ACCENT, { width: hw, align: 'left' }).node.setPosition(hx, 42);
-        addLabel(head, `${info?.title ?? ''}   专长：${SPECIALTY_NAMES[info?.specialty ?? ''] ?? '—'}`, 20, TEXT, { width: hw, align: 'left' }).node.setPosition(hx, 6);
-        addLabel(head, `${this.survivorStatus(camp, id, now)}   ${moodTier(s.mood).icon} ${moodTier(s.mood).name} ${Math.round(s.mood)}   ${sleepText(s.sleep)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }).node.setPosition(hx, -28);
+        placeLabel(addLabel(head, `${info?.name ?? id}${info?.isHero ? ' ⭐' : ''}`, 34, ACCENT, { width: hw, align: 'left' }), hx, 42);
+        placeLabel(addLabel(head, `${info?.title ?? ''}   专长：${SPECIALTY_NAMES[info?.specialty ?? ''] ?? '—'}`, 20, TEXT, { width: hw, align: 'left' }), hx, 6);
+        placeLabel(addLabel(head, `${this.survivorStatus(camp, id, now)}   ${moodTier(s.mood).icon} ${moodTier(s.mood).name} ${Math.round(s.mood)}   ${sleepText(s.sleep)}`, 20, s.injured ? LOSE : DIM, { width: hw, align: 'left' }), hx, -28);
         const unitId = info?.battleUnit;
         if (unitId && battleRegistry(config).hasUnit(unitId)) {
             const base = statsAtLevel(battleRegistry(config).unit(unitId), survivorBattleLevel(config, state));
             const m = combatMultiplier(config, state, id);
-            addLabel(head, `⚔️ 战斗 Lv${survivorBattleLevel(config, state)}  生命 ${Math.round(base.maxHp * m.hp)}  攻击 ${Math.round(base.atk * m.atk)}`, 18, DIM, { width: hw, align: 'left' }).node.setPosition(hx, -58);
+            placeLabel(addLabel(head, `⚔️ 战斗 Lv${survivorBattleLevel(config, state)}  生命 ${Math.round(base.maxHp * m.hp)}  攻击 ${Math.round(base.atk * m.atk)}`, 18, DIM, { width: hw, align: 'left' }), hx, -58);
         }
         this.cursorY -= headH + 12;
 
